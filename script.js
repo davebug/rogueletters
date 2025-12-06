@@ -1594,6 +1594,32 @@ function setupEventListeners() {
             }
         });
     });
+
+    // Run Mode Event Listeners
+    document.getElementById('start-run-btn')?.addEventListener('click', () => {
+        runManager.startRun();
+    });
+
+    document.getElementById('next-round-btn')?.addEventListener('click', () => {
+        runManager.nextRound();
+    });
+
+    document.getElementById('try-again-btn')?.addEventListener('click', () => {
+        runManager.hideAllRunPopups();
+        runManager.showStartRun();
+    });
+
+    document.getElementById('new-run-btn')?.addEventListener('click', () => {
+        runManager.hideAllRunPopups();
+        runManager.showStartRun();
+    });
+
+    // Close buttons for run popups
+    document.querySelectorAll('#round-complete-popup .popup-close-btn, #run-failed-popup .popup-close-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.target.closest('.popup-content').parentElement.classList.add('hidden');
+        });
+    });
 }
 
 // Tile selection handler
