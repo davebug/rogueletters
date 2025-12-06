@@ -1,0 +1,28 @@
+# GitHub Setup Commands for Daily Letters
+
+After creating your repository on GitHub, run these commands:
+
+## Option 1: If your GitHub username is 'davebug' and repo is 'daily-letters':
+git remote add origin https://github.com/davebug/daily-letters.git
+git push -u origin main
+
+## Option 2: Using SSH (if you have SSH keys set up):
+git remote add origin git@github.com:davebug/daily-letters.git
+git push -u origin main
+
+## Option 3: If you named the repository something else, replace 'daily-letters' with your repo name:
+git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
+git push -u origin main
+
+## To verify the remote was added:
+git remote -v
+
+## If you need to change the remote URL later:
+git remote set-url origin NEW_URL
+
+## Current status:
+- ✅ Local git repository initialized
+- ✅ All files added and committed
+- ⏳ Waiting to add remote and push
+
+The repository is ready to push as soon as you create it on GitHub!

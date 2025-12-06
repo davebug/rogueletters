@@ -1,0 +1,43 @@
+{
+  "scenarioName": "scenario-2",
+  "lastUpdated": "2025-10-20T21:54:11.390Z",
+  "expectedOutcomes": {
+    "turnScores": [
+      34,
+      22,
+      32,
+      40,
+      58
+    ],
+    "finalScore": 186,
+    "turnsCompleted": 5,
+    "gameCompleted": true
+  },
+  "turnDetails": [
+    {
+      "turn": 1,
+      "score": 34,
+      "tilesPlaced": 3
+    },
+    {
+      "turn": 2,
+      "score": 22,
+      "tilesPlaced": 4
+    },
+    {
+      "turn": 3,
+      "score": 32,
+      "tilesPlaced": 4
+    },
+    {
+      "turn": 4,
+      "score": 40,
+      "tilesPlaced": 4
+    },
+    {
+      "turn": 5,
+      "score": 58,
+      "tilesPlaced": 5
+    }
+  ]
+}

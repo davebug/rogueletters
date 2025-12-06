@@ -1,0 +1,27 @@
+{
+  "name": "wikiletters-core-gameplay-tests",
+  "version": "1.0.0",
+  "description": "Core gameplay validation test suite for WikiLetters",
+  "scripts": {
+    "test": "npx playwright test core-gameplay-suite.spec.js",
+    "test:all": "npx playwright test",
+    "test:gameplay": "npx playwright test core-gameplay-suite.spec.js",
+    "test:ui": "npx playwright test ui-interactions-suite.spec.js",
+    "test:headed": "npx playwright test --headed",
+    "test:debug": "npx playwright test --debug",
+    "test:ui-mode": "npx playwright test --ui",
+    "extract": "node tools/extract-scenario.js",
+    "extract:help": "node tools/extract-scenario.js --help"
+  },
+  "keywords": [
+    "wikiletters",
+    "testing",
+    "playwright",
+    "gameplay"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}

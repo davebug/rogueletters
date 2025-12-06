@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tile Rack - Dragula Demo</title>
+
+    <!-- Dragula CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.3/dragula.min.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #ee9ca7 0%, #ffdde1 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 700px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #ee9ca7;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #e88892;
+            transform: translateY(-2px);
+        }
+
+        button.active {
+            background: #d77681;
+        }
+
+        /* Tile Rack Container */
+        .tile-rack {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            min-height: 80px;
+            background: #f7f7f7;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        /* Second rack for testing cross-container dragging */
+        .tile-rack.secondary {
+            background: #e8f4f8;
+            border: 2px dashed #9ecadb;
+        }
+
+        /* Tile Styles */
+        .tile {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #ee9ca7, #ffc2cc);
+            border: 2px solid #d77681;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: move;
+            user-select: none;
+            position: relative;
+            transition: transform 0.2s;
+        }
+
+        .tile:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .tile span {
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .tile-points {
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            font-size: 10px;
+            color: white;
+            font-weight: bold;
+        }
+
+        /* Dragula-specific classes */
+        .gu-mirror {
+            position: fixed !important;
+            margin: 0 !important;
+            z-index: 9999 !important;
+            opacity: 0.8;
+            transform: rotate(5deg);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .gu-hide {
+            display: none !important;
+        }
+
+        .gu-unselectable {
+            -webkit-user-select: none !important;
+            -moz-user-select: none !important;
+            -ms-user-select: none !important;
+            user-select: none !important;
+        }
+
+        .gu-transit {
+            opacity: 0.2;
+        }
+
+        /* Status */
+        .status {
+            text-align: center;
+            padding: 10px;
+            background: #ffe0e6;
+            border-radius: 8px;
+            margin: 20px 0;
+            color: #d77681;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Info Cards */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .info-card {
+            padding: 15px;
+            background: #fff5f7;
+            border-radius: 8px;
+            border-left: 4px solid #ee9ca7;
+        }
+
+        .info-card h3 {
+            color: #d77681;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .info-card p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .demo-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+        }
+
+        .demo-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .event-log {
+            background: #333;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            height: 100px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .event-log div {
+            margin: 2px 0;
+        }
+
+        @media (max-width: 600px) {
+            .tile {
+                width: 45px;
+                height: 45px;
+            }
+
+            .tile span {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dragula Tile Rack Demo</h1>
+        <p class="subtitle">"Drag and drop so simple it hurts"</p>
+
+        <div class="controls">
+            <button id="shuffle-btn">🔀 Shuffle</button>
+            <button id="reset-btn">🔄 Reset</button>
+            <button id="add-tile-btn">➕ Add Tile</button>
+            <button id="remove-tile-btn">➖ Remove</button>
+            <button id="copy-mode-btn">📋 Copy: OFF</button>
+            <button id="revert-btn">↩️ Revert: ON</button>
+        </div>
+
+        <div class="status" id="status">
+            Ready - Drag tiles to reorder
+        </div>
+
+        <!-- Primary Rack -->
+        <div class="demo-section">
+            <h3>Primary Rack</h3>
+            <div id="tile-rack-1" class="tile-rack">
+                <!-- Tiles will be added here -->
+            </div>
+        </div>
+
+        <!-- Secondary Rack for Cross-Container Demo -->
+        <div class="demo-section">
+            <h3>Secondary Rack (Cross-Container Dragging)</h3>
+            <div id="tile-rack-2" class="tile-rack secondary">
+                <!-- Empty initially - can receive tiles from primary rack -->
+            </div>
+        </div>
+
+        <!-- Event Log -->
+        <div class="event-log" id="event-log">
+            <div>Event log initialized...</div>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>🎯 Simplicity</h3>
+                <p>Dragula provides the simplest possible API. No configuration needed for basic drag-and-drop.</p>
+            </div>
+            <div class="info-card">
+                <h3>📱 Touch Support</h3>
+                <p>Works seamlessly on touch devices without any additional configuration or libraries.</p>
+            </div>
+            <div class="info-card">
+                <h3>🔄 Cross-Container</h3>
+                <p>Drag elements between different containers with automatic DOM management.</p>
+            </div>
+            <div class="info-card">
+                <h3>📋 Copy Mode</h3>
+                <p>Optional copy mode creates clones instead of moving elements.</p>
+            </div>
+            <div class="info-card">
+                <h3>↩️ Revert on Spill</h3>
+                <p>Elements return to original position if dropped outside valid containers.</p>
+            </div>
+            <div class="info-card">
+                <h3>🪶 Lightweight</h3>
+                <p>Only 7.2KB minified and gzipped. No dependencies required.</p>
+            </div>
+        </div>
+
+        <div class="info-grid" style="margin-top: 20px;">
+            <div class="info-card">
+                <h3>⚠️ Dragula Considerations</h3>
+                <p><strong>Pros:</strong> Dead simple API, tiny size (7.2KB), no dependencies, touch works automatically</p>
+                <p><strong>Cons:</strong> No maintenance since 2020, less customization than SortableJS, no built-in animations</p>
+                <p><strong>Best for:</strong> Simple drag-drop when minimal code is priority</p>
+            </div>
+            <div class="info-card">
+                <h3>📊 vs SortableJS</h3>
+                <p><strong>Size:</strong> Dragula (7.2KB) vs SortableJS (37KB)</p>
+                <p><strong>API:</strong> Dragula simpler, SortableJS more features</p>
+                <p><strong>Maintenance:</strong> SortableJS actively maintained, Dragula stale since 2020</p>
+                <p><strong>Verdict:</strong> Use Dragula for simplicity, SortableJS for longevity</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dragula JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dragula/3.7.3/dragula.min.js"></script>
+
+    <script>
+        // Configuration
+        const INITIAL_TILES = ['S', 'C', 'R', 'A', 'B', 'B', 'L', 'E'];
+        const ALL_TILES = 'AAAAAAAAABBCCDDDDEEEEEEEEEEEEFFGGGHHIIIIIIIIIJKLLLLMMNNNNNNOOOOOOOOPPQRRRRRRSSSSTTTTTTUUUUVVWWXYYZ'.split('');
+        const TILE_POINTS = {
+            A: 1, B: 3, C: 3, D: 2, E: 1, F: 4, G: 2, H: 4,
+            I: 1, J: 8, K: 5, L: 1, M: 3, N: 1, O: 1, P: 3,
+            Q: 10, R: 1, S: 1, T: 1, U: 1, V: 4, W: 4, X: 8,
+            Y: 4, Z: 10
+        };
+
+        let currentTiles = [...INITIAL_TILES];
+        let drake = null;
+        let copyMode = false;
+        let revertOnSpill = true;
+        let eventCount = 0;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeTiles();
+            setupDragula();
+            setupEventListeners();
+        });
+
+        function initializeTiles() {
+            const rack1 = document.getElementById('tile-rack-1');
+            rack1.innerHTML = '';
+
+            currentTiles.forEach((letter, index) => {
+                const tile = createTile(letter);
+                rack1.appendChild(tile);
+            });
+
+            // Clear secondary rack
+            document.getElementById('tile-rack-2').innerHTML = '';
+        }
+
+        function createTile(letter) {
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+            tile.dataset.letter = letter;
+
+            const letterSpan = document.createElement('span');
+            letterSpan.textContent = letter;
+            tile.appendChild(letterSpan);
+
+            const points = document.createElement('span');
+            points.className = 'tile-points';
+            points.textContent = TILE_POINTS[letter] || 0;
+            tile.appendChild(points);
+
+            return tile;
+        }
+
+        function setupDragula() {
+            // Destroy existing instance if it exists
+            if (drake) {
+                drake.destroy();
+            }
+
+            // Create Dragula instance with both racks
+            drake = dragula([
+                document.getElementById('tile-rack-1'),
+                document.getElementById('tile-rack-2')
+            ], {
+                copy: copyMode,  // Copy instead of move
+                revertOnSpill: revertOnSpill,  // Put back if dropped outside
+                removeOnSpill: false,  // Don't remove if dropped outside
+
+                // Optional: Custom move validation
+                moves: function(el, source, handle, sibling) {
+                    return true; // Allow all moves
+                },
+
+                // Optional: Custom accept validation
+                accepts: function(el, target, source, sibling) {
+                    return true; // Accept all drops
+                },
+
+                // Optional: Invalid drop targets
+                invalid: function(el, handle) {
+                    return false; // No invalid elements
+                }
+            });
+
+            // Dragula Events
+            drake.on('drag', function(el, source) {
+                logEvent(`DRAG: ${el.dataset.letter} from ${source.id}`);
+                updateStatus(`Dragging tile: ${el.dataset.letter}`);
+            });
+
+            drake.on('drop', function(el, target, source, sibling) {
+                logEvent(`DROP: ${el.dataset.letter} to ${target.id}`);
+                updateStatus(`Dropped tile: ${el.dataset.letter}`);
+
+                // Update tiles array if needed
+                updateTileArrays();
+            });
+
+            drake.on('over', function(el, container, source) {
+                logEvent(`OVER: ${container.id}`);
+            });
+
+            drake.on('out', function(el, container, source) {
+                logEvent(`OUT: ${container.id}`);
+            });
+
+            drake.on('shadow', function(el, container, source) {
+                // Shadow is the placeholder element
+                logEvent(`SHADOW in ${container.id}`);
+            });
+
+            drake.on('cancel', function(el, container, source) {
+                logEvent(`CANCEL: ${el.dataset.letter} returned to ${container.id}`);
+                updateStatus(`Cancelled drag`);
+            });
+
+            drake.on('remove', function(el, container, source) {
+                logEvent(`REMOVE: ${el.dataset.letter} from ${container.id}`);
+            });
+
+            drake.on('cloned', function(clone, original, type) {
+                logEvent(`CLONED: ${original.dataset.letter} (${type})`);
+            });
+        }
+
+        function setupEventListeners() {
+            document.getElementById('shuffle-btn').addEventListener('click', shuffleTiles);
+            document.getElementById('reset-btn').addEventListener('click', resetTiles);
+            document.getElementById('add-tile-btn').addEventListener('click', addRandomTile);
+            document.getElementById('remove-tile-btn').addEventListener('click', removeLastTile);
+            document.getElementById('copy-mode-btn').addEventListener('click', toggleCopyMode);
+            document.getElementById('revert-btn').addEventListener('click', toggleRevert);
+        }
+
+        function shuffleTiles() {
+            currentTiles.sort(() => Math.random() - 0.5);
+            initializeTiles();
+            setupDragula();  // Reinitialize Dragula after DOM change
+            updateStatus('Tiles shuffled!');
+            logEvent('SHUFFLE: Tiles randomized');
+        }
+
+        function resetTiles() {
+            currentTiles = [...INITIAL_TILES];
+            initializeTiles();
+            setupDragula();  // Reinitialize Dragula after DOM change
+            updateStatus('Tiles reset to original');
+            logEvent('RESET: Tiles restored');
+        }
+
+        function addRandomTile() {
+            const rack1 = document.getElementById('tile-rack-1');
+            if (rack1.children.length >= 10) {
+                updateStatus('Maximum tiles reached!');
+                return;
+            }
+
+            const randomLetter = ALL_TILES[Math.floor(Math.random() * ALL_TILES.length)];
+            const tile = createTile(randomLetter);
+            rack1.appendChild(tile);
+
+            // Re-register containers (not needed but being safe)
+            drake.containers = [
+                document.getElementById('tile-rack-1'),
+                document.getElementById('tile-rack-2')
+            ];
+
+            updateStatus(`Added tile: ${randomLetter}`);
+            logEvent(`ADD: New tile ${randomLetter}`);
+        }
+
+        function removeLastTile() {
+            const rack1 = document.getElementById('tile-rack-1');
+            if (rack1.children.length <= 1) {
+                updateStatus('Minimum tiles reached!');
+                return;
+            }
+
+            const lastTile = rack1.lastChild;
+            const letter = lastTile.dataset.letter;
+            rack1.removeChild(lastTile);
+
+            updateStatus(`Removed tile: ${letter}`);
+            logEvent(`REMOVE: Tile ${letter} deleted`);
+        }
+
+        function toggleCopyMode() {
+            copyMode = !copyMode;
+            const btn = document.getElementById('copy-mode-btn');
+            btn.textContent = `📋 Copy: ${copyMode ? 'ON' : 'OFF'}`;
+            btn.classList.toggle('active', copyMode);
+
+            setupDragula();  // Recreate with new settings
+            updateStatus(`Copy mode ${copyMode ? 'enabled' : 'disabled'}`);
+            logEvent(`CONFIG: Copy mode = ${copyMode}`);
+        }
+
+        function toggleRevert() {
+            revertOnSpill = !revertOnSpill;
+            const btn = document.getElementById('revert-btn');
+            btn.textContent = `↩️ Revert: ${revertOnSpill ? 'ON' : 'OFF'}`;
+            btn.classList.toggle('active', revertOnSpill);
+
+            setupDragula();  // Recreate with new settings
+            updateStatus(`Revert on spill ${revertOnSpill ? 'enabled' : 'disabled'}`);
+            logEvent(`CONFIG: Revert on spill = ${revertOnSpill}`);
+        }
+
+        function updateTileArrays() {
+            // Update internal arrays based on current DOM state
+            const rack1 = document.getElementById('tile-rack-1');
+            currentTiles = Array.from(rack1.children).map(tile => tile.dataset.letter);
+        }
+
+        function updateStatus(message) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+
+            // Reset status after 2 seconds
+            setTimeout(() => {
+                status.textContent = 'Ready - Drag tiles to reorder';
+            }, 2000);
+        }
+
+        function logEvent(message) {
+            const log = document.getElementById('event-log');
+            const entry = document.createElement('div');
+            entry.textContent = `[${++eventCount}] ${message}`;
+            log.appendChild(entry);
+
+            // Auto-scroll to bottom
+            log.scrollTop = log.scrollHeight;
+
+            // Keep only last 50 entries
+            while (log.children.length > 50) {
+                log.removeChild(log.firstChild);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+{
+  "scenarioName": "high-score-grandpa-129pts",
+  "lastUpdated": "2025-10-20T21:44:12.401Z",
+  "expectedOutcomes": {
+    "turnScores": [
+      22,
+      18,
+      30,
+      31,
+      28
+    ],
+    "finalScore": 129,
+    "turnsCompleted": 5,
+    "gameCompleted": true
+  },
+  "turnDetails": [
+    {
+      "turn": 1,
+      "score": 22,
+      "tilesPlaced": 3
+    },
+    {
+      "turn": 2,
+      "score": 18,
+      "tilesPlaced": 4
+    },
+    {
+      "turn": 3,
+      "score": 30,
+      "tilesPlaced": 3
+    },
+    {
+      "turn": 4,
+      "score": 31,
+      "tilesPlaced": 3
+    },
+    {
+      "turn": 5,
+      "score": 28,
+      "tilesPlaced": 3
+    }
+  ]
+}

@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SortableJS Tile Rack - Testing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            touch-action: pan-y; /* Allow vertical scroll but not horizontal */
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            touch-action: manipulation;
+        }
+
+        button:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Tile Rack */
+        #tile-rack {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            align-items: center;
+            min-height: 100px;
+            background: #f7f7f7;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 30px 0;
+            position: relative;
+            touch-action: pan-y;
+        }
+
+        /* Tiles */
+        .tile {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            border: 3px solid #d4af37;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: move;
+            user-select: none;
+            position: relative;
+            transition: transform 0.2s;
+            touch-action: none;
+        }
+
+        .tile:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .tile-letter {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            line-height: 1;
+        }
+
+        .tile-points {
+            position: absolute;
+            bottom: 3px;
+            right: 5px;
+            font-size: 12px;
+            color: #666;
+            font-weight: bold;
+        }
+
+        /* SortableJS Classes */
+        .sortable-ghost {
+            opacity: 0.4;
+            background: linear-gradient(135deg, #a8e6cf, #dcedc1);
+        }
+
+        .sortable-chosen {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .sortable-drag {
+            opacity: 0;
+        }
+
+        /* Status */
+        #status {
+            text-align: center;
+            padding: 15px;
+            background: #e0e7ff;
+            border-radius: 10px;
+            margin: 20px 0;
+            color: #4c51bf;
+            font-size: 16px;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Debug Info */
+        #debug {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        #debug h3 {
+            margin-bottom: 10px;
+            color: #666;
+        }
+
+        #debug-log {
+            max-height: 150px;
+            overflow-y: auto;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .debug-entry {
+            margin: 2px 0;
+            color: #555;
+        }
+
+        /* Mobile Optimizations */
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+
+            .tile {
+                width: 50px;
+                height: 50px;
+            }
+
+            .tile-letter {
+                font-size: 24px;
+            }
+
+            button {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+
+            #tile-rack {
+                padding: 15px 10px;
+                gap: 5px;
+            }
+        }
+
+        /* Test markers for Playwright */
+        [data-testid] {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SortableJS Tile Rack Test</h1>
+
+        <div class="controls">
+            <button id="shuffle-btn" data-testid="shuffle-btn">🔀 Shuffle</button>
+            <button id="reset-btn" data-testid="reset-btn">🔄 Reset</button>
+            <button id="add-tile-btn" data-testid="add-tile-btn">➕ Add</button>
+            <button id="remove-tile-btn" data-testid="remove-tile-btn">➖ Remove</button>
+        </div>
+
+        <div id="status" data-testid="status">
+            Ready - Drag tiles to reorder
+        </div>
+
+        <div id="tile-rack" data-testid="tile-rack">
+            <!-- Tiles will be added dynamically -->
+        </div>
+
+        <div id="debug" data-testid="debug-panel">
+            <h3>Debug Log:</h3>
+            <div id="debug-log" data-testid="debug-log"></div>
+        </div>
+    </div>
+
+    <!-- SortableJS -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+    <script>
+        // Configuration
+        const INITIAL_TILES = ['S', 'C', 'R', 'A', 'B', 'B', 'L', 'E'];
+        const ALL_TILES = 'AAAAAAAAABBCCDDDDEEEEEEEEEEEEFFGGGHHIIIIIIIIIJKLLLLMMNNNNNNOOOOOOOOPPQRRRRRRSSSSTTTTTTUUUUVVWWXYYZ'.split('');
+        const TILE_POINTS = {
+            A: 1, B: 3, C: 3, D: 2, E: 1, F: 4, G: 2, H: 4,
+            I: 1, J: 8, K: 5, L: 1, M: 3, N: 1, O: 1, P: 3,
+            Q: 10, R: 1, S: 1, T: 1, U: 1, V: 4, W: 4, X: 8,
+            Y: 4, Z: 10
+        };
+
+        let currentTiles = [...INITIAL_TILES];
+        let sortableInstance = null;
+        let eventCount = 0;
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            logDebug('Page loaded - Initializing SortableJS tile rack');
+            initializeTiles();
+            setupSortable();
+            setupEventListeners();
+            updateStatus('Ready - Drag tiles to reorder');
+        });
+
+        function initializeTiles() {
+            const rack = document.getElementById('tile-rack');
+            rack.innerHTML = '';
+
+            currentTiles.forEach((letter, index) => {
+                const tile = createTile(letter, index);
+                rack.appendChild(tile);
+            });
+
+            logDebug(`Initialized ${currentTiles.length} tiles: ${currentTiles.join(', ')}`);
+        }
+
+        function createTile(letter, index) {
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+            tile.dataset.letter = letter;
+            tile.dataset.index = index;
+            tile.dataset.testid = `tile-${letter}-${index}`;
+
+            const letterSpan = document.createElement('span');
+            letterSpan.className = 'tile-letter';
+            letterSpan.textContent = letter;
+            tile.appendChild(letterSpan);
+
+            const points = document.createElement('span');
+            points.className = 'tile-points';
+            points.textContent = TILE_POINTS[letter] || 0;
+            tile.appendChild(points);
+
+            return tile;
+        }
+
+        function setupSortable() {
+            const rack = document.getElementById('tile-rack');
+
+            // Destroy existing instance
+            if (sortableInstance) {
+                sortableInstance.destroy();
+                logDebug('Destroyed existing Sortable instance');
+            }
+
+            // Create new SortableJS instance
+            sortableInstance = new Sortable(rack, {
+                animation: 150,
+                easing: "cubic-bezier(0.4, 0.0, 0.2, 1)",
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                dragClass: 'sortable-drag',
+
+                // Touch settings
+                forceFallback: false,
+                fallbackTolerance: 3,
+                touchStartThreshold: 3,
+                delay: 0,
+
+                // Events for testing
+                onStart: function(evt) {
+                    const letter = evt.item.dataset.letter;
+                    logDebug(`DRAG START: ${letter} from position ${evt.oldIndex}`);
+                    updateStatus(`Dragging tile: ${letter}`);
+                },
+
+                onEnd: function(evt) {
+                    const letter = evt.item.dataset.letter;
+                    logDebug(`DRAG END: ${letter} from ${evt.oldIndex} to ${evt.newIndex}`);
+
+                    // Update internal array
+                    const tiles = Array.from(rack.children);
+                    currentTiles = tiles.map(tile => tile.dataset.letter);
+
+                    updateStatus(`Moved ${letter} to position ${evt.newIndex + 1}`);
+                    logDebug(`New order: ${currentTiles.join(', ')}`);
+                },
+
+                onChoose: function(evt) {
+                    logDebug(`CHOOSE: ${evt.item.dataset.letter}`);
+                },
+
+                onSort: function(evt) {
+                    logDebug(`SORT: Reordered`);
+                }
+            });
+
+            logDebug('SortableJS instance created');
+        }
+
+        function setupEventListeners() {
+            document.getElementById('shuffle-btn').addEventListener('click', shuffleTiles);
+            document.getElementById('reset-btn').addEventListener('click', resetTiles);
+            document.getElementById('add-tile-btn').addEventListener('click', addRandomTile);
+            document.getElementById('remove-tile-btn').addEventListener('click', removeLastTile);
+        }
+
+        function shuffleTiles() {
+            currentTiles.sort(() => Math.random() - 0.5);
+            initializeTiles();
+            setupSortable();
+            updateStatus('Tiles shuffled!');
+            logDebug('Shuffled tiles');
+        }
+
+        function resetTiles() {
+            currentTiles = [...INITIAL_TILES];
+            initializeTiles();
+            setupSortable();
+            updateStatus('Reset to original tiles');
+            logDebug('Reset tiles to SCRABBLE');
+        }
+
+        function addRandomTile() {
+            if (currentTiles.length >= 10) {
+                updateStatus('Maximum 10 tiles!');
+                return;
+            }
+
+            const letter = ALL_TILES[Math.floor(Math.random() * ALL_TILES.length)];
+            currentTiles.push(letter);
+
+            const rack = document.getElementById('tile-rack');
+            const tile = createTile(letter, currentTiles.length - 1);
+            rack.appendChild(tile);
+
+            updateStatus(`Added tile: ${letter}`);
+            logDebug(`Added tile: ${letter}`);
+        }
+
+        function removeLastTile() {
+            if (currentTiles.length <= 1) {
+                updateStatus('Minimum 1 tile!');
+                return;
+            }
+
+            const removed = currentTiles.pop();
+            const rack = document.getElementById('tile-rack');
+            rack.removeChild(rack.lastChild);
+
+            updateStatus(`Removed tile: ${removed}`);
+            logDebug(`Removed tile: ${removed}`);
+        }
+
+        function updateStatus(message) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+
+            // Auto-reset status
+            setTimeout(() => {
+                status.textContent = 'Ready - Drag tiles to reorder';
+            }, 3000);
+        }
+
+        function logDebug(message) {
+            const log = document.getElementById('debug-log');
+            const entry = document.createElement('div');
+            entry.className = 'debug-entry';
+
+            const timestamp = new Date().toLocaleTimeString('en-US', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                fractionalSecondDigits: 3
+            });
+
+            entry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+
+            // Auto-scroll to bottom
+            log.scrollTop = log.scrollHeight;
+
+            // Keep only last 20 entries
+            while (log.children.length > 20) {
+                log.removeChild(log.firstChild);
+            }
+
+            // Also log to console for Playwright
+            console.log(`[TILE-RACK] ${message}`);
+        }
+
+        // Expose for testing
+        window.getTileOrder = function() {
+            return currentTiles;
+        };
+
+        window.getTilePositions = function() {
+            const rack = document.getElementById('tile-rack');
+            return Array.from(rack.children).map(tile => ({
+                letter: tile.dataset.letter,
+                rect: tile.getBoundingClientRect()
+            }));
+        };
+    </script>
+</body>
+</html>

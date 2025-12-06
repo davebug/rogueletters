@@ -1,0 +1,154 @@
+{
+  "name": "scenario-3",
+  "description": "Game from October 17 - 186 points",
+  "source": "https://letters.wiki/?g=IRIn4UGJ4pg05ihJS45NcpuQGsUIyCHDWiMyAbBV",
+  "metadata": {
+    "seed": "20251017",
+    "startingWord": "HARPIST",
+    "dateStr": "October 17",
+    "extractedAt": "2025-10-20T21:54:18.424Z"
+  },
+  "expectedOutcomes": {
+    "turnScores": [
+      38,
+      26,
+      50,
+      45,
+      27
+    ],
+    "finalScore": 186,
+    "turnsCompleted": 5,
+    "gameCompleted": true
+  },
+  "moves": [
+    {
+      "turn": 1,
+      "tiles": [
+        {
+          "row": 3,
+          "col": 4,
+          "letter": "O"
+        },
+        {
+          "row": 3,
+          "col": 5,
+          "letter": "X"
+        }
+      ],
+      "expectedScore": 38
+    },
+    {
+      "turn": 2,
+      "tiles": [
+        {
+          "row": 3,
+          "col": 3,
+          "letter": "B"
+        },
+        {
+          "row": 5,
+          "col": 3,
+          "letter": "E"
+        },
+        {
+          "row": 6,
+          "col": 3,
+          "letter": "N"
+        },
+        {
+          "row": 7,
+          "col": 3,
+          "letter": "T"
+        }
+      ],
+      "expectedScore": 26
+    },
+    {
+      "turn": 3,
+      "tiles": [
+        {
+          "row": 8,
+          "col": 3,
+          "letter": "S"
+        },
+        {
+          "row": 8,
+          "col": 1,
+          "letter": "O"
+        },
+        {
+          "row": 8,
+          "col": 2,
+          "letter": "W"
+        },
+        {
+          "row": 8,
+          "col": 0,
+          "letter": "J"
+        }
+      ],
+      "expectedScore": 50
+    },
+    {
+      "turn": 4,
+      "tiles": [
+        {
+          "row": 4,
+          "col": 8,
+          "letter": "S"
+        },
+        {
+          "row": 1,
+          "col": 8,
+          "letter": "A"
+        },
+        {
+          "row": 0,
+          "col": 8,
+          "letter": "M"
+        },
+        {
+          "row": 2,
+          "col": 8,
+          "letter": "I"
+        },
+        {
+          "row": 3,
+          "col": 8,
+          "letter": "D"
+        }
+      ],
+      "expectedScore": 45
+    },
+    {
+      "turn": 5,
+      "tiles": [
+        {
+          "row": 7,
+          "col": 1,
+          "letter": "Y"
+        },
+        {
+          "row": 7,
+          "col": 2,
+          "letter": "E"
+        }
+      ],
+      "expectedScore": 27
+    }
+  ],
+  "testValidations": {
+    "wordValidation": {
+      "description": "All words formed should be valid"
+    },
+    "scoringValidation": {
+      "description": "Scoring must match expected values for each turn"
+    },
+    "gameCompletionValidation": {
+      "description": "Game completes successfully after 5 turns"
+    },
+    "shareUrlValidation": {
+      "description": "Share URL generates correctly and round-trip matches original"
+    }
+  }
+}

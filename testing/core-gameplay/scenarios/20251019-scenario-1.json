@@ -1,0 +1,149 @@
+{
+  "name": "scenario-1",
+  "description": "Game from October 19 - 129 points",
+  "source": "https://letters.wiki/?g=IRoLgW6MBlWkiaM5EKg8QhsJmFLDBoNELj82DqA",
+  "metadata": {
+    "seed": "20251019",
+    "startingWord": "DICKEY",
+    "dateStr": "October 19",
+    "extractedAt": "2025-10-20T21:54:03.573Z"
+  },
+  "expectedOutcomes": {
+    "turnScores": [
+      10,
+      31,
+      54,
+      24,
+      10
+    ],
+    "finalScore": 129,
+    "turnsCompleted": 5,
+    "gameCompleted": true
+  },
+  "moves": [
+    {
+      "turn": 1,
+      "tiles": [
+        {
+          "row": 5,
+          "col": 1,
+          "letter": "I"
+        },
+        {
+          "row": 6,
+          "col": 1,
+          "letter": "N"
+        },
+        {
+          "row": 7,
+          "col": 1,
+          "letter": "E"
+        }
+      ],
+      "expectedScore": 10
+    },
+    {
+      "turn": 2,
+      "tiles": [
+        {
+          "row": 4,
+          "col": 7,
+          "letter": "S"
+        },
+        {
+          "row": 3,
+          "col": 7,
+          "letter": "E"
+        },
+        {
+          "row": 2,
+          "col": 7,
+          "letter": "L"
+        },
+        {
+          "row": 1,
+          "col": 7,
+          "letter": "A"
+        },
+        {
+          "row": 0,
+          "col": 7,
+          "letter": "M"
+        }
+      ],
+      "expectedScore": 31
+    },
+    {
+      "turn": 3,
+      "tiles": [
+        {
+          "row": 0,
+          "col": 8,
+          "letter": "E"
+        },
+        {
+          "row": 0,
+          "col": 4,
+          "letter": "C"
+        },
+        {
+          "row": 0,
+          "col": 5,
+          "letter": "H"
+        },
+        {
+          "row": 0,
+          "col": 6,
+          "letter": "I"
+        }
+      ],
+      "expectedScore": 54
+    },
+    {
+      "turn": 4,
+      "tiles": [
+        {
+          "row": 3,
+          "col": 5,
+          "letter": "F"
+        },
+        {
+          "row": 3,
+          "col": 6,
+          "letter": "O"
+        }
+      ],
+      "expectedScore": 24
+    },
+    {
+      "turn": 5,
+      "tiles": [
+        {
+          "row": 7,
+          "col": 0,
+          "letter": "J"
+        },
+        {
+          "row": 7,
+          "col": 2,
+          "letter": "T"
+        }
+      ],
+      "expectedScore": 10
+    }
+  ],
+  "testValidations": {
+    "wordValidation": {
+      "description": "All words formed should be valid"
+    },
+    "scoringValidation": {
+      "description": "Scoring must match expected values for each turn"
+    },
+    "gameCompletionValidation": {
+      "description": "Game completes successfully after 5 turns"
+    },
+    "shareUrlValidation": {
+      "description": "Share URL generates correctly and round-trip matches original"
+    }
+  }
+}

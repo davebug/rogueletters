@@ -1,0 +1,2 @@
+# Python dependencies for Letters game
+lzstring  # For board URL decompression in high score validation

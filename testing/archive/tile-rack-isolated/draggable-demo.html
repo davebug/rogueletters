@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tile Rack - GSAP Draggable Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 700px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #88ce02;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #76b901;
+            transform: translateY(-2px);
+        }
+
+        .tile-rack {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            min-height: 80px;
+            background: #f7f7f7;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .tile {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #88ce02, #a4dd02);
+            border: 2px solid #76b901;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: move;
+            user-select: none;
+            position: relative;
+            z-index: 1;
+        }
+
+        .tile.dragging {
+            z-index: 1000;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .tile.selected {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            border-color: #d4af37;
+            transform: scale(1.1);
+        }
+
+        .tile span {
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .tile-points {
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            font-size: 10px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .placeholder {
+            width: 50px;
+            height: 50px;
+            background: rgba(136, 206, 2, 0.2);
+            border: 2px dashed #88ce02;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .status {
+            text-align: center;
+            padding: 10px;
+            background: #e8f5e9;
+            border-radius: 8px;
+            margin: 20px 0;
+            color: #388e3c;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .feature-card {
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+            border-left: 4px solid #88ce02;
+        }
+
+        .feature-card h3 {
+            color: #4a5568;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .feature-card p {
+            font-size: 12px;
+            color: #718096;
+            line-height: 1.4;
+        }
+
+        .mode-indicator {
+            text-align: center;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .mode-indicator span {
+            color: #88ce02;
+            font-weight: bold;
+        }
+
+        /* GSAP-specific animations */
+        .tile-enter {
+            animation: tileEnter 0.5s ease-out;
+        }
+
+        @keyframes tileEnter {
+            from {
+                transform: scale(0) rotate(180deg);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .tile {
+                width: 45px;
+                height: 45px;
+            }
+
+            .tile span {
+                font-size: 20px;
+            }
+
+            .placeholder {
+                width: 45px;
+                height: 45px;
+            }
+        }
+
+        /* Debug info */
+        .debug {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #88ce02;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GSAP Draggable Tile Rack</h1>
+        <p class="subtitle">Powered by GreenSock Animation Platform</p>
+
+        <div class="controls">
+            <button id="shuffle-btn">🔀 Shuffle</button>
+            <button id="reset-btn">🔄 Reset</button>
+            <button id="add-tile-btn">➕ Add Tile</button>
+            <button id="remove-tile-btn">➖ Remove</button>
+            <button id="physics-btn">🎯 Physics: ON</button>
+        </div>
+
+        <div class="mode-indicator">
+            Mode: <span id="mode-text">Sortable with Momentum</span>
+        </div>
+
+        <div class="status" id="status">
+            Ready - Drag tiles to reorder
+        </div>
+
+        <div id="tile-rack" class="tile-rack">
+            <!-- Tiles will be added here -->
+        </div>
+
+        <div class="features">
+            <div class="feature-card">
+                <h3>🚀 Physics-Based</h3>
+                <p>InertiaPlugin provides momentum-based animation with natural deceleration</p>
+            </div>
+            <div class="feature-card">
+                <h3>📱 Touch Optimized</h3>
+                <p>Native touch support with velocity tracking and kinetic scrolling</p>
+            </div>
+            <div class="feature-card">
+                <h3>🎨 Smooth Animations</h3>
+                <p>60fps animations with GPU acceleration and sub-pixel rendering</p>
+            </div>
+            <div class="feature-card">
+                <h3>🎯 Hit Detection</h3>
+                <p>Advanced collision detection with customizable thresholds</p>
+            </div>
+            <div class="feature-card">
+                <h3>🔧 Event System</h3>
+                <p>Rich callbacks: onPress, onDrag, onRelease with velocity data</p>
+            </div>
+            <div class="feature-card">
+                <h3>⚡ Performance</h3>
+                <p>Optimized for complex animations with minimal CPU usage</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="debug" id="debug">
+        <div>FPS: <span id="fps">60</span></div>
+        <div>Dragging: <span id="dragging">false</span></div>
+        <div>Velocity: <span id="velocity">0</span></div>
+    </div>
+
+    <!-- GSAP CDN with Draggable and InertiaPlugin -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Draggable.min.js"></script>
+    <!-- Note: InertiaPlugin is a paid plugin, using basic version for demo -->
+
+    <script>
+        // Register plugins
+        gsap.registerPlugin(Draggable);
+
+        // Configuration
+        const INITIAL_TILES = ['S', 'C', 'R', 'A', 'B', 'B', 'L', 'E'];
+        const ALL_TILES = 'AAAAAAAAABBCCDDDDEEEEEEEEEEEEFFGGGHHIIIIIIIIIJKLLLLMMNNNNNNOOOOOOOOPPQRRRRRRSSSSTTTTTTUUUUVVWWXYYZ'.split('');
+        const TILE_POINTS = {
+            A: 1, B: 3, C: 3, D: 2, E: 1, F: 4, G: 2, H: 4,
+            I: 1, J: 8, K: 5, L: 1, M: 3, N: 1, O: 1, P: 3,
+            Q: 10, R: 1, S: 1, T: 1, U: 1, V: 4, W: 4, X: 8,
+            Y: 4, Z: 10
+        };
+
+        let currentTiles = [...INITIAL_TILES];
+        let draggables = [];
+        let physicsEnabled = true;
+        let currentlyDragging = null;
+
+        // FPS counter
+        let fps = 60;
+        let lastTime = performance.now();
+
+        function updateFPS() {
+            const now = performance.now();
+            fps = Math.round(1000 / (now - lastTime));
+            lastTime = now;
+            document.getElementById('fps').textContent = fps;
+            requestAnimationFrame(updateFPS);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeTiles();
+            setupEventListeners();
+            updateFPS();
+        });
+
+        function initializeTiles() {
+            const rack = document.getElementById('tile-rack');
+            rack.innerHTML = '';
+
+            // Destroy existing draggables
+            draggables.forEach(d => d.kill());
+            draggables = [];
+
+            currentTiles.forEach((letter, index) => {
+                const tile = createTile(letter, index);
+                rack.appendChild(tile);
+
+                // Add entrance animation
+                gsap.from(tile, {
+                    scale: 0,
+                    rotation: 180,
+                    opacity: 0,
+                    duration: 0.5,
+                    delay: index * 0.05,
+                    ease: "back.out(1.7)"
+                });
+            });
+
+            // Wait for animations to complete before making draggable
+            setTimeout(() => {
+                makeTilesDraggable();
+            }, 600);
+        }
+
+        function createTile(letter, index) {
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+            tile.dataset.letter = letter;
+            tile.dataset.index = index;
+            tile.id = `tile-${index}`;
+
+            const letterSpan = document.createElement('span');
+            letterSpan.textContent = letter;
+            tile.appendChild(letterSpan);
+
+            const points = document.createElement('span');
+            points.className = 'tile-points';
+            points.textContent = TILE_POINTS[letter] || 0;
+            tile.appendChild(points);
+
+            return tile;
+        }
+
+        function makeTilesDraggable() {
+            const tiles = document.querySelectorAll('.tile');
+
+            tiles.forEach((tile, index) => {
+                const draggable = Draggable.create(tile, {
+                    type: "x",  // Horizontal movement only
+                    edgeResistance: 0.65,
+                    bounds: "#tile-rack",
+                    lockAxis: false,
+
+                    // Physics simulation (requires InertiaPlugin for full effect)
+                    inertia: physicsEnabled ? {
+                        resistance: 100,
+                        velocityScale: 1
+                    } : false,
+
+                    // Events
+                    onPress: function() {
+                        currentlyDragging = this;
+                        this.target.classList.add('dragging');
+                        updateStatus(`Grabbed tile: ${this.target.dataset.letter}`);
+                        document.getElementById('dragging').textContent = 'true';
+
+                        // Bring to front
+                        gsap.set(this.target, { zIndex: 1000 });
+                    },
+
+                    onDragStart: function() {
+                        // Store original position for snapping
+                        this.startX = this.x;
+                    },
+
+                    onDrag: function() {
+                        const velocity = Math.abs(this.getVelocity("x"));
+                        document.getElementById('velocity').textContent = Math.round(velocity);
+
+                        // Check for overlaps and rearrange
+                        checkOverlapsAndRearrange(this);
+                    },
+
+                    onRelease: function() {
+                        this.target.classList.remove('dragging');
+                        currentlyDragging = null;
+                        document.getElementById('dragging').textContent = 'false';
+                        document.getElementById('velocity').textContent = '0';
+
+                        // Snap back to position
+                        snapToPosition(this);
+
+                        updateStatus(`Released tile: ${this.target.dataset.letter}`);
+                    },
+
+                    onClick: function() {
+                        // Prevent click if dragged
+                        if (Math.abs(this.x - this.startX) < 3) {
+                            toggleTileSelection(this.target);
+                        }
+                    }
+                })[0];
+
+                draggables.push(draggable);
+            });
+        }
+
+        function checkOverlapsAndRearrange(draggable) {
+            const tiles = Array.from(document.querySelectorAll('.tile'));
+            const draggedTile = draggable.target;
+            const draggedRect = draggedTile.getBoundingClientRect();
+            const draggedMidpoint = draggedRect.left + draggedRect.width / 2;
+
+            tiles.forEach(tile => {
+                if (tile === draggedTile) return;
+
+                const rect = tile.getBoundingClientRect();
+                const midpoint = rect.left + rect.width / 2;
+
+                // Check if dragged tile has crossed midpoint of another tile
+                if (Math.abs(draggedMidpoint - midpoint) < rect.width / 2) {
+                    // Swap positions
+                    const draggedIndex = tiles.indexOf(draggedTile);
+                    const targetIndex = tiles.indexOf(tile);
+
+                    if (draggedIndex !== targetIndex) {
+                        swapTiles(draggedIndex, targetIndex);
+                    }
+                }
+            });
+        }
+
+        function swapTiles(fromIndex, toIndex) {
+            const rack = document.getElementById('tile-rack');
+            const tiles = Array.from(rack.children);
+
+            if (fromIndex < toIndex) {
+                rack.insertBefore(tiles[fromIndex], tiles[toIndex].nextSibling);
+            } else {
+                rack.insertBefore(tiles[fromIndex], tiles[toIndex]);
+            }
+
+            // Update tile array
+            const temp = currentTiles[fromIndex];
+            currentTiles.splice(fromIndex, 1);
+            currentTiles.splice(toIndex, 0, temp);
+
+            // Animate the swap
+            gsap.to(tiles[toIndex], {
+                x: 0,
+                duration: 0.3,
+                ease: "power2.out"
+            });
+        }
+
+        function snapToPosition(draggable) {
+            gsap.to(draggable.target, {
+                x: 0,
+                duration: 0.3,
+                ease: "power2.inOut"
+            });
+        }
+
+        function toggleTileSelection(tile) {
+            tile.classList.toggle('selected');
+            if (tile.classList.contains('selected')) {
+                updateStatus(`Selected: ${tile.dataset.letter}`);
+                gsap.to(tile, {
+                    scale: 1.1,
+                    duration: 0.2,
+                    ease: "back.out(2)"
+                });
+            } else {
+                gsap.to(tile, {
+                    scale: 1,
+                    duration: 0.2,
+                    ease: "power2.out"
+                });
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('shuffle-btn').addEventListener('click', shuffleTiles);
+            document.getElementById('reset-btn').addEventListener('click', resetTiles);
+            document.getElementById('add-tile-btn').addEventListener('click', addRandomTile);
+            document.getElementById('remove-tile-btn').addEventListener('click', removeLastTile);
+            document.getElementById('physics-btn').addEventListener('click', togglePhysics);
+        }
+
+        function shuffleTiles() {
+            currentTiles.sort(() => Math.random() - 0.5);
+
+            // Animate out, shuffle, animate in
+            const tiles = document.querySelectorAll('.tile');
+            gsap.to(tiles, {
+                scale: 0,
+                rotation: -180,
+                opacity: 0,
+                duration: 0.3,
+                stagger: 0.02,
+                onComplete: () => {
+                    initializeTiles();
+                    updateStatus('Tiles shuffled!');
+                }
+            });
+        }
+
+        function resetTiles() {
+            currentTiles = [...INITIAL_TILES];
+
+            // Animate transition
+            const tiles = document.querySelectorAll('.tile');
+            gsap.to(tiles, {
+                y: -100,
+                opacity: 0,
+                duration: 0.3,
+                stagger: 0.02,
+                onComplete: () => {
+                    initializeTiles();
+                    updateStatus('Tiles reset to original');
+                }
+            });
+        }
+
+        function addRandomTile() {
+            if (currentTiles.length >= 10) {
+                updateStatus('Maximum tiles reached!');
+                return;
+            }
+
+            const randomLetter = ALL_TILES[Math.floor(Math.random() * ALL_TILES.length)];
+            currentTiles.push(randomLetter);
+
+            const rack = document.getElementById('tile-rack');
+            const tile = createTile(randomLetter, currentTiles.length - 1);
+            rack.appendChild(tile);
+
+            // Animate entrance
+            gsap.from(tile, {
+                scale: 0,
+                rotation: 360,
+                opacity: 0,
+                duration: 0.5,
+                ease: "back.out(1.7)",
+                onComplete: () => {
+                    makeTilesDraggable();
+                }
+            });
+
+            updateStatus(`Added tile: ${randomLetter}`);
+        }
+
+        function removeLastTile() {
+            if (currentTiles.length <= 1) {
+                updateStatus('Minimum tiles reached!');
+                return;
+            }
+
+            const rack = document.getElementById('tile-rack');
+            const lastTile = rack.lastChild;
+
+            // Animate exit
+            gsap.to(lastTile, {
+                scale: 0,
+                rotation: -360,
+                opacity: 0,
+                duration: 0.3,
+                ease: "power2.in",
+                onComplete: () => {
+                    currentTiles.pop();
+                    rack.removeChild(lastTile);
+                    makeTilesDraggable();
+                }
+            });
+
+            updateStatus('Removed last tile');
+        }
+
+        function togglePhysics() {
+            physicsEnabled = !physicsEnabled;
+            const btn = document.getElementById('physics-btn');
+            btn.textContent = `🎯 Physics: ${physicsEnabled ? 'ON' : 'OFF'}`;
+
+            const modeText = document.getElementById('mode-text');
+            modeText.textContent = physicsEnabled ? 'Sortable with Momentum' : 'Simple Drag & Drop';
+
+            makeTilesDraggable();
+            updateStatus(`Physics ${physicsEnabled ? 'enabled' : 'disabled'}`);
+        }
+
+        function updateStatus(message) {
+            const status = document.getElementById('status');
+
+            // Animate status change
+            gsap.to(status, {
+                opacity: 0,
+                duration: 0.1,
+                onComplete: () => {
+                    status.textContent = message;
+                    gsap.to(status, {
+                        opacity: 1,
+                        duration: 0.1
+                    });
+                }
+            });
+
+            // Reset after delay
+            setTimeout(() => {
+                gsap.to(status, {
+                    opacity: 0,
+                    duration: 0.1,
+                    onComplete: () => {
+                        status.textContent = 'Ready - Drag tiles to reorder';
+                        gsap.to(status, {
+                            opacity: 1,
+                            duration: 0.1
+                        });
+                    }
+                });
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

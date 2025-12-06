@@ -1,0 +1,149 @@
+{
+  "name": "high-score-grandpa-129pts",
+  "description": "Game from October 20 - 129 points",
+  "source": "https://letters.wiki/?g=IR4MKWILLFEE0qepRsnicUOc2scaiPpBUpNU5qA",
+  "metadata": {
+    "seed": "20251020",
+    "startingWord": "GRANDPA",
+    "dateStr": "October 20",
+    "extractedAt": "2025-10-20T21:44:12.399Z"
+  },
+  "expectedOutcomes": {
+    "turnScores": [
+      22,
+      18,
+      30,
+      31,
+      28
+    ],
+    "finalScore": 129,
+    "turnsCompleted": 5,
+    "gameCompleted": true
+  },
+  "moves": [
+    {
+      "turn": 1,
+      "tiles": [
+        {
+          "row": 5,
+          "col": 3,
+          "letter": "B"
+        },
+        {
+          "row": 5,
+          "col": 4,
+          "letter": "O"
+        },
+        {
+          "row": 5,
+          "col": 5,
+          "letter": "O"
+        }
+      ],
+      "expectedScore": 22
+    },
+    {
+      "turn": 2,
+      "tiles": [
+        {
+          "row": 3,
+          "col": 7,
+          "letter": "V"
+        },
+        {
+          "row": 5,
+          "col": 7,
+          "letter": "L"
+        },
+        {
+          "row": 6,
+          "col": 7,
+          "letter": "I"
+        },
+        {
+          "row": 7,
+          "col": 7,
+          "letter": "D"
+        }
+      ],
+      "expectedScore": 18
+    },
+    {
+      "turn": 3,
+      "tiles": [
+        {
+          "row": 6,
+          "col": 6,
+          "letter": "H"
+        },
+        {
+          "row": 7,
+          "col": 6,
+          "letter": "A"
+        },
+        {
+          "row": 8,
+          "col": 6,
+          "letter": "E"
+        }
+      ],
+      "expectedScore": 30
+    },
+    {
+      "turn": 4,
+      "tiles": [
+        {
+          "row": 4,
+          "col": 8,
+          "letter": "S"
+        },
+        {
+          "row": 5,
+          "col": 8,
+          "letter": "I"
+        },
+        {
+          "row": 6,
+          "col": 8,
+          "letter": "P"
+        }
+      ],
+      "expectedScore": 31
+    },
+    {
+      "turn": 5,
+      "tiles": [
+        {
+          "row": 1,
+          "col": 1,
+          "letter": "Z"
+        },
+        {
+          "row": 2,
+          "col": 1,
+          "letter": "I"
+        },
+        {
+          "row": 3,
+          "col": 1,
+          "letter": "N"
+        }
+      ],
+      "expectedScore": 28
+    }
+  ],
+  "testValidations": {
+    "wordValidation": {
+      "description": "All words formed should be valid"
+    },
+    "scoringValidation": {
+      "description": "Scoring must match expected values for each turn"
+    },
+    "gameCompletionValidation": {
+      "description": "Game completes successfully after 5 turns"
+    },
+    "shareUrlValidation": {
+      "description": "Share URL generates correctly and round-trip matches original"
+    }
+  }
+}

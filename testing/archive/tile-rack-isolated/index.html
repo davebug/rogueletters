@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tile Rack Test - Drag/Drop & Tap/Swap</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Tile Rack Test Environment</h1>
+
+        <div class="controls">
+            <button id="shuffle-btn">🔀 Shuffle</button>
+            <button id="reset-btn">🔄 Reset</button>
+            <button id="mode-toggle">Mode: Drag & Drop</button>
+        </div>
+
+        <div class="status" id="status">
+            <span id="status-text">Ready - Drag tiles or tap to select</span>
+        </div>
+
+        <div id="tile-rack" class="tile-rack">
+            <!-- Tiles will be added here dynamically -->
+        </div>
+
+        <div class="debug-info">
+            <h3>Debug Info:</h3>
+            <div id="debug-output">
+                <p>Mode: <span id="debug-mode">Both</span></p>
+                <p>Selected: <span id="debug-selected">None</span></p>
+                <p>Last action: <span id="debug-action">None</span></p>
+                <p>Touch/Mouse: <span id="debug-input">-</span></p>
+                <p>Tiles: <span id="debug-tiles">-</span></p>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <ul>
+                <li><strong>Drag & Drop:</strong> Press and drag tiles to reorder</li>
+                <li><strong>Tap to Swap:</strong> Tap one tile, then tap another to swap</li>
+                <li><strong>Desktop:</strong> Click and drag or click to select</li>
+                <li><strong>Mobile:</strong> Touch and drag or tap to select</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- SortableJS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+    <script src="script.js"></script>
+</body>
+</html>
