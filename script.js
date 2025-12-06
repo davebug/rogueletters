@@ -28,6 +28,19 @@ let gameState = {
     isNewHighScore: false  // Track if player got a new high score
 };
 
+// Run state for roguelike mode
+let runState = {
+    isRunMode: false,
+    round: 1,
+    maxRounds: 3,
+    targetScore: 80,
+    roundTargets: [80, 120, 180],
+    runScore: 0,
+    roundScores: [],
+    runStartTime: null,
+    runSeed: null
+};
+
 // Board configuration
 const BOARD_SIZE = 9;
 const CENTER_POSITION = 4;
