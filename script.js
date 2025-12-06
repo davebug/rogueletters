@@ -203,23 +203,26 @@ const runManager = {
         const progressSet = document.getElementById('progress-set');
         const progressRound = document.getElementById('progress-round');
         const progressTurn = document.getElementById('progress-turn');
-        const targetInfo = document.getElementById('target-info');
+        const subtitle = document.getElementById('subtitle');
 
         if (runState.isRunMode) {
             if (progressTurn) progressTurn.textContent = `Turn ${gameState.currentTurn}`;
             if (progressRound) progressRound.textContent = `Round ${runState.round}`;
             if (progressSet) progressSet.textContent = `Set ${runState.set}`;
 
-            // Update target display with points to go or surplus
-            if (targetInfo) {
-                const currentScore = gameState.score || 0;
-                const remaining = runState.targetScore - currentScore;
+            const currentScore = gameState.score || 0;
+            const remaining = runState.targetScore - currentScore;
+            const turnsLeft = (gameState.maxTurns || 5) - (gameState.currentTurn || 1) + 1;
+
+            // Update subtitle based on whether target is met
+            if (subtitle) {
                 if (remaining > 0) {
-                    targetInfo.innerHTML = `<span id="target-score">${remaining}</span> to go`;
-                } else if (remaining === 0) {
-                    targetInfo.innerHTML = `<span id="target-score" class="target-met">Target reached!</span>`;
+                    // Target not yet met
+                    subtitle.innerHTML = `Score <span id="subtitle-target">${remaining}</span> in <span id="subtitle-turns">${turnsLeft}</span> turn${turnsLeft !== 1 ? 's' : ''} to advance`;
                 } else {
-                    targetInfo.innerHTML = `<span id="target-score" class="target-surplus">+${Math.abs(remaining)}</span> surplus`;
+                    // Target met - show surplus message
+                    const surplus = Math.abs(remaining);
+                    subtitle.innerHTML = `<span class="target-met">+${surplus} surplus</span> — keep playing for bonuses!`;
                 }
             }
         }
@@ -1364,10 +1367,11 @@ async function initializeGame() {
 
             await showBasicPopupWithHighScore();
 
-            const shareIcon = document.getElementById('shareIcon');
-            if (shareIcon) {
-                shareIcon.classList.remove('hidden');
-            }
+            // Share buttons hidden for RogueLetters - uncomment when sharing is implemented
+            // const shareIcon = document.getElementById('shareIcon');
+            // if (shareIcon) {
+            //     shareIcon.classList.remove('hidden');
+            // }
         }
     } else {
         // Fetch game data from server (needed for fresh load or after startOver)
@@ -3139,11 +3143,11 @@ async function endGame() {
         localStorage.setItem('letters_completed_today', gameState.seed);
     }
 
-    // Show share icon
-    const shareIcon = document.getElementById('shareIcon');
-    if (shareIcon) {
-        shareIcon.classList.remove('hidden');
-    }
+    // Share buttons hidden for RogueLetters - uncomment when sharing is implemented
+    // const shareIcon = document.getElementById('shareIcon');
+    // if (shareIcon) {
+    //     shareIcon.classList.remove('hidden');
+    // }
 
     // Track game completion
     const totalWords = gameState.turnHistory.filter(turn => turn && turn.tiles && turn.tiles.length > 0).length;

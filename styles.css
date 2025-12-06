@@ -1,20 +1,36 @@
-/* Daily Letters - Styles */
+/* RogueLetters - Dark Roguelike Theme */
 
 :root {
-    --primary-color: #6b5637;  /* Dark wood */
-    --secondary-color: #d4a574;  /* Tile wood color */
-    --success-color: #27ae60;
-    --warning-color: #f39c12;
-    --danger-color: #e74c3c;
-    --board-bg: #8b6f47;
-    --board-square: #faf6e8;  /* Lighter board squares */
-    --tile-bg: #d4a574;  /* Darker wood color for tiles */
-    --tile-border: #8b6347;
-    --multiplier-2w: #ffb3ba;
-    --multiplier-3w: #ff6b6b;
-    --multiplier-2l: #bae1ff;
-    --multiplier-3l: #4a90e2;
-    --center-star: #ffd700;
+    /* Dark roguelike color palette */
+    --primary-color: #dc2626;     /* Red - matches TW squares */
+    --secondary-color: #8b7355;   /* Muted bronze */
+    --success-color: #4ade80;     /* Bright green */
+    --warning-color: #dc2626;     /* Red */
+    --danger-color: #ef4444;      /* Red */
+
+    /* Board colors */
+    --board-bg: #1a1a2e;          /* Deep dark purple */
+    --board-square: #252538;      /* Dark square */
+    --board-border: #3d3d5c;      /* Board edge */
+
+    /* Tile colors - stone/dungeon feel */
+    --tile-bg: #4a4a6a;           /* Stone gray-purple */
+    --tile-border: #6a6a8a;       /* Lighter stone edge */
+    --tile-text: #f0e6d3;         /* Warm off-white */
+
+    /* Multiplier colors - more vibrant for dark mode */
+    --multiplier-2w: #9333ea;     /* Purple for 2x word */
+    --multiplier-3w: #dc2626;     /* Red for 3x word */
+    --multiplier-2l: #0891b2;     /* Cyan for 2x letter */
+    --multiplier-3l: #2563eb;     /* Blue for 3x letter */
+    --center-star: #dc2626;       /* Red center */
+
+    /* Page colors */
+    --bg-color: #0f0f1a;          /* Very dark background */
+    --bg-secondary: #1a1a2e;      /* Slightly lighter bg */
+    --text-color: #e8e8e8;        /* Light text */
+    --text-muted: #9ca3af;        /* Muted text */
+    --text-accent: #dc2626;       /* Red accent text */
 }
 
 * {
@@ -33,15 +49,15 @@ html, body {
 
 body {
     font-family: Helvetica, Arial, sans-serif;
-    background: #faf6e8; /* Board vanilla/cream color */
-    color: #4a3c28; /* Dark brown text */
+    background: var(--bg-color);
+    color: var(--text-color);
     margin: 0;
     padding: 0;
 }
 
 header {
     position: fixed;
-    background: #faf6e8; /* Solid cream background - no gradient */
+    background: var(--bg-color);
     top: 0;
     left: 0;
     width: 100%;
@@ -86,7 +102,7 @@ h1 {
 }
 
 a, .accent {
-    color: #8b6f47; /* Wood color instead of #333344 */
+    color: var(--multiplier-3w); /* Red to match Triple Word squares */
     text-decoration: none;
 }
 
@@ -97,14 +113,14 @@ a, .accent {
     align-items: center;
     gap: 8px;
     margin-top: -22px;
-    color: #4a3c28;
+    color: var(--text-color);
     font-size: 18px;
     font-weight: bold;
     letter-spacing: 0.5px;
 }
 
 #game-progress .progress-sep {
-    color: #8b6f47;
+    color: var(--text-muted);
     font-weight: normal;
 }
 
@@ -117,7 +133,7 @@ a, .accent {
 #target-info {
     display: flex;
     justify-content: center;
-    color: #6b5637;
+    color: var(--text-muted);
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 1.2px;
@@ -126,7 +142,7 @@ a, .accent {
 
 #target-score {
     font-weight: bold;
-    color: #4a3c28;
+    color: var(--text-color);
 }
 
 #target-score.target-met {
@@ -137,22 +153,42 @@ a, .accent {
     color: var(--success-color);
 }
 
+#subtitle {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-top: 4px;
+    padding: 0 10px;
+}
+
+#subtitle .target-surplus,
+#subtitle .target-met {
+    color: var(--success-color);
+    font-weight: bold;
+}
+
+#subtitle-target,
+#subtitle-turns {
+    font-weight: bold;
+    color: var(--text-color);
+}
+
 #status {
     font-size: 13px;
     text-align: center;
     margin-top: 1px;
     margin-bottom: 1px;
     min-height: 0; /* Reduced from 20px to eliminate extra space when empty */
-    color: #6b5637;
+    color: var(--text-muted);
 }
 
 #status strong {
-    color: #4a3c28; /* Dark brown instead of white */
+    color: var(--text-color);
 }
 
 footer {
     position: fixed;
-    background: #faf6e8; /* Solid cream background - no gradient */
+    background: var(--bg-color);
     bottom: 0;
     left: 0;
     width: 100%;
@@ -160,6 +196,7 @@ footer {
     text-align: center;
     font-size: 12px;
     padding-top: 2px; /* Footer top starts 2px above feedback squares */
+    color: var(--text-muted);
 }
 
 footer p {
@@ -200,9 +237,9 @@ main {
     justify-content: space-between;
     align-items: center;
     padding: 8px;
-    background: transparent;
+    background: var(--bg-secondary);
     border-radius: 4px;
-    border-left: 3px solid #d4a574;
+    border-left: 3px solid var(--multiplier-3w);
 }
 
 .word-item.invalid-word {
@@ -213,17 +250,17 @@ main {
 
 .word-text {
     font-weight: 600;
-    color: #4a3c28;
+    color: var(--text-color);
     text-transform: uppercase;
     letter-spacing: 1px;
 }
 
 .invalid-word .word-text {
-    color: #c0392b;
+    color: var(--danger-color);
 }
 
 .word-score {
-    color: #8b6f47;
+    color: var(--tile-text);
     font-size: 14px;
     font-weight: bold;
 }
@@ -269,12 +306,12 @@ main {
 }
 
 .total-score .label {
-    color: #4a3c28;
+    color: var(--text-color);
     font-size: 16px;
 }
 
 .total-score .value {
-    color: #4a3c28;
+    color: var(--text-color);
     font-size: 18px;
 }
 
@@ -309,9 +346,9 @@ main {
     gap: 0;
     background: var(--board-bg);
     padding: 0;
-    border: 2px solid #8b6f47;
+    border: 2px solid var(--board-border);
     border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     width: fit-content;
     margin: 0 auto;
 }
@@ -320,13 +357,14 @@ main {
     width: var(--actual-cell-size);
     height: var(--actual-cell-size);
     background: var(--board-square);
-    border: 1px solid #d4c5a9;
+    border: 1px solid var(--board-bg);
     display: flex;
     justify-content: center;
     align-items: center;
     font-size: calc(var(--actual-cell-size) * 0.4);
     font-weight: bold;
     cursor: pointer;
+    color: var(--text-muted);
     position: relative;
     transition: all 0.2s;
 }
@@ -392,7 +430,7 @@ main {
 .board-cell.center:not(.occupied)::after {
     content: "★";
     position: absolute;
-    color: rgba(0, 0, 0, 0.3);
+    color: rgba(251, 191, 36, 0.6);
     font-size: 20px;
 }
 
@@ -401,35 +439,22 @@ main {
     position: absolute;
     bottom: 1px;
     right: 1px;
-    opacity: 0.7;
+    color: var(--tile-text);
+    opacity: 0.9;
 }
 
-/* Tiles */
+/* Tiles - Stone/dungeon feel */
 .tile {
     width: 30px;
     height: 30px;
     background: var(--tile-bg);
     user-select: none;
     background-image:
-        repeating-linear-gradient(
-            90deg,
-            transparent,
-            transparent 2px,
-            rgba(139, 99, 71, 0.1) 2px,
-            rgba(139, 99, 71, 0.1) 4px
-        ),
-        repeating-linear-gradient(
-            0deg,
-            transparent,
-            transparent 8px,
-            rgba(101, 67, 33, 0.05) 8px,
-            rgba(101, 67, 33, 0.05) 10px
-        ),
         linear-gradient(
-            180deg,
-            rgba(160, 82, 45, 0.1) 0%,
+            135deg,
+            rgba(255, 255, 255, 0.1) 0%,
             transparent 50%,
-            rgba(101, 67, 33, 0.1) 100%
+            rgba(0, 0, 0, 0.2) 100%
         );
     border: 2px solid var(--tile-border);
     border-radius: 4px;
@@ -441,9 +466,10 @@ main {
     cursor: move;
     position: relative;
     transition: all 0.2s;
+    color: var(--tile-text);
     box-shadow:
-        inset 0 1px 2px rgba(255, 255, 255, 0.3),
-        0 2px 4px rgba(0, 0, 0, 0.2);
+        inset 0 1px 2px rgba(255, 255, 255, 0.15),
+        0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
 .tile:hover {
@@ -454,26 +480,19 @@ main {
 }
 
 .tile.selected {
-    background: #ffd700;
+    background: var(--primary-color);
     background-image:
-        repeating-linear-gradient(
-            90deg,
-            transparent,
-            transparent 2px,
-            rgba(139, 99, 71, 0.15) 2px,
-            rgba(139, 99, 71, 0.15) 4px
-        ),
-        repeating-linear-gradient(
-            0deg,
-            transparent,
-            transparent 8px,
-            rgba(101, 67, 33, 0.08) 8px,
-            rgba(101, 67, 33, 0.08) 10px
+        linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.2) 0%,
+            transparent 50%,
+            rgba(0, 0, 0, 0.1) 100%
         );
-    border-color: #daa520;
+    border-color: #ef4444;
+    color: #1a1a2e;
     box-shadow:
-        inset 0 1px 2px rgba(255, 255, 255, 0.5),
-        0 2px 6px rgba(218, 165, 32, 0.4);
+        inset 0 1px 2px rgba(255, 255, 255, 0.3),
+        0 2px 8px rgba(220, 38, 38, 0.5);
 }
 
 .tile .tile-letter {
@@ -552,15 +571,15 @@ main {
             to bottom,
             transparent 0%,      /* Transparent for tile tops */
             transparent 50%,     /* Keep transparent until halfway */
-            #d4c4a0 51%,        /* Start wood sharply at bottom half */
-            #c8b896 58%,        /* Light wood back wall */
-            #baa782 65%,        /* Transitioning forward */
-            #a08560 72%,        /* Mid-tone */
-            #8b6f47 80%,        /* Getting darker toward front */
-            #7a5e3a 87%,        /* Front area darker */
-            #6b5637 92%,        /* Front ledge shadow */
-            #5c4a30 96%,        /* Deep shadow at base */
-            #7a5e3a 100%        /* Bottom edge */
+            #3d3d5c 51%,        /* Start stone sharply at bottom half */
+            #353550 58%,        /* Dark stone back wall */
+            #2d2d45 65%,        /* Transitioning forward */
+            #252538 72%,        /* Mid-tone */
+            #1e1e2e 80%,        /* Getting darker toward front */
+            #1a1a28 87%,        /* Front area darker */
+            #151520 92%,        /* Front ledge shadow */
+            #101018 96%,        /* Deep shadow at base */
+            #1a1a28 100%        /* Bottom edge */
         );
 
     /* No box-shadow on main container */
@@ -679,9 +698,9 @@ main {
     width: 36px;
     height: 36px;
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid var(--tile-border);
+    background: var(--board-square);
     color: var(--text-color);
+    border: 1px solid var(--tile-border);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -803,8 +822,8 @@ main {
 #potential-words .word-item {
     padding: 4px 8px;
     border-radius: 12px;
-    background: rgba(212, 165, 116, 0.2);
-    border: 1px solid #d4a574;
+    background: var(--board-square);
+    border: 1px solid var(--tile-border);
     display: inline-flex;
     gap: 4px;
     align-items: center;
@@ -812,28 +831,28 @@ main {
 }
 
 #potential-words .word-item.invalid-word {
-    border: 2px solid #e74c3c;
+    border: 2px solid var(--danger-color);
     background: rgba(231, 76, 60, 0.15);
 }
 
 #potential-words .word-text {
     font-weight: 600;
-    color: #4a3c28;
+    color: var(--tile-text);
     text-transform: uppercase;
 }
 
 #potential-words .invalid-word .word-text {
-    color: #c0392b;
+    color: var(--danger-color);
 }
 
 #potential-words .word-score {
-    color: #8b6f47;
+    color: var(--tile-text);
     font-size: 11px;
 }
 
 #potential-words .total-score {
     font-weight: bold;
-    color: #4a3c28;
+    color: var(--tile-text);
     padding: 4px 8px;
     background: rgba(39, 174, 96, 0.3);
     border-radius: 12px;
@@ -1078,8 +1097,8 @@ main {
 .loading-spinner {
     width: 50px;
     height: 50px;
-    border: 5px solid #f3f3f3;
-    border-top: 5px solid var(--secondary-color);
+    border: 5px solid var(--board-border);
+    border-top: 5px solid var(--primary-color);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -1099,9 +1118,9 @@ main {
 .word-preview {
     margin: 15px 20px;
     padding: 12px;
-    background: rgba(250, 246, 232, 0.9); /* Board square color with opacity */
+    background: var(--bg-secondary);
     border-radius: 6px;
-    border: 2px solid var(--secondary-color);
+    border: 2px solid var(--board-border);
     display: none;
 }
 
@@ -1172,11 +1191,13 @@ main {
 }
 
 .modal-content {
-    background: white;
+    background: var(--bg-secondary);
     padding: 30px;
     border-radius: 8px;
     min-width: 300px;
     text-align: center;
+    border: 2px solid var(--board-border);
+    color: var(--text-color);
 }
 
 .modal-content h3 {
@@ -1274,26 +1295,26 @@ main {
 .feedback-square {
     width: 30px;
     height: 30px;
-    background-color: #d4a574; /* Wood color instead of #708090 */
+    background-color: var(--tile-bg);
     border-radius: 50%;
-    border: 2px solid #8b6f47; /* Wood border instead of #333344 */
+    border: 2px solid var(--tile-border);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 12px;
     font-weight: bold;
-    color: #4a3c28;
+    color: var(--tile-text);
     position: relative;
     transition: border-color 0.3s ease;
 }
 
 .feedback-square.current-turn {
-    border: 2px solid #e74c3c; /* Red outline for current turn - matches Triple Word score */
-    box-shadow: 0 0 4px rgba(231, 76, 60, 0.3);
+    border: 2px solid var(--multiplier-3w);
+    box-shadow: 0 0 6px rgba(220, 38, 38, 0.5);
 }
 
 .feedback-square.completed {
-    background-color: #f5e6d3; /* Default - will be overridden by score classes */
+    background-color: var(--board-square);
 }
 
 /* Score-based color coding for feedback squares */
@@ -1308,8 +1329,8 @@ main {
 }
 
 .feedback-square.score-good {
-    background-color: #fbb021; /* 20-29 points - yellow/gold */
-    color: #333;
+    background-color: #dc2626; /* 20-29 points - red */
+    color: white;
 }
 
 .feedback-square.score-great {
@@ -1366,18 +1387,18 @@ main {
     margin-left: 8px;
     font-size: 20px;
     font-weight: bold;
-    color: #4a3c28;
+    color: var(--tile-text);
     transition: opacity 0.3s ease;
 }
 
 .total-score-display::before {
     content: "=";
     margin-right: 8px;
-    color: #8b6f47;
+    color: var(--primary-color);
 }
 
 #shareIcon {
-    background-color: #8b6f47; /* Wood color instead of #333344 */
+    background-color: var(--primary-color);
     padding: 4px;
     border-radius: 50%;
     text-align: center;
@@ -1424,11 +1445,11 @@ main {
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 999;
-    background-color: #f8f6f0; /* WikiLetters cream background */
-    border: 2px solid #8b6f47; /* WikiLetters brown border */
+    background-color: var(--bg-secondary);
+    border: 2px solid var(--board-border);
     border-radius: 8px;
     padding: 10px;
-    box-shadow: 0 12px 16px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
     min-width: 280px;
     text-align: center;
 }
@@ -1442,11 +1463,11 @@ main {
     position: relative;
 }
 
-/* Title - matches WikiDates h2 */
+/* Title */
 #game-popup h2 {
     margin-top: 0;
     margin-bottom: 8px;
-    color: #4a3c28; /* WikiLetters dark brown */
+    color: var(--text-color);
     font-size: 22px;
     font-weight: 600;
 }
@@ -1457,7 +1478,7 @@ main {
 }
 
 #popup-score-label {
-    color: #6b5637; /* WikiLetters medium brown */
+    color: var(--text-muted);
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 1.5px;
@@ -1465,7 +1486,7 @@ main {
 }
 
 #popup-score-value {
-    color: #4a3c28; /* WikiLetters dark brown */
+    color: var(--text-accent);
     font-size: 36px;
     font-weight: bold;
     margin: 3px 0;
@@ -1493,9 +1514,9 @@ main {
 }
 
 .popup-btn-primary {
-    background-color: #d4c5a9; /* WikiLetters tile color */
-    color: #4a3c28;
-    border: 1px solid #8b6f47;
+    background-color: var(--primary-color);
+    color: var(--bg-color);
+    border: 1px solid var(--primary-color);
     padding: 10px 20px;
     border-radius: 4px;
     font-size: 16px;
@@ -1506,16 +1527,16 @@ main {
 }
 
 .popup-btn-primary:hover {
-    background-color: #c4b599;
+    background-color: #ef4444;
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
 }
 
-/* Secondary button - Lighter style for Share Board */
+/* Secondary button */
 .popup-btn-secondary {
-    background-color: #f5f0e8;
-    color: #6b5637;
-    border: 1px solid #c4b599;
+    background-color: var(--board-square);
+    color: var(--text-color);
+    border: 1px solid var(--board-border);
     padding: 10px 20px;
     border-radius: 4px;
     font-size: 14px;
@@ -1526,18 +1547,18 @@ main {
 }
 
 .popup-btn-secondary:hover {
-    background-color: #e5e0d8;
+    background-color: var(--board-border);
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-/* Close button - matches WikiDates closePopup */
+/* Close button */
 .popup-close-btn {
     position: absolute;
     top: -5px;
     right: -5px;
     background: transparent;
-    color: #8b6f47;
+    color: var(--text-muted);
     border: none;
     font-size: 24px;
     font-weight: bold;
@@ -1566,11 +1587,11 @@ main {
     align-items: center;
     padding: 12px 8px;
     text-decoration: none;
-    color: #8b6f47;
-    background: #f9f9f9;
+    color: var(--text-muted);
+    background: var(--board-square);
     transition: all 0.2s ease;
     position: relative;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--board-border);
     border-right: none;
 }
 
@@ -1582,19 +1603,19 @@ main {
 .game-tab:last-child {
     border-top-right-radius: 8px;
     border-bottom-right-radius: 8px;
-    border-right: 1px solid #e0e0e0;
+    border-right: 1px solid var(--board-border);
 }
 
 .game-tab-active {
-    background: #d4c5a9;
-    color: #4a3c28;
+    background: var(--primary-color);
+    color: var(--bg-color);
     font-weight: 600;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
     cursor: default;
 }
 
 .game-tab:not(.game-tab-active):hover {
-    background: #f0f0f0;
+    background: var(--board-border);
     transform: translateY(-1px);
 }
 
@@ -1620,7 +1641,7 @@ main {
 }
 
 #high-score-label {
-    color: #6b5637; /* WikiLetters medium brown - matches YOUR SCORE */
+    color: var(--text-muted);
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 1.5px;
@@ -1704,16 +1725,16 @@ main {
     display: none;
 }
 
-/* Run Popup Content - matches #game-popup brand styling */
+/* Run Popup Content */
 #round-complete-popup .popup-content,
 #run-failed-popup .popup-content,
 #run-victory-popup .popup-content,
 #start-run-popup .popup-content {
-    background-color: #f8f6f0; /* WikiLetters cream background */
-    border: 2px solid #8b6f47; /* WikiLetters brown border */
+    background-color: var(--bg-secondary);
+    border: 2px solid var(--board-border);
     border-radius: 8px;
     padding: 20px 30px;
-    box-shadow: 0 12px 16px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
     max-width: 340px;
     width: 90%;
     text-align: center;
@@ -1727,7 +1748,7 @@ main {
 #start-run-popup h2 {
     margin-top: 0;
     margin-bottom: 12px;
-    color: #4a3c28; /* WikiLetters dark brown */
+    color: var(--text-color);
     font-size: 24px;
     font-weight: 600;
 }
@@ -1737,7 +1758,7 @@ main {
 #run-failed-popup p,
 #run-victory-popup p,
 #start-run-popup p {
-    color: #5a4a3a;
+    color: var(--text-muted);
     font-size: 15px;
     margin: 10px 0;
 }
@@ -1746,9 +1767,9 @@ main {
 .round-result {
     margin: 20px 0;
     padding: 15px;
-    background: rgba(139, 111, 71, 0.1); /* Light brown tint */
+    background: rgba(0, 0, 0, 0.2);
     border-radius: 8px;
-    border: 1px solid rgba(139, 111, 71, 0.2);
+    border: 1px solid var(--board-border);
 }
 
 .result-row {
@@ -1756,7 +1777,7 @@ main {
     justify-content: space-between;
     padding: 8px 0;
     font-size: 18px;
-    color: #4a3c28;
+    color: var(--text-color);
 }
 
 .result-row.surplus span:last-child {
@@ -1780,17 +1801,17 @@ main {
 .targets-preview {
     margin: 20px 0;
     padding: 15px;
-    background: rgba(139, 111, 71, 0.1); /* Light brown tint */
+    background: rgba(0, 0, 0, 0.2);
     border-radius: 8px;
-    border: 1px solid rgba(139, 111, 71, 0.2);
+    border: 1px solid var(--board-border);
     text-align: left;
 }
 
 .target-item {
     padding: 8px 0;
     font-size: 16px;
-    color: #4a3c28;
-    border-bottom: 1px solid rgba(139, 111, 71, 0.15);
+    color: var(--text-color);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .target-item:last-child {
@@ -1801,7 +1822,7 @@ main {
 #victory-rounds-summary {
     margin: 15px 0;
     font-size: 14px;
-    color: #5a4a3a;
+    color: var(--text-muted);
 }
 
 /* Progress bar for target */

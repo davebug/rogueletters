@@ -13,7 +13,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui, viewport-fit=cover">
     <title>RogueLetters - A Daily Word Game</title>
-    <link rel="stylesheet" href="./styles.css?v=11.2">
+    <link rel="stylesheet" href="./styles.css?v=12.6">
     <meta name="description" content="Play RogueLetters - a daily word puzzle game. Build words on a letter-tile board to maximize your score!">
 
 
@@ -38,7 +38,7 @@
 		<span class="progress-sep">|</span>
 		<span id="progress-set">Set 1</span>
 	</div>
-	<div id="target-info"><span id="target-score">40</span> to go</div>
+	<div id="subtitle">Score <span id="subtitle-target">40</span> in <span id="subtitle-turns">5</span> turns to advance</div>
 	<div id="status"></div>
 	</header>
 
@@ -102,7 +102,7 @@
                     <input type="text" id="player-name" placeholder="AAA" maxlength="3" style="text-transform: uppercase; text-align: center; width: 80px; font-size: 24px; font-weight: bold;">
                     <button id="submit-score" class="btn btn-primary">Submit Score</button>
                 </div>
-                <button id="share-game" class="btn btn-secondary">Share</button>
+                <button id="share-game" class="btn btn-secondary" style="display: none;">Share</button>
                 <button id="new-game" class="btn btn-primary">Play Tomorrow's Game</button>
             </div>
 
@@ -180,7 +180,7 @@
                     </div>
                 </div>
 
-                <div id="popup-buttons">
+                <div id="popup-buttons" style="display: none;">
                     <button id="share-popup-btn" class="popup-btn popup-btn-primary">Share Score</button>
                     <button id="share-board-btn" class="popup-btn popup-btn-secondary" disabled>Preparing...</button>
                 </div>
@@ -282,6 +282,6 @@
     <!-- LZ-String compression library for shareable URLs -->
     <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 
-    <script src="./script.js?v=12.0"></script>
+    <script src="./script.js?v=12.3"></script>
 </body>
 </html>
