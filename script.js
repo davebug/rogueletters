@@ -1193,18 +1193,22 @@ async function initializeGame() {
     // Check for existing run or show start screen
     runManager.loadRunState();
 
+    // Check if we have a seed parameter (test mode or direct link) - skip run mode popup
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasSeedParam = urlParams.has('seed') || urlParams.has('g') || urlParams.has('w'); // 'g' is legacy share, 'w' is sorted share
+
     if (runState.isRunMode) {
         // Resume existing run
         runManager.updateRunUI();
-    } else {
-        // Show start run popup after a brief delay
+    } else if (!hasSeedParam) {
+        // Only show start run popup if no seed/share URL parameter
+        // This allows tests and direct links to work without dismissing popup
         setTimeout(() => {
             runManager.showStartRun();
         }, 500);
     }
 
-    // Get or generate seed from URL
-    const urlParams = new URLSearchParams(window.location.search);
+    // Get or generate seed from URL (moved up for hasSeedParam check)
 
     // Phase 3: Check for compressed game share (?g= legacy or ?w= sorted)
     const legacyParam = urlParams.get('g');  // V3 original (no sorting)
