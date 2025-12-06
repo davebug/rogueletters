@@ -18,14 +18,14 @@ test('Capture V3 encoding timing from existing scenario', async ({ page }) => {
   const scenario = JSON.parse(fs.readFileSync(scenarioFile, 'utf8'));
 
   // Extract expected moves from share URL
-  await page.goto(scenario.source.replace('https://letters.wiki', 'http://localhost:8085'));
+  await page.goto(scenario.source.replace('https://letters.wiki', 'http://localhost:8086'));
   await page.waitForSelector('#game-board', { timeout: 10000 });
   await page.waitForTimeout(1500);
 
   const expectedMoves = await page.evaluate(() => window.gameState.turnHistory);
 
   // Start fresh game
-  await page.goto(`http://localhost:8085/?seed=${scenario.metadata.seed}`);
+  await page.goto(`http://localhost:8086/?seed=${scenario.metadata.seed}`);
   await page.waitForSelector('#game-board', { timeout: 15000 });
   await page.waitForSelector('#loading-overlay', { state: 'hidden', timeout: 15000 });
   await page.waitForFunction(() => window.gameState && window.gameState.rackTiles && window.gameState.rackTiles.length > 0, { timeout: 15000 });

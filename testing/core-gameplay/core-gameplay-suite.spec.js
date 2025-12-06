@@ -39,7 +39,7 @@ test.describe('Core Gameplay Validator', () => {
 
       // 1. Extract expected moves from share URL
       console.log('\n[1/5] Loading share URL to extract expected moves...');
-      await page.goto(scenario.source.replace('https://letters.wiki', 'http://localhost:8085'));
+      await page.goto(scenario.source.replace('https://letters.wiki', 'http://localhost:8086'));
       await page.waitForSelector('#game-board', { timeout: 10000 });
       await page.waitForTimeout(1500);
 
@@ -50,7 +50,7 @@ test.describe('Core Gameplay Validator', () => {
 
       // 2. Start fresh game with same seed
       console.log('\n[2/5] Starting fresh game...');
-      await page.goto(`http://localhost:8085/?seed=${scenario.metadata.seed}`);
+      await page.goto(`http://localhost:8086/?seed=${scenario.metadata.seed}`);
       await page.waitForSelector('#game-board', { timeout: 15000 });
 
       // Wait for loading overlay to disappear
@@ -170,7 +170,7 @@ test.describe('Core Gameplay Validator', () => {
       console.log(`Share URL generated: ${finalState.preGeneratedShareURL.substring(0, 50)}...`);
 
       // Load the generated share URL and verify it matches
-      await page.goto(finalState.preGeneratedShareURL.replace('https://letters.wiki', 'http://localhost:8085'));
+      await page.goto(finalState.preGeneratedShareURL.replace('https://letters.wiki', 'http://localhost:8086'));
       await page.waitForSelector('#game-board', { timeout: 10000 });
       await page.waitForTimeout(1500);
 

@@ -23,7 +23,7 @@ async function extractScenario(shareUrl, scenarioName) {
 
   try {
     // Load the share URL (use localhost for testing)
-    const localUrl = shareUrl.replace('https://letters.wiki', 'http://localhost:8085');
+    const localUrl = shareUrl.replace('https://letters.wiki', 'http://localhost:8086');
     console.log(`Loading: ${localUrl}`);
 
     await page.goto(localUrl);

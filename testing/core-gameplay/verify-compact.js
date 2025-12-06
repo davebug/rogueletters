@@ -6,7 +6,7 @@ const { chromium } = require('playwright');
   
   const compactURL = 'https://letters.wiki/?g=IZanoT9KAFCyBKFNE4jmS5JvUALEhkoxDhEQ1YjMWaCxQWpQ0A';
   
-  await page.goto(compactURL.replace('https://letters.wiki', 'http://localhost:8085'));
+  await page.goto(compactURL.replace('https://letters.wiki', 'http://localhost:8086'));
   await page.waitForSelector('#game-board');
   await page.waitForTimeout(2000);
   

@@ -1,7 +1,7 @@
 const { test } = require('@playwright/test');
 
 test('Decode bloated URL to see what it contains', async ({ page }) => {
-  await page.goto('http://localhost:8085');
+  await page.goto('http://localhost:8086');
   await page.waitForSelector('#game-board');
 
   const analysis = await page.evaluate(() => {

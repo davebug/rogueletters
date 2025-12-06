@@ -14,7 +14,7 @@ const { chromium } = require('playwright');
   });
   
   // Start a fresh game instead
-  await page.goto('http://localhost:8085/?seed=20251017');
+  await page.goto('http://localhost:8086/?seed=20251017');
   
   // Wait for game to load
   await page.waitForSelector('#game-board', { timeout: 10000 });

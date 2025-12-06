@@ -3,7 +3,7 @@ const { test } = require('@playwright/test');
 test('Analyze user URL', async ({ page }) => {
   const userURL = 'https://letters.wiki/?g=N4IgJiBcIEwAwwKwEZUE4QBoQHcogGkAJAQQBkBJAMRKxABcoBtJgZk3ZABEtlM4AupjaYALNlqY+g4e0TYAsr35CRANmwBRZTKZwp2ACpYYK4Xz4gASibNNTlyad3tLAYVu75l7ZmeqNSxs-O319EF92XWlsAHksKNVnbAA5BNDMAA5sDzE7PmyIrHFdU0KyYrt2QuM83XFCgGVK6JCQWvldfVMQSU6ktt9+oRAAZ2ZWPhhAtDEAdik1AQBfIA';
 
-  await page.goto(userURL.replace('https://letters.wiki', 'http://localhost:8085'));
+  await page.goto(userURL.replace('https://letters.wiki', 'http://localhost:8086'));
   await page.waitForSelector('#game-board', { timeout: 10000 });
   await page.waitForTimeout(2000);
 

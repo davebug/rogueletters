@@ -19,7 +19,7 @@ Validates essential game mechanics by actually playing through complete games.
    ./letters_start.sh
    ```
 
-2. Verify the server is running at http://localhost:8085
+2. Verify the server is running at http://localhost:8086
 
 ### Running Tests
 
@@ -119,7 +119,7 @@ Game loaded with seed: 20251020
 
 ### "Server not running" errors
 - Ensure Docker container is running: `./letters_start.sh`
-- Check http://localhost:8085 loads in browser
+- Check http://localhost:8086 loads in browser
 
 ### "Could not find tile" errors
 - Scenario may not match the seed's tile distribution
@@ -132,7 +132,7 @@ Game loaded with seed: 20251020
 ## Implementation Notes
 
 - Uses Playwright for browser automation
-- Tests run against localhost:8085 (Docker)
+- Tests run against localhost:8086 (Docker)
 - Share URLs automatically converted from letters.wiki to localhost
 - Each test is fully independent (no shared state)
 - Scenarios extracted from real game playthroughs

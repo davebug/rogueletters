@@ -72,7 +72,7 @@ test.describe('Backward Compatibility - Share URLs', () => {
       console.log(`Format: ?${format}=`);
 
       // Load the URL (convert to localhost for testing)
-      const localURL = url.replace('https://letters.wiki', 'http://localhost:8085');
+      const localURL = url.replace('https://letters.wiki', 'http://localhost:8086');
       await page.goto(localURL);
 
       // Wait for game to load
@@ -116,7 +116,7 @@ test.describe('Backward Compatibility - Share URLs', () => {
       console.log(`Expected score: ${expectedScore}`);
 
       // Load the URL (convert to localhost for testing)
-      const localURL = url.replace('https://letters.wiki', 'http://localhost:8085');
+      const localURL = url.replace('https://letters.wiki', 'http://localhost:8086');
       await page.goto(localURL);
 
       // Wait for game to load
@@ -164,7 +164,7 @@ test.describe('Backward Compatibility - High Score Database', () => {
     console.log('\n=== Testing: High Score Database Links ===');
 
     // Get today's high score from API
-    const response = await page.request.get('http://localhost:8085/cgi-bin/get_high_score.py?date=20251122');
+    const response = await page.request.get('http://localhost:8086/cgi-bin/get_high_score.py?date=20251122');
     const data = await response.json();
 
     if (!data.success || !data.board_url) {
@@ -181,7 +181,7 @@ test.describe('Backward Compatibility - High Score Database', () => {
     expect(hasCorrectFormat).toBe(true);
 
     // Load the URL
-    const localURL = data.board_url.replace('https://letters.wiki', 'http://localhost:8085');
+    const localURL = data.board_url.replace('https://letters.wiki', 'http://localhost:8086');
     await page.goto(localURL);
 
     // Wait for game to load
@@ -212,7 +212,7 @@ test.describe('Backward Compatibility - High Score Database', () => {
     console.log('\n=== Testing: Yesterday\'s High Score Link ===');
 
     // Get yesterday's high score from API
-    const response = await page.request.get('http://localhost:8085/cgi-bin/get_high_score.py?date=20251121');
+    const response = await page.request.get('http://localhost:8086/cgi-bin/get_high_score.py?date=20251121');
     const data = await response.json();
 
     if (!data.success || !data.board_url) {
@@ -225,7 +225,7 @@ test.describe('Backward Compatibility - High Score Database', () => {
     console.log(`Score: ${data.score}`);
 
     // Load the URL
-    const localURL = data.board_url.replace('https://letters.wiki', 'http://localhost:8085');
+    const localURL = data.board_url.replace('https://letters.wiki', 'http://localhost:8086');
     await page.goto(localURL);
 
     // Wait for game to load
@@ -246,7 +246,7 @@ test.describe('Backward Compatibility - High Score Database', () => {
 test.describe('Backward Compatibility - URL Format Detection', () => {
 
   test('Correctly identifies ?g= as legacy format', async ({ page }) => {
-    const testURL = 'http://localhost:8085/?g=IRIn4UGJ4pg05ihJS45NcpuQGsUIyCHDWiMyAbBV';
+    const testURL = 'http://localhost:8086/?g=IRIn4UGJ4pg05ihJS45NcpuQGsUIyCHDWiMyAbBV';
 
     await page.goto(testURL);
     await page.waitForSelector('#game-board', { timeout: 10000 });
@@ -264,7 +264,7 @@ test.describe('Backward Compatibility - URL Format Detection', () => {
   });
 
   test('Correctly identifies ?w= as sorted format', async ({ page }) => {
-    const testURL = 'http://localhost:8085/?w=IaKnMV1LdmATJhQ5MwniUVqcUQzMxog0YhrQjYIkmSzdZ4tC0A';
+    const testURL = 'http://localhost:8086/?w=IaKnMV1LdmATJhQ5MwniUVqcUQzMxog0YhrQjYIkmSzdZ4tC0A';
 
     await page.goto(testURL);
     await page.waitForSelector('#game-board', { timeout: 10000 });
@@ -286,7 +286,7 @@ test.describe('Backward Compatibility - Edge Cases', () => {
 
   test('Mixed case URL parameters still work', async ({ page }) => {
     // Test with uppercase G
-    const testURL = 'http://localhost:8085/?G=IRIn4UGJ4pg05ihJS45NcpuQGsUIyCHDWiMyAbBV';
+    const testURL = 'http://localhost:8086/?G=IRIn4UGJ4pg05ihJS45NcpuQGsUIyCHDWiMyAbBV';
 
     await page.goto(testURL);
     await page.waitForSelector('#game-board', { timeout: 10000 });
@@ -305,7 +305,7 @@ test.describe('Backward Compatibility - Edge Cases', () => {
 
   test('URLs with extra parameters still work', async ({ page }) => {
     // URL with tracking parameters (like from social media)
-    const testURL = 'http://localhost:8085/?g=IRIn4UGJ4pg05ihJS45NcpuQGsUIyCHDWiMyAbBV&utm_source=twitter&utm_medium=social';
+    const testURL = 'http://localhost:8086/?g=IRIn4UGJ4pg05ihJS45NcpuQGsUIyCHDWiMyAbBV&utm_source=twitter&utm_medium=social';
 
     await page.goto(testURL);
     await page.waitForSelector('#game-board', { timeout: 10000 });
@@ -319,7 +319,7 @@ test.describe('Backward Compatibility - Edge Cases', () => {
 
   test('Fragment identifiers don\'t break loading', async ({ page }) => {
     // URL with hash fragment
-    const testURL = 'http://localhost:8085/?g=IRIn4UGJ4pg05ihJS45NcpuQGsUIyCHDWiMyAbBV#shared';
+    const testURL = 'http://localhost:8086/?g=IRIn4UGJ4pg05ihJS45NcpuQGsUIyCHDWiMyAbBV#shared';
 
     await page.goto(testURL);
     await page.waitForSelector('#game-board', { timeout: 10000 });

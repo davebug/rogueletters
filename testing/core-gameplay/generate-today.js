@@ -13,7 +13,7 @@ const { chromium } = require('playwright');
   });
   
   // Play the November 19 game (minimal - just place a few tiles)
-  await page.goto('http://localhost:8085/?seed=20251119');
+  await page.goto('http://localhost:8086/?seed=20251119');
   await page.waitForSelector('#game-board');
   await page.waitForTimeout(2000);
   

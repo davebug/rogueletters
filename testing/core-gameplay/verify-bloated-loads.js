@@ -8,7 +8,7 @@ const { chromium } = require('playwright');
   
   console.log('Testing if bloated URL loads correctly...\n');
   
-  await page.goto(bloatedURL.replace('https://letters.wiki', 'http://localhost:8085'));
+  await page.goto(bloatedURL.replace('https://letters.wiki', 'http://localhost:8086'));
   await page.waitForSelector('#game-board');
   await page.waitForTimeout(2000);
   

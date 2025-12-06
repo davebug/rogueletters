@@ -16,7 +16,7 @@ test('Capture V3 encoding timing', async ({ page }) => {
   console.log('\n=== Loading scenario and playing through ===');
   
   // Load game with seed
-  await page.goto(`http://localhost:8085/?seed=${scenario.metadata.seed}`);
+  await page.goto(`http://localhost:8086/?seed=${scenario.metadata.seed}`);
   await page.waitForSelector('#game-board', { timeout: 10000 });
   await page.waitForTimeout(1500);
   

@@ -24,7 +24,7 @@ test.describe('UI Interactions Validator', () => {
     console.log('\n=== Testing: Shuffle Button ===');
 
     // Load a fresh game
-    await page.goto(`http://localhost:8085/?seed=${testScenario.metadata.seed}`);
+    await page.goto(`http://localhost:8086/?seed=${testScenario.metadata.seed}`);
     await page.waitForSelector('#game-board', { timeout: 15000 });
     await page.waitForSelector('#loading-overlay', { state: 'hidden', timeout: 15000 });
     await page.waitForFunction(() => window.gameState && window.gameState.rackTiles && window.gameState.rackTiles.length > 0, { timeout: 15000 });
@@ -56,7 +56,7 @@ test.describe('UI Interactions Validator', () => {
     console.log('\n=== Testing: Recall Tiles ===');
 
     // Load a fresh game
-    await page.goto(`http://localhost:8085/?seed=${testScenario.metadata.seed}`);
+    await page.goto(`http://localhost:8086/?seed=${testScenario.metadata.seed}`);
     await page.waitForSelector('#game-board', { timeout: 15000 });
     await page.waitForSelector('#loading-overlay', { state: 'hidden', timeout: 15000 });
     await page.waitForFunction(() => window.gameState && window.gameState.rackTiles && window.gameState.rackTiles.length > 0, { timeout: 15000 });
@@ -117,7 +117,7 @@ test.describe('UI Interactions Validator', () => {
     console.log('\n=== Testing: Tile Swap in Rack ===');
 
     // Load a fresh game
-    await page.goto(`http://localhost:8085/?seed=${testScenario.metadata.seed}`);
+    await page.goto(`http://localhost:8086/?seed=${testScenario.metadata.seed}`);
     await page.waitForSelector('#game-board', { timeout: 15000 });
     await page.waitForSelector('#loading-overlay', { state: 'hidden', timeout: 15000 });
     await page.waitForFunction(() => window.gameState && window.gameState.rackTiles && window.gameState.rackTiles.length > 0, { timeout: 15000 });
@@ -161,7 +161,7 @@ test.describe('UI Interactions Validator', () => {
     const dateStr = testScenario.metadata.seed;
 
     // Load the game
-    await page.goto(`http://localhost:8085/?seed=${testScenario.metadata.seed}`);
+    await page.goto(`http://localhost:8086/?seed=${testScenario.metadata.seed}`);
     await page.waitForSelector('#game-board', { timeout: 15000 });
     await page.waitForSelector('#loading-overlay', { state: 'hidden', timeout: 15000 });
     await page.waitForFunction(() => window.gameState && window.gameState.rackTiles && window.gameState.rackTiles.length > 0, { timeout: 15000 });

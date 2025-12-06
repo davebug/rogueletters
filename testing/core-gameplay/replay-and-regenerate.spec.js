@@ -9,7 +9,7 @@ test('Replay user game and regenerate share URL', async ({ page }) => {
 
   // Step 1: Load the original URL
   console.log('Step 1: Loading original URL...');
-  await page.goto(originalURL.replace('https://letters.wiki', 'http://localhost:8085'));
+  await page.goto(originalURL.replace('https://letters.wiki', 'http://localhost:8086'));
   await page.waitForSelector('#game-board', { timeout: 10000 });
   await page.waitForTimeout(2000);
 
