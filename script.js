@@ -119,7 +119,7 @@ const runManager = {
         gameState.isNewHighScore = false;
 
         // Generate new seed for this round
-        gameState.seed = getTodaysSeed() + runState.round;
+        gameState.seed = runState.runSeed + runState.round;
         gameState.dateStr = formatSeedToDate(gameState.seed);
 
         // Reinitialize the game board
@@ -196,7 +196,7 @@ const runManager = {
         popup.classList.remove('hidden');
 
         // Clear run state
-        runState.isRunMode = false;
+        this.resetRunState();
         this.clearRunState();
     },
 
@@ -220,7 +220,7 @@ const runManager = {
         popup.classList.remove('hidden');
 
         // Clear run state
-        runState.isRunMode = false;
+        this.resetRunState();
         this.clearRunState();
     },
 
@@ -251,8 +251,21 @@ const runManager = {
         }
     },
 
+    // Reset run state to initial values
+    resetRunState() {
+        runState.isRunMode = false;
+        runState.round = 1;
+        runState.targetScore = runState.roundTargets[0];
+        runState.runScore = 0;
+        runState.roundScores = [];
+        runState.runStartTime = null;
+        runState.runSeed = null;
+    },
+
     // Clear run state from localStorage
     clearRunState() {
+        const container = document.getElementById('target-progress-container');
+        if (container) container.classList.add('hidden');
         localStorage.removeItem('rogueletters_run');
     }
 };
@@ -1664,7 +1677,7 @@ function setupEventListeners() {
     });
 
     // Close buttons for run popups
-    document.querySelectorAll('#round-complete-popup .popup-close-btn, #run-failed-popup .popup-close-btn').forEach(btn => {
+    document.querySelectorAll('#round-complete-popup .popup-close-btn, #run-failed-popup .popup-close-btn, #run-victory-popup .popup-close-btn, #start-run-popup .popup-close-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.target.closest('.popup-content').parentElement.classList.add('hidden');
         });
