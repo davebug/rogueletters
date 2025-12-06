@@ -1628,3 +1628,132 @@ main {
     50% { transform: scale(1.05); }
     100% { transform: scale(1); opacity: 1; }
 }
+
+/* ============================================================================
+   RUN MODE STYLES
+   ============================================================================ */
+
+/* Run Info Bar */
+#run-info {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    padding: 8px 16px;
+    background: var(--accent);
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+#run-info.hidden {
+    display: none;
+}
+
+#run-round, #run-target {
+    display: inline-block;
+}
+
+/* Run Popup Shared Styles */
+#round-complete-popup,
+#run-failed-popup,
+#run-victory-popup,
+#start-run-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+#round-complete-popup.hidden,
+#run-failed-popup.hidden,
+#run-victory-popup.hidden,
+#start-run-popup.hidden {
+    display: none;
+}
+
+/* Round Result Display */
+.round-result {
+    margin: 20px 0;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+}
+
+.result-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 18px;
+}
+
+.result-row.surplus span:last-child {
+    color: #4caf50;
+    font-weight: bold;
+}
+
+.result-row.deficit span:last-child {
+    color: #f44336;
+    font-weight: bold;
+}
+
+/* Fail message */
+.fail-message {
+    color: #f44336;
+    font-size: 16px;
+    margin: 15px 0;
+}
+
+/* Targets Preview */
+.targets-preview {
+    margin: 20px 0;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+}
+
+.target-item {
+    padding: 8px 0;
+    font-size: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.target-item:last-child {
+    border-bottom: none;
+}
+
+/* Victory summary */
+#victory-rounds-summary {
+    margin: 15px 0;
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+/* Progress bar for target */
+.target-progress {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.target-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.3s ease;
+}
+
+.target-progress-fill.exceeded {
+    background: #4caf50;
+}
+
+.target-progress-fill.danger {
+    background: #f44336;
+}
