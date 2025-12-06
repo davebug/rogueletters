@@ -13,7 +13,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui, viewport-fit=cover">
     <title>RogueLetters - A Daily Word Game</title>
-    <link rel="stylesheet" href="./styles.css?v=10.39">
+    <link rel="stylesheet" href="./styles.css?v=11.2">
     <meta name="description" content="Play RogueLetters - a daily word puzzle game. Build words on a letter-tile board to maximize your score!">
 
 
@@ -30,15 +30,16 @@
 			<path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
 		</svg>
 	</button>
-	<div id="dateDisplay">Loading…
+	<!-- Game Progress Display -->
+	<div id="game-progress">
+		<span id="progress-turn">Turn 1</span>
+		<span class="progress-sep">|</span>
+		<span id="progress-round">Round 1</span>
+		<span class="progress-sep">|</span>
+		<span id="progress-set">Set 1</span>
 	</div>
-	<div id="subtitle">5 Solo Turns, Maximize Your Score</div>
+	<div id="target-info"><span id="target-score">40</span> to go</div>
 	<div id="status"></div>
-	<!-- Run Mode Info (hidden by default) -->
-	<div id="run-info" class="hidden">
-		<span id="run-round">Round 1/3</span>
-		<span id="run-target">Target: 80</span>
-	</div>
 	</header>
 
         <!-- Debug Mode Toggle (hidden by default, activate with ?debug=1) -->
@@ -248,10 +249,10 @@
 		</div>
 	</div>
 
-	<!-- Run Victory Screen (beat all rounds) -->
+	<!-- Run Victory Screen (beat all rounds in a set) -->
 	<div id="run-victory-popup" class="hidden">
 		<div class="popup-content">
-			<h2>🎉 Victory!</h2>
+			<h2>🎉 Set Complete!</h2>
 			<p>You completed all 3 rounds!</p>
 			<div class="round-result">
 				<div class="result-row">
@@ -260,7 +261,7 @@
 				</div>
 			</div>
 			<div id="victory-rounds-summary"></div>
-			<button id="new-run-btn" class="popup-btn popup-btn-primary">New Run</button>
+			<button id="next-set-btn" class="popup-btn popup-btn-primary">Next Set</button>
 		</div>
 	</div>
 
@@ -268,19 +269,19 @@
 	<div id="start-run-popup" class="hidden">
 		<div class="popup-content">
 			<h2>🎲 RogueLetters</h2>
-			<p>Beat escalating score targets across 3 rounds.</p>
+			<p>Beat escalating score targets across 3 rounds per set.</p>
 			<div class="targets-preview">
-				<div class="target-item">Round 1: 80 pts</div>
-				<div class="target-item">Round 2: 120 pts</div>
-				<div class="target-item">Round 3: 180 pts</div>
+				<div class="target-item">Round 1: 40 pts</div>
+				<div class="target-item">Round 2: 60 pts</div>
+				<div class="target-item">Round 3: 80 pts</div>
 			</div>
-			<button id="start-run-btn" class="popup-btn popup-btn-primary">Start Run</button>
+			<button id="start-run-btn" class="popup-btn popup-btn-primary">Start Set</button>
 		</div>
 	</div>
 
     <!-- LZ-String compression library for shareable URLs -->
     <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 
-    <script src="./script.js?v=10.38"></script>
+    <script src="./script.js?v=12.0"></script>
 </body>
 </html>

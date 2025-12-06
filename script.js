@@ -29,14 +29,29 @@ let gameState = {
 };
 
 // Run state for roguelike mode
+// Hierarchy: Game > Set > Round > Turn
 let runState = {
     isRunMode: false,
-    round: 1,
-    maxRounds: 3,
-    targetScore: 80,
-    roundTargets: [80, 120, 180],
-    runScore: 0,
-    roundScores: [],
+    // Set tracking (3 rounds per set)
+    set: 1,                         // Current set (1-5+, can continue)
+    maxSets: 5,                     // Nominal sets per game (then unlimited)
+    // Round tracking (5 turns per round)
+    round: 1,                       // Current round within set (1-3)
+    maxRounds: 3,                   // Rounds per set
+    targetScore: 40,                // Score needed this round
+    // Target scores for each set (3 rounds each)
+    // Set 1: 40, 60, 80 | Set 2: 100, 150, 200 | Set 3: 250, 375, 500 | Set 4: 650, 975, 1300
+    setTargets: [
+        [40, 60, 80],       // Set 1
+        [100, 150, 200],    // Set 2
+        [250, 375, 500],    // Set 3
+        [650, 975, 1300]    // Set 4+
+    ],
+    // Scoring
+    setScore: 0,                    // Cumulative score this set
+    totalScore: 0,                  // Cumulative score entire game
+    roundScores: [],                // Scores for each round this set
+    // Meta
     runStartTime: null,
     runSeed: null
 };
@@ -45,13 +60,23 @@ let runState = {
 // RUN MANAGER
 // ============================================================================
 
+// Helper to get target score for a given set and round
+function getTargetScore(set, round) {
+    // Use the last set's targets for sets beyond what's defined
+    const setIndex = Math.min(set - 1, runState.setTargets.length - 1);
+    const targets = runState.setTargets[setIndex];
+    return targets[round - 1];
+}
+
 const runManager = {
-    // Start a new run
+    // Start a new run (game)
     startRun() {
         runState.isRunMode = true;
+        runState.set = 1;
         runState.round = 1;
-        runState.targetScore = runState.roundTargets[0];
-        runState.runScore = 0;
+        runState.targetScore = getTargetScore(1, 1);
+        runState.setScore = 0;
+        runState.totalScore = 0;
         runState.roundScores = [];
         runState.runStartTime = Date.now();
         runState.runSeed = Date.now(); // Use timestamp as run seed
@@ -69,19 +94,28 @@ const runManager = {
         if (!runState.isRunMode) return false;
 
         runState.roundScores.push(score);
-        runState.runScore += score;
+        runState.setScore += score;
+        runState.totalScore += score;
 
         if (score >= runState.targetScore) {
-            // Success!
+            // Success! Auto-advance without popup
             if (runState.round >= runState.maxRounds) {
-                this.showVictory();
+                // Completed all rounds in this set
+                if (runState.set >= runState.maxSets) {
+                    // Completed Set 5 - GAME OVER (victory!)
+                    this.showGameComplete(true);
+                } else {
+                    // Auto-advance to next set
+                    this.nextSet();
+                }
             } else {
-                this.showRoundComplete(score);
+                // Auto-advance to next round
+                this.nextRound();
             }
             return true;
         } else {
-            // Failed
-            this.showRunFailed(score);
+            // Failed - GAME OVER
+            this.showGameComplete(false);
             return false;
         }
     },
@@ -89,13 +123,29 @@ const runManager = {
     // Advance to next round
     nextRound() {
         runState.round++;
-        runState.targetScore = runState.roundTargets[runState.round - 1];
+        runState.targetScore = getTargetScore(runState.set, runState.round);
 
         this.saveRunState();
         this.updateRunUI();
         this.hideAllRunPopups();
 
         // Reset game for new round
+        this.resetForNewRound();
+    },
+
+    // Advance to next set (after completing all rounds in current set)
+    nextSet() {
+        runState.set++;
+        runState.round = 1;
+        runState.targetScore = getTargetScore(runState.set, 1);
+        runState.setScore = 0;
+        runState.roundScores = [];
+
+        this.saveRunState();
+        this.updateRunUI();
+        this.hideAllRunPopups();
+
+        // Reset game for new set
         this.resetForNewRound();
     },
 
@@ -118,16 +168,17 @@ const runManager = {
         gameState.preGeneratedShareURL = null;
         gameState.isNewHighScore = false;
 
-        // Generate new seed for this round
-        gameState.seed = runState.runSeed + runState.round;
+        // Generate new seed for this round (as string for consistency)
+        gameState.seed = String(runState.runSeed + runState.round);
         gameState.dateStr = formatSeedToDate(gameState.seed);
 
-        // Reinitialize the game board
+        // Reinitialize the game boards
         createBoard();
+        createRackBoard();
         fetchGameData(gameState.seed);
 
         // Reset UI
-        document.getElementById('dateDisplay').textContent = `Round ${runState.round}`;
+        this.updateRunUI();
         updateTurnCounter();
 
         // Re-enable controls
@@ -147,18 +198,30 @@ const runManager = {
         if (shareIcon) shareIcon.classList.add('hidden');
     },
 
-    // Update run info display
+    // Update run info display in header
     updateRunUI() {
-        const runInfo = document.getElementById('run-info');
-        const roundDisplay = document.getElementById('run-round');
-        const targetDisplay = document.getElementById('run-target');
+        const progressSet = document.getElementById('progress-set');
+        const progressRound = document.getElementById('progress-round');
+        const progressTurn = document.getElementById('progress-turn');
+        const targetInfo = document.getElementById('target-info');
 
         if (runState.isRunMode) {
-            runInfo.classList.remove('hidden');
-            roundDisplay.textContent = `Round ${runState.round}/${runState.maxRounds}`;
-            targetDisplay.textContent = `Target: ${runState.targetScore}`;
-        } else {
-            runInfo.classList.add('hidden');
+            if (progressTurn) progressTurn.textContent = `Turn ${gameState.currentTurn}`;
+            if (progressRound) progressRound.textContent = `Round ${runState.round}`;
+            if (progressSet) progressSet.textContent = `Set ${runState.set}`;
+
+            // Update target display with points to go or surplus
+            if (targetInfo) {
+                const currentScore = gameState.score || 0;
+                const remaining = runState.targetScore - currentScore;
+                if (remaining > 0) {
+                    targetInfo.innerHTML = `<span id="target-score">${remaining}</span> to go`;
+                } else if (remaining === 0) {
+                    targetInfo.innerHTML = `<span id="target-score" class="target-met">Target reached!</span>`;
+                } else {
+                    targetInfo.innerHTML = `<span id="target-score" class="target-surplus">+${Math.abs(remaining)}</span> surplus`;
+                }
+            }
         }
     },
 
@@ -200,26 +263,27 @@ const runManager = {
         this.clearRunState();
     },
 
-    // Show victory popup
-    showVictory() {
-        const popup = document.getElementById('run-victory-popup');
-        const totalEl = document.getElementById('victory-total-value');
-        const summaryEl = document.getElementById('victory-rounds-summary');
+    // Show final game complete popup (win or lose)
+    showGameComplete(isVictory) {
+        const popup = document.getElementById('game-popup');
+        const title = document.getElementById('popup-title');
+        const scoreLabel = document.getElementById('popup-score-label');
+        const scoreValue = document.getElementById('popup-score-value');
 
-        totalEl.textContent = runState.runScore;
+        if (isVictory) {
+            title.textContent = '🎉 Victory!';
+            scoreLabel.textContent = 'You completed all 5 sets!';
+        } else {
+            title.textContent = 'Game Over';
+            const deficit = runState.targetScore - (gameState.score || 0);
+            scoreLabel.textContent = `Needed ${deficit} more to advance`;
+        }
 
-        // Build rounds summary
-        let summary = '';
-        runState.roundScores.forEach((score, i) => {
-            const target = runState.roundTargets[i];
-            const surplus = score - target;
-            summary += `Round ${i + 1}: ${score}/${target} (+${surplus})<br>`;
-        });
-        summaryEl.innerHTML = summary;
+        scoreValue.textContent = runState.totalScore;
 
         popup.classList.remove('hidden');
 
-        // Clear run state
+        // Clear run state - game is over
         this.resetRunState();
         this.clearRunState();
     },
@@ -235,6 +299,7 @@ const runManager = {
         document.getElementById('run-failed-popup')?.classList.add('hidden');
         document.getElementById('run-victory-popup')?.classList.add('hidden');
         document.getElementById('start-run-popup')?.classList.add('hidden');
+        document.getElementById('game-popup')?.classList.add('hidden');
     },
 
     // Save run state to localStorage
@@ -254,9 +319,11 @@ const runManager = {
     // Reset run state to initial values
     resetRunState() {
         runState.isRunMode = false;
+        runState.set = 1;
         runState.round = 1;
-        runState.targetScore = runState.roundTargets[0];
-        runState.runScore = 0;
+        runState.targetScore = getTargetScore(1, 1);
+        runState.setScore = 0;
+        runState.totalScore = 0;
         runState.roundScores = [];
         runState.runStartTime = null;
         runState.runSeed = null;
@@ -1122,8 +1189,10 @@ async function loadV3SharedGame(encodedParam, isSortedFormat = false) {
 
         console.log('[V3 Load] Date:', gameData.d);
 
-        // Update UI
-        document.getElementById('dateDisplay').textContent = gameState.dateStr;
+        // Update run UI if in run mode (dateDisplay removed)
+        if (runState.isRunMode) {
+            runManager.updateRunUI();
+        }
 
         // Initialize boards
         createBoard();
@@ -1211,14 +1280,15 @@ async function initializeGame() {
     const hasSeedParam = urlParams.has('seed') || urlParams.has('g') || urlParams.has('w'); // 'g' is legacy share, 'w' is sorted share
 
     if (runState.isRunMode) {
-        // Resume existing run
+        // Resume existing run - calculate seed from runSeed + round
+        gameState.seed = String(runState.runSeed + runState.round);
         runManager.updateRunUI();
+        // Continue to load game with the correct seed
     } else if (!hasSeedParam) {
-        // Only show start run popup if no seed/share URL parameter
-        // This allows tests and direct links to work without dismissing popup
-        setTimeout(() => {
-            runManager.showStartRun();
-        }, 500);
+        // Auto-start run mode - no popup needed
+        // Header shows Set/Round/Turn and target score
+        runManager.startRun();
+        return; // startRun handles game initialization
     }
 
     // Get or generate seed from URL (moved up for hasSeedParam check)
@@ -1249,8 +1319,13 @@ async function initializeGame() {
     let seed = urlParams.get('seed');
 
     if (!seed) {
-        // Use today's date in YYYYMMDD format
-        seed = getTodaysSeed();
+        if (runState.isRunMode) {
+            // In run mode, use the seed we calculated from runSeed + round
+            seed = gameState.seed;
+        } else {
+            // Use today's date in YYYYMMDD format
+            seed = getTodaysSeed();
+        }
 
         // Preserve existing URL parameters while adding seed
         urlParams.set('seed', seed);
@@ -1261,8 +1336,10 @@ async function initializeGame() {
     gameState.seed = seed;
     gameState.dateStr = formatSeedToDate(seed);
 
-    // Update UI with date
-    document.getElementById('dateDisplay').textContent = gameState.dateStr;
+    // Update run UI if in run mode (dateDisplay removed in favor of game-progress)
+    if (runState.isRunMode) {
+        runManager.updateRunUI();
+    }
 
     // Try to load saved game state
     const stateLoaded = loadGameState();
@@ -1293,26 +1370,30 @@ async function initializeGame() {
             }
         }
     } else {
-        // Only auto-load game data if not in run mode
-        // (run mode handles game loading in startRun/nextRound)
-        if (!runState.isRunMode) {
-            // Fetch game data from server
-            fetchGameData(seed);
-        }
+        // Fetch game data from server (needed for fresh load or after startOver)
+        fetchGameData(seed);
     }
 }
 
 function formatSeedToDate(seed) {
-    // Convert YYYYMMDD to readable date
-    const year = seed.substring(0, 4);
-    const month = seed.substring(4, 6);
-    const day = seed.substring(6, 8);
-    const date = new Date(year, month - 1, day);
+    // Convert seed to string first
+    const seedStr = String(seed);
 
-    return date.toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric'
-    });
+    // Only format as date if it's in YYYYMMDD format (8 digits)
+    if (seedStr.length === 8 && /^\d{8}$/.test(seedStr)) {
+        const year = seedStr.substring(0, 4);
+        const month = seedStr.substring(4, 6);
+        const day = seedStr.substring(6, 8);
+        const date = new Date(year, month - 1, day);
+
+        return date.toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric'
+        });
+    }
+
+    // For timestamp or other seeds, return empty string (run mode uses Set/Round display)
+    return '';
 }
 
 function createBoard() {
@@ -1615,6 +1696,11 @@ function setupEventListeners() {
             const popup = document.getElementById('game-popup');
             if (popup) {
                 popup.classList.add('hidden');
+                // In run mode, closing game-over popup starts a new game
+                if (!runState.isRunMode) {
+                    // Run state was cleared, start fresh game
+                    runManager.startRun();
+                }
             }
         });
     }
@@ -1671,9 +1757,9 @@ function setupEventListeners() {
         runManager.showStartRun();
     });
 
-    document.getElementById('new-run-btn')?.addEventListener('click', () => {
+    document.getElementById('next-set-btn')?.addEventListener('click', () => {
         runManager.hideAllRunPopups();
-        runManager.showStartRun();
+        runManager.nextSet();
     });
 
     // Close buttons for run popups
@@ -2849,6 +2935,7 @@ function submitWord() {
             gameState.score += turnScore;
             gameState.turnScores.push(turnScore);  // Save this turn's score
             updateTargetProgress();
+            runManager.updateRunUI();  // Update "X to go" display
 
             // Note: Tiles have already been removed from rackTiles when placed on board
             // so gameState.rackTiles already contains only the tiles left in the rack
@@ -3677,8 +3764,10 @@ async function loadSharedGame(compressedParam) {
 
         console.log('[Load] Date:', gameData.d);
 
-        // Update UI
-        document.getElementById('dateDisplay').textContent = gameState.dateStr;
+        // Update run UI if in run mode (dateDisplay removed)
+        if (runState.isRunMode) {
+            runManager.updateRunUI();
+        }
 
         // Initialize boards
         createBoard();
@@ -4227,6 +4316,11 @@ function updateTurnCounter() {
     const turnCounter = document.getElementById('turn-counter');
     if (turnCounter) {
         turnCounter.textContent = `Turn ${gameState.currentTurn} of ${gameState.maxTurns}`;
+    }
+
+    // Update run UI header if in run mode
+    if (runState.isRunMode) {
+        runManager.updateRunUI();
     }
 
     // Update footer squares

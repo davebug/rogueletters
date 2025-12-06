@@ -106,10 +106,10 @@ def create_tile_bag():
     return bag
 
 def get_starting_word(seed):
-    """Get starting word from pre-generated daily word list
+    """Get starting word from pre-generated word list
 
-    Uses a pre-selected list of 10 words per day.
-    Word selection is based on the last digit of the year.
+    For YYYYMMDD format seeds (8 digits, valid date): uses date-based lookup for backward compatibility
+    For all other seeds (timestamps, UUIDs, etc.): uses hash-based selection
     All words are pre-validated to be in ENABLE and possible with tiles.
     """
     # Load the daily words file
@@ -127,32 +127,47 @@ def get_starting_word(seed):
         print(f"Error loading daily words: {e}", file=sys.stderr)
         return "SAILING"
 
-    # Extract date components from seed (YYYYMMDD format)
-    try:
-        year = int(seed[:4])
-        month = int(seed[4:6])
-        day = int(seed[6:8])
-    except:
-        return "SAILING"
+    # Check if seed is in YYYYMMDD format (8 digits, valid date)
+    # This provides backward compatibility with existing share URLs
+    seed_str = str(seed)
+    if len(seed_str) == 8 and seed_str.isdigit():
+        try:
+            year = int(seed_str[:4])
+            month = int(seed_str[4:6])
+            day = int(seed_str[6:8])
+            # Validate it's a reasonable date (month 1-12, day 1-31)
+            if 1 <= month <= 12 and 1 <= day <= 31:
+                date_key = f"{month:02d}-{day:02d}"
+                if date_key in daily_words:
+                    words_for_day = daily_words[date_key]
+                    if words_for_day and len(words_for_day) > 0:
+                        word_index = year % 10
+                        if word_index >= len(words_for_day):
+                            word_index = word_index % len(words_for_day)
+                        word = words_for_day[word_index]
+                        if is_valid_word(word):
+                            return word
+        except:
+            pass  # Fall through to hash-based selection
 
-    # Format date key (MM-DD)
-    date_key = f"{month:02d}-{day:02d}"
+    # Hash-based selection for non-date seeds (timestamps, random strings, etc.)
+    seed_hash = get_seed_hash(seed_str)
 
-    # Get words for this day
-    if date_key in daily_words:
-        words_for_day = daily_words[date_key]
-        if words_for_day and len(words_for_day) > 0:
-            # Use the last digit of year to select which word (0-9)
-            word_index = year % 10
-            # If we don't have that many words, wrap around
-            if word_index >= len(words_for_day):
-                word_index = word_index % len(words_for_day)
+    # Get list of date keys and use hash to pick one
+    date_keys = sorted(daily_words.keys())  # Consistent ordering
+    date_index = seed_hash % len(date_keys)
+    date_key = date_keys[date_index]
 
-            word = words_for_day[word_index]
+    # Get words for this "virtual date"
+    words_for_day = daily_words[date_key]
+    if words_for_day and len(words_for_day) > 0:
+        # Use another portion of hash to select which word
+        word_index = (seed_hash // len(date_keys)) % len(words_for_day)
+        word = words_for_day[word_index]
 
-            # Double-check it's valid (should already be, but just in case)
-            if is_valid_word(word):
-                return word
+        # Double-check it's valid (should already be, but just in case)
+        if is_valid_word(word):
+            return word
 
     # Fallback if something goes wrong
     return "SAILING"
