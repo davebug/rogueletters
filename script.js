@@ -1162,6 +1162,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function initializeGame() {
+    // Check for existing run or show start screen
+    runManager.loadRunState();
+
+    if (runState.isRunMode) {
+        // Resume existing run
+        runManager.updateRunUI();
+    } else {
+        // Show start run popup after a brief delay
+        setTimeout(() => {
+            runManager.showStartRun();
+        }, 500);
+    }
+
     // Get or generate seed from URL
     const urlParams = new URLSearchParams(window.location.search);
 
@@ -1235,8 +1248,12 @@ async function initializeGame() {
             }
         }
     } else {
-        // Fetch game data from server
-        fetchGameData(seed);
+        // Only auto-load game data if not in run mode
+        // (run mode handles game loading in startRun/nextRound)
+        if (!runState.isRunMode) {
+            // Fetch game data from server
+            fetchGameData(seed);
+        }
     }
 }
 
