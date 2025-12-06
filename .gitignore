@@ -65,3 +65,6 @@ docker-volumes/
 data/high_scores/
 .claude/skills/
 data/rate_limits.json
+
+# Git worktrees
+.worktrees/
