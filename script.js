@@ -2956,15 +2956,10 @@ async function endGame() {
     let totalScore = 0;
     if (gameState.turnScores && gameState.turnScores.length > 0) {
         totalScore = gameState.turnScores.reduce((sum, score) => sum + score, 0);
-        gameState.score = totalScore; // Ensure gameState.score is accurate
+        gameState.score = totalScore;
     }
 
     saveGameState();
-
-    // Mark that player has completed today's game (persists through Start Over)
-    if (gameState.seed === getTodaysSeed()) {
-        localStorage.setItem('letters_completed_today', gameState.seed);
-    }
 
     // Disable game controls
     const submitBtn = document.getElementById('submit-word');
@@ -2972,13 +2967,7 @@ async function endGame() {
     if (submitBtn) submitBtn.disabled = true;
     if (recallBtn) recallBtn.disabled = true;
 
-    // Keep game container visible (Phase 1 change)
-    // document.getElementById('game-container').style.display = 'none';
-
-    // Don't show the old game over section (Phase 1 change)
-    // document.getElementById('game-over-section').style.display = 'block';
-
-    // Update footer squares one more time to ensure everything is displayed correctly
+    // Update footer squares
     updateFooterSquares();
 
     // Add visual indicator that game is over
@@ -2986,9 +2975,21 @@ async function endGame() {
     const rackBoard = document.getElementById('tile-rack-board');
     if (gameBoard) gameBoard.classList.add('game-over');
     if (rackBoard) rackBoard.classList.add('game-over');
-    if (rackBoard) rackBoard.classList.add('game-over');
 
-    // Phase 1: Show share icon (like WikiDates)
+    // === RUN MODE HANDLING ===
+    if (runState.isRunMode) {
+        // Check if target was met - runManager handles all UI
+        runManager.checkRoundComplete(totalScore);
+        return; // Don't show normal completion UI in run mode
+    }
+
+    // === NORMAL MODE (non-run) ===
+    // Mark that player has completed today's game
+    if (gameState.seed === getTodaysSeed()) {
+        localStorage.setItem('letters_completed_today', gameState.seed);
+    }
+
+    // Show share icon
     const shareIcon = document.getElementById('shareIcon');
     if (shareIcon) {
         shareIcon.classList.remove('hidden');
@@ -3010,10 +3011,10 @@ async function endGame() {
         gameState.startingWord || 'unknown'
     );
 
-    // Pre-generate shareable URL (needed for high score submission)
+    // Pre-generate shareable URL
     await generateShareableBoardURL();
 
-    // Update subtitle to show high score (since player just completed today's game)
+    // Update subtitle to show high score
     await updateSubtitleWithHighScore();
 
     // Show popup with high score check
