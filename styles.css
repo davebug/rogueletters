@@ -1867,3 +1867,211 @@ main {
     color: var(--white);
     opacity: 0.9;
 }
+
+/* ============================================================================
+   FULL SCREEN VIEWS (Earnings, Set Complete)
+   ============================================================================ */
+
+.full-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-primary);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 500; /* Below popups but above game */
+    padding-top: 80px; /* Account for header */
+    padding-bottom: 80px; /* Account for footer */
+    box-sizing: border-box;
+}
+
+.full-screen.hidden {
+    display: none;
+}
+
+.full-screen-content {
+    background-color: var(--bg-secondary);
+    border: 2px solid var(--board-border);
+    border-radius: 12px;
+    padding: 30px 40px;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+}
+
+.full-screen-content h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--text-color);
+    font-size: 28px;
+    font-weight: 600;
+}
+
+.full-screen-content h3 {
+    margin: 20px 0 10px;
+    color: var(--text-color);
+    font-size: 18px;
+    font-weight: 600;
+}
+
+/* Score Summary (Score / Target display) */
+.score-summary {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin: 20px 0;
+}
+
+.score-pair {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.score-pair .score-label {
+    font-size: 14px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.score-pair .score-value {
+    font-size: 36px;
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+/* Surplus / Target Reached Display */
+.surplus-display {
+    font-size: 20px;
+    color: #4caf50;
+    font-weight: 600;
+    margin: 10px 0 20px;
+}
+
+.target-reached-display {
+    font-size: 20px;
+    color: var(--accent);
+    font-weight: 600;
+    margin: 10px 0 20px;
+}
+
+/* Earnings Breakdown */
+.earnings-breakdown {
+    margin: 20px 0;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    border: 1px solid var(--board-border);
+}
+
+.earnings-breakdown h3 {
+    margin: 0 0 15px;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+}
+
+.earnings-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 16px;
+    color: var(--text-color);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.earnings-row:last-of-type {
+    border-bottom: none;
+}
+
+.earnings-row.earnings-total {
+    padding-top: 12px;
+    margin-top: 8px;
+    border-top: 1px solid var(--board-border);
+    font-weight: bold;
+    font-size: 18px;
+    color: #4caf50;
+}
+
+.bank-update {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--board-border);
+    font-size: 18px;
+    color: var(--text-color);
+}
+
+.bank-update #bank-after {
+    color: #4caf50;
+    font-weight: bold;
+}
+
+/* Set Complete Screen */
+.set-summary {
+    margin: 20px 0;
+}
+
+.set-total {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.set-total-label {
+    font-size: 14px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.set-total-value {
+    font-size: 48px;
+    font-weight: bold;
+    color: var(--accent);
+}
+
+.rounds-summary {
+    margin: 20px 0;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.round-summary-row {
+    padding: 6px 0;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.next-set-preview {
+    margin: 20px 0;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    border: 1px solid var(--board-border);
+}
+
+.next-set-preview h3 {
+    margin: 0 0 10px;
+    color: var(--text-color);
+}
+
+.target-preview {
+    padding: 6px 0;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+/* Coin display in header */
+#progress-coins {
+    color: #4caf50;
+    font-weight: 600;
+}

@@ -51,6 +51,9 @@ let runState = {
     setScore: 0,                    // Cumulative score this set
     totalScore: 0,                  // Cumulative score entire game
     roundScores: [],                // Scores for each round this set
+    // Economy
+    coins: 0,                       // Current bank balance
+    lastEarnings: null,             // Most recent round earnings (for display)
     // Meta
     runStartTime: null,
     runSeed: null
@@ -68,6 +71,21 @@ function getTargetScore(set, round) {
     return targets[round - 1];
 }
 
+// Calculate earnings for a completed round
+// Base: $3 (R1), $4 (R2), $5 (R3) + $1 per 10 surplus points
+function calculateEarnings(score, target, roundInSet) {
+    const basePayout = [3, 4, 5][roundInSet - 1] || 3;
+    const surplus = Math.max(0, score - target);
+    const surplusBonus = Math.floor(surplus / 10);
+
+    return {
+        base: basePayout,
+        surplusBonus: surplusBonus,
+        total: basePayout + surplusBonus,
+        surplusPoints: surplus
+    };
+}
+
 const runManager = {
     // Start a new run (game)
     startRun() {
@@ -78,6 +96,8 @@ const runManager = {
         runState.setScore = 0;
         runState.totalScore = 0;
         runState.roundScores = [];
+        runState.coins = 0;
+        runState.lastEarnings = null;
         runState.runStartTime = Date.now();
         runState.runSeed = Date.now(); // Use timestamp as run seed
 
@@ -98,19 +118,18 @@ const runManager = {
         runState.totalScore += score;
 
         if (score >= runState.targetScore) {
-            // Success! Auto-advance without popup
-            if (runState.round >= runState.maxRounds) {
-                // Completed all rounds in this set
-                if (runState.set >= runState.maxSets) {
-                    // Completed Set 5 - GAME OVER (victory!)
-                    this.showGameComplete(true);
-                } else {
-                    // Auto-advance to next set
-                    this.nextSet();
-                }
+            // Success!
+            // Check for final victory (Set 5 Round 3) - skip earnings, go straight to victory
+            if (runState.round >= runState.maxRounds && runState.set >= runState.maxSets) {
+                // Calculate and add final earnings silently
+                const earnings = calculateEarnings(score, runState.targetScore, runState.round);
+                runState.coins += earnings.total;
+                runState.lastEarnings = earnings;
+                this.saveRunState();
+                this.showGameComplete(true);
             } else {
-                // Auto-advance to next round
-                this.nextRound();
+                // Show earnings screen
+                this.showEarningsScreen(score);
             }
             return true;
         } else {
@@ -210,6 +229,9 @@ const runManager = {
             if (progressRound) progressRound.textContent = `Round ${runState.round}`;
             if (progressSet) progressSet.textContent = `Set ${runState.set}`;
 
+            // Update coin display
+            this.updateCoinDisplay();
+
             const currentScore = gameState.score || 0;
             const remaining = runState.targetScore - currentScore;
             const turnsLeft = (gameState.maxTurns || 5) - (gameState.currentTurn || 1) + 1;
@@ -273,16 +295,20 @@ const runManager = {
         const scoreLabel = document.getElementById('popup-score-label');
         const scoreValue = document.getElementById('popup-score-value');
 
+        // Save values before resetting state
+        const finalScore = runState.totalScore;
+        const finalCoins = runState.coins;
+
         if (isVictory) {
             title.textContent = '🎉 Victory!';
-            scoreLabel.textContent = 'You completed all 5 sets!';
+            scoreLabel.innerHTML = `You completed all 5 sets!<br><span style="color: #4caf50;">Total earned: $${finalCoins}</span>`;
         } else {
             title.textContent = 'Game Over';
             const deficit = runState.targetScore - (gameState.score || 0);
             scoreLabel.textContent = `Needed ${deficit} more to advance`;
         }
 
-        scoreValue.textContent = runState.totalScore;
+        scoreValue.textContent = finalScore;
 
         popup.classList.remove('hidden');
 
@@ -296,13 +322,165 @@ const runManager = {
         document.getElementById('start-run-popup').classList.remove('hidden');
     },
 
-    // Hide all run popups
+    // Hide all run popups and screens
     hideAllRunPopups() {
         document.getElementById('round-complete-popup')?.classList.add('hidden');
         document.getElementById('run-failed-popup')?.classList.add('hidden');
         document.getElementById('run-victory-popup')?.classList.add('hidden');
         document.getElementById('start-run-popup')?.classList.add('hidden');
         document.getElementById('game-popup')?.classList.add('hidden');
+        document.getElementById('earnings-screen')?.classList.add('hidden');
+        document.getElementById('set-complete-screen')?.classList.add('hidden');
+        // Show game container when hiding screens
+        document.getElementById('game-container')?.classList.remove('hidden');
+    },
+
+    // Show the earnings screen (full page, replaces game board)
+    showEarningsScreen(score) {
+        // Calculate earnings
+        const earnings = calculateEarnings(score, runState.targetScore, runState.round);
+        const previousCoins = runState.coins;
+
+        // Update state
+        runState.coins += earnings.total;
+        runState.lastEarnings = earnings;
+        this.saveRunState();
+
+        // Update header to show "Round Complete"
+        const progressRound = document.getElementById('progress-round');
+        if (progressRound) progressRound.textContent = 'Round Complete';
+
+        // Hide game board, show earnings screen
+        document.getElementById('game-container')?.classList.add('hidden');
+        const earningsScreen = document.getElementById('earnings-screen');
+        if (!earningsScreen) return;
+
+        // Populate earnings data
+        document.getElementById('earnings-score').textContent = score;
+        document.getElementById('earnings-target').textContent = runState.targetScore;
+
+        // Handle surplus vs exact match
+        const surplusDisplay = document.getElementById('earnings-surplus-display');
+        const targetReachedDisplay = document.getElementById('earnings-target-reached');
+
+        if (earnings.surplusPoints > 0) {
+            if (surplusDisplay) {
+                surplusDisplay.classList.remove('hidden');
+                document.getElementById('earnings-surplus-points').textContent = earnings.surplusPoints;
+            }
+            if (targetReachedDisplay) targetReachedDisplay.classList.add('hidden');
+        } else {
+            if (surplusDisplay) surplusDisplay.classList.add('hidden');
+            if (targetReachedDisplay) targetReachedDisplay.classList.remove('hidden');
+        }
+
+        // Populate earnings breakdown
+        document.getElementById('earnings-base').textContent = earnings.base;
+        document.getElementById('earnings-surplus-bonus').textContent = earnings.surplusBonus;
+        document.getElementById('earnings-total').textContent = earnings.total;
+        document.getElementById('bank-before').textContent = previousCoins;
+        document.getElementById('bank-after').textContent = runState.coins;
+
+        // Show/hide surplus bonus row based on whether there's a bonus
+        const surplusBonusRow = document.getElementById('earnings-surplus-row');
+        if (surplusBonusRow) {
+            surplusBonusRow.style.display = earnings.surplusBonus > 0 ? 'flex' : 'none';
+        }
+
+        // Update coin display in header
+        this.updateCoinDisplay();
+
+        // Show earnings screen
+        earningsScreen.classList.remove('hidden');
+
+        // Animate bank counter
+        this.animateBankCounter(previousCoins, runState.coins);
+    },
+
+    // Handle Continue button from earnings screen
+    continueFromEarnings() {
+        this.hideAllRunPopups();
+
+        if (runState.round >= runState.maxRounds) {
+            // Completed all rounds in this set - show set complete screen
+            this.showSetCompleteScreen();
+        } else {
+            // Advance to next round
+            this.nextRound();
+        }
+    },
+
+    // Show set complete screen (full page)
+    showSetCompleteScreen() {
+        // Hide game container, show set complete screen
+        document.getElementById('game-container')?.classList.add('hidden');
+        const setCompleteScreen = document.getElementById('set-complete-screen');
+        if (!setCompleteScreen) return;
+
+        // Populate set data
+        document.getElementById('set-complete-number').textContent = runState.set;
+        document.getElementById('set-complete-total').textContent = runState.setScore;
+
+        // Populate round scores summary
+        const summaryEl = document.getElementById('set-rounds-summary');
+        if (summaryEl) {
+            const roundsHtml = runState.roundScores.map((score, idx) =>
+                `<div class="round-summary-row">Round ${idx + 1}: ${score} pts</div>`
+            ).join('');
+            summaryEl.innerHTML = roundsHtml;
+        }
+
+        // Show next set preview
+        const nextSet = runState.set + 1;
+        const nextSetIndex = Math.min(nextSet - 1, runState.setTargets.length - 1);
+        const nextTargets = runState.setTargets[nextSetIndex];
+        document.getElementById('next-set-number').textContent = nextSet;
+        document.getElementById('next-set-targets').innerHTML = nextTargets.map((t, i) =>
+            `<div class="target-preview">Round ${i + 1}: ${t} pts</div>`
+        ).join('');
+
+        setCompleteScreen.classList.remove('hidden');
+    },
+
+    // Handle Continue button from set complete screen
+    continueFromSetComplete() {
+        this.hideAllRunPopups();
+        this.nextSet();
+    },
+
+    // Animate the bank counter
+    animateBankCounter(from, to) {
+        const bankAfterEl = document.getElementById('bank-after');
+        if (!bankAfterEl || from === to) return;
+
+        const duration = 1000; // 1 second
+        const startTime = performance.now();
+        const diff = to - from;
+
+        function animate(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Ease out quad
+            const eased = 1 - (1 - progress) * (1 - progress);
+            const current = Math.floor(from + diff * eased);
+
+            bankAfterEl.textContent = current;
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        }
+
+        requestAnimationFrame(animate);
+    },
+
+    // Update coin display in header
+    updateCoinDisplay() {
+        const coinDisplay = document.getElementById('progress-coins');
+        if (coinDisplay) {
+            coinDisplay.textContent = `$${runState.coins}`;
+        }
     },
 
     // Save run state to localStorage
@@ -328,6 +506,8 @@ const runManager = {
         runState.setScore = 0;
         runState.totalScore = 0;
         runState.roundScores = [];
+        runState.coins = 0;
+        runState.lastEarnings = null;
         runState.runStartTime = null;
         runState.runSeed = null;
     },
@@ -1321,16 +1501,17 @@ async function initializeGame() {
 
     let seed = urlParams.get('seed');
 
-    if (!seed) {
-        if (runState.isRunMode) {
-            // In run mode, use the seed we calculated from runSeed + round
-            seed = gameState.seed;
-        } else {
-            // Use today's date in YYYYMMDD format
-            seed = getTodaysSeed();
-        }
+    // In run mode, ALWAYS use the calculated seed from runSeed + round
+    // This ensures refreshing the page uses the correct round's seed
+    if (runState.isRunMode) {
+        seed = gameState.seed;  // Already calculated as String(runSeed + round)
+    } else if (!seed) {
+        // Use today's date in YYYYMMDD format
+        seed = getTodaysSeed();
+    }
 
-        // Preserve existing URL parameters while adding seed
+    // Update URL with the correct seed
+    if (urlParams.get('seed') !== seed) {
         urlParams.set('seed', seed);
         const newUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?${urlParams.toString()}`;
         window.history.pushState({ path: newUrl }, '', newUrl);
@@ -1764,6 +1945,16 @@ function setupEventListeners() {
     document.getElementById('next-set-btn')?.addEventListener('click', () => {
         runManager.hideAllRunPopups();
         runManager.nextSet();
+    });
+
+    // Earnings screen Continue button
+    document.getElementById('earnings-continue-btn')?.addEventListener('click', () => {
+        runManager.continueFromEarnings();
+    });
+
+    // Set Complete screen Continue button
+    document.getElementById('set-continue-btn')?.addEventListener('click', () => {
+        runManager.continueFromSetComplete();
     });
 
     // Close buttons for run popups

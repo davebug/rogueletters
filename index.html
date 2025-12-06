@@ -13,7 +13,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui, viewport-fit=cover">
     <title>RogueLetters - A Daily Word Game</title>
-    <link rel="stylesheet" href="./styles.css?v=12.6">
+    <link rel="stylesheet" href="./styles.css?v=13.0">
     <meta name="description" content="Play RogueLetters - a daily word puzzle game. Build words on a letter-tile board to maximize your score!">
 
 
@@ -37,6 +37,8 @@
 		<span id="progress-round">Round 1</span>
 		<span class="progress-sep">|</span>
 		<span id="progress-set">Set 1</span>
+		<span class="progress-sep">|</span>
+		<span id="progress-coins">$0</span>
 	</div>
 	<div id="subtitle">Score <span id="subtitle-target">40</span> in <span id="subtitle-turns">5</span> turns to advance</div>
 	<div id="status"></div>
@@ -279,9 +281,82 @@
 		</div>
 	</div>
 
+	<!-- Earnings Screen (Full Page) -->
+	<div id="earnings-screen" class="full-screen hidden">
+		<div class="full-screen-content">
+			<h2>Round Complete!</h2>
+
+			<div class="score-summary">
+				<div class="score-pair">
+					<span class="score-label">Score</span>
+					<span class="score-value" id="earnings-score">0</span>
+				</div>
+				<div class="score-pair">
+					<span class="score-label">Target</span>
+					<span class="score-value" id="earnings-target">0</span>
+				</div>
+			</div>
+
+			<div id="earnings-surplus-display" class="surplus-display">
+				Surplus: +<span id="earnings-surplus-points">0</span> points
+			</div>
+			<div id="earnings-target-reached" class="target-reached-display hidden">
+				Target reached!
+			</div>
+
+			<div class="earnings-breakdown">
+				<h3>Earnings</h3>
+				<div class="earnings-row">
+					<span>Round bonus</span>
+					<span>$<span id="earnings-base">0</span></span>
+				</div>
+				<div class="earnings-row" id="earnings-surplus-row">
+					<span>Surplus bonus</span>
+					<span>$<span id="earnings-surplus-bonus">0</span></span>
+				</div>
+				<div class="earnings-row earnings-total">
+					<span>Total earned</span>
+					<span>$<span id="earnings-total">0</span></span>
+				</div>
+				<div class="bank-update">
+					Bank: $<span id="bank-before">0</span> → $<span id="bank-after">0</span>
+				</div>
+			</div>
+
+			<button id="earnings-continue-btn" class="popup-btn popup-btn-primary">Continue</button>
+		</div>
+	</div>
+
+	<!-- Set Complete Screen (Full Page) -->
+	<div id="set-complete-screen" class="full-screen hidden">
+		<div class="full-screen-content">
+			<h2>Set <span id="set-complete-number">1</span> Complete!</h2>
+
+			<div class="set-summary">
+				<div class="set-total">
+					<span class="set-total-label">Set Score</span>
+					<span class="set-total-value" id="set-complete-total">0</span>
+				</div>
+			</div>
+
+			<div id="set-rounds-summary" class="rounds-summary">
+				<!-- Populated by JS -->
+			</div>
+
+			<div class="next-set-preview">
+				<h3>Next: Set <span id="next-set-number">2</span></h3>
+				<div id="next-set-targets" class="targets-preview">
+					<!-- Populated by JS -->
+				</div>
+			</div>
+
+			<button id="set-continue-btn" class="popup-btn popup-btn-primary">Start Next Set</button>
+		</div>
+	</div>
+
     <!-- LZ-String compression library for shareable URLs -->
     <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 
-    <script src="./script.js?v=12.3"></script>
+    <script src="./script.js?v=13.1"></script>
 </body>
 </html>
