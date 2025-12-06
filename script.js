@@ -41,6 +41,222 @@ let runState = {
     runSeed: null
 };
 
+// ============================================================================
+// RUN MANAGER
+// ============================================================================
+
+const runManager = {
+    // Start a new run
+    startRun() {
+        runState.isRunMode = true;
+        runState.round = 1;
+        runState.targetScore = runState.roundTargets[0];
+        runState.runScore = 0;
+        runState.roundScores = [];
+        runState.runStartTime = Date.now();
+        runState.runSeed = Date.now(); // Use timestamp as run seed
+
+        this.saveRunState();
+        this.updateRunUI();
+        this.hideAllRunPopups();
+
+        // Reset game state for fresh round
+        this.resetForNewRound();
+    },
+
+    // Check if round target was met (called from endGame)
+    checkRoundComplete(score) {
+        if (!runState.isRunMode) return false;
+
+        runState.roundScores.push(score);
+        runState.runScore += score;
+
+        if (score >= runState.targetScore) {
+            // Success!
+            if (runState.round >= runState.maxRounds) {
+                this.showVictory();
+            } else {
+                this.showRoundComplete(score);
+            }
+            return true;
+        } else {
+            // Failed
+            this.showRunFailed(score);
+            return false;
+        }
+    },
+
+    // Advance to next round
+    nextRound() {
+        runState.round++;
+        runState.targetScore = runState.roundTargets[runState.round - 1];
+
+        this.saveRunState();
+        this.updateRunUI();
+        this.hideAllRunPopups();
+
+        // Reset game for new round
+        this.resetForNewRound();
+    },
+
+    // Reset game state for a new round (keeping run state)
+    resetForNewRound() {
+        // Reset game state
+        gameState.board = [];
+        gameState.tiles = [];
+        gameState.currentTurn = 1;
+        gameState.score = 0;
+        gameState.turnScores = [];
+        gameState.placedTiles = [];
+        gameState.turnHistory = [];
+        gameState.isGameOver = false;
+        gameState.hasSubmittedScore = false;
+        gameState.isSubmitting = false;
+        gameState.rackTiles = [];
+        gameState.totalTilesDrawn = 7;
+        gameState.gameStartTime = Date.now();
+        gameState.preGeneratedShareURL = null;
+        gameState.isNewHighScore = false;
+
+        // Generate new seed for this round
+        gameState.seed = getTodaysSeed() + runState.round;
+        gameState.dateStr = formatSeedToDate(gameState.seed);
+
+        // Reinitialize the game board
+        createBoard();
+        fetchGameData(gameState.seed);
+
+        // Reset UI
+        document.getElementById('dateDisplay').textContent = `Round ${runState.round}`;
+        updateTurnCounter();
+
+        // Re-enable controls
+        const submitBtn = document.getElementById('submit-word');
+        const recallBtn = document.getElementById('recall-tiles');
+        if (submitBtn) submitBtn.disabled = false;
+        if (recallBtn) recallBtn.disabled = false;
+
+        // Remove game-over classes
+        const gameBoard = document.getElementById('game-board');
+        const rackBoard = document.getElementById('tile-rack-board');
+        if (gameBoard) gameBoard.classList.remove('game-over');
+        if (rackBoard) rackBoard.classList.remove('game-over');
+
+        // Hide share icon
+        const shareIcon = document.getElementById('shareIcon');
+        if (shareIcon) shareIcon.classList.add('hidden');
+    },
+
+    // Update run info display
+    updateRunUI() {
+        const runInfo = document.getElementById('run-info');
+        const roundDisplay = document.getElementById('run-round');
+        const targetDisplay = document.getElementById('run-target');
+
+        if (runState.isRunMode) {
+            runInfo.classList.remove('hidden');
+            roundDisplay.textContent = `Round ${runState.round}/${runState.maxRounds}`;
+            targetDisplay.textContent = `Target: ${runState.targetScore}`;
+        } else {
+            runInfo.classList.add('hidden');
+        }
+    },
+
+    // Show round complete popup
+    showRoundComplete(score) {
+        const popup = document.getElementById('round-complete-popup');
+        const scoreEl = document.getElementById('round-score-value');
+        const targetEl = document.getElementById('round-target-value');
+        const surplusEl = document.getElementById('round-surplus-value');
+
+        const surplus = score - runState.targetScore;
+
+        scoreEl.textContent = score;
+        targetEl.textContent = runState.targetScore;
+        surplusEl.textContent = `+${surplus}`;
+
+        popup.classList.remove('hidden');
+    },
+
+    // Show run failed popup
+    showRunFailed(score) {
+        const popup = document.getElementById('run-failed-popup');
+        const scoreEl = document.getElementById('failed-score-value');
+        const targetEl = document.getElementById('failed-target-value');
+        const deficitEl = document.getElementById('failed-deficit-value');
+        const failAmount = document.getElementById('fail-amount');
+
+        const deficit = runState.targetScore - score;
+
+        scoreEl.textContent = score;
+        targetEl.textContent = runState.targetScore;
+        deficitEl.textContent = `-${deficit}`;
+        failAmount.textContent = deficit;
+
+        popup.classList.remove('hidden');
+
+        // Clear run state
+        runState.isRunMode = false;
+        this.clearRunState();
+    },
+
+    // Show victory popup
+    showVictory() {
+        const popup = document.getElementById('run-victory-popup');
+        const totalEl = document.getElementById('victory-total-value');
+        const summaryEl = document.getElementById('victory-rounds-summary');
+
+        totalEl.textContent = runState.runScore;
+
+        // Build rounds summary
+        let summary = '';
+        runState.roundScores.forEach((score, i) => {
+            const target = runState.roundTargets[i];
+            const surplus = score - target;
+            summary += `Round ${i + 1}: ${score}/${target} (+${surplus})<br>`;
+        });
+        summaryEl.innerHTML = summary;
+
+        popup.classList.remove('hidden');
+
+        // Clear run state
+        runState.isRunMode = false;
+        this.clearRunState();
+    },
+
+    // Show start run popup
+    showStartRun() {
+        document.getElementById('start-run-popup').classList.remove('hidden');
+    },
+
+    // Hide all run popups
+    hideAllRunPopups() {
+        document.getElementById('round-complete-popup')?.classList.add('hidden');
+        document.getElementById('run-failed-popup')?.classList.add('hidden');
+        document.getElementById('run-victory-popup')?.classList.add('hidden');
+        document.getElementById('start-run-popup')?.classList.add('hidden');
+    },
+
+    // Save run state to localStorage
+    saveRunState() {
+        localStorage.setItem('rogueletters_run', JSON.stringify(runState));
+    },
+
+    // Load run state from localStorage
+    loadRunState() {
+        const saved = localStorage.getItem('rogueletters_run');
+        if (saved) {
+            const loaded = JSON.parse(saved);
+            Object.assign(runState, loaded);
+        }
+    },
+
+    // Clear run state from localStorage
+    clearRunState() {
+        localStorage.removeItem('rogueletters_run');
+    }
+};
+
 // Board configuration
 const BOARD_SIZE = 9;
 const CENTER_POSITION = 4;
