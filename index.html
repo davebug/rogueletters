@@ -34,6 +34,11 @@
 	</div>
 	<div id="subtitle">5 Solo Turns, Maximize Your Score</div>
 	<div id="status"></div>
+	<!-- Run Mode Info (hidden by default) -->
+	<div id="run-info" class="hidden">
+		<span id="run-round">Round 1/3</span>
+		<span id="run-target">Target: 80</span>
+	</div>
 	</header>
 
         <!-- Debug Mode Toggle (hidden by default, activate with ?debug=1) -->
@@ -190,6 +195,82 @@
                 </div>
             </div>
         </div>
+
+	<!-- Run Complete Screen (beat the round) -->
+	<div id="round-complete-popup" class="hidden">
+		<div class="popup-content">
+			<button class="popup-close-btn" aria-label="Close">×</button>
+			<h2>Round Complete!</h2>
+			<div class="round-result">
+				<div class="result-row">
+					<span>Your Score:</span>
+					<span id="round-score-value">0</span>
+				</div>
+				<div class="result-row">
+					<span>Target:</span>
+					<span id="round-target-value">80</span>
+				</div>
+				<div class="result-row surplus">
+					<span>Surplus:</span>
+					<span id="round-surplus-value">+0</span>
+				</div>
+			</div>
+			<button id="next-round-btn" class="popup-btn popup-btn-primary">Next Round</button>
+		</div>
+	</div>
+
+	<!-- Run Failed Screen (didn't hit target) -->
+	<div id="run-failed-popup" class="hidden">
+		<div class="popup-content">
+			<h2>Run Failed</h2>
+			<div class="round-result">
+				<div class="result-row">
+					<span>Your Score:</span>
+					<span id="failed-score-value">0</span>
+				</div>
+				<div class="result-row">
+					<span>Target:</span>
+					<span id="failed-target-value">80</span>
+				</div>
+				<div class="result-row deficit">
+					<span>Needed:</span>
+					<span id="failed-deficit-value">-0</span>
+				</div>
+			</div>
+			<p class="fail-message">You needed <span id="fail-amount">0</span> more points to advance.</p>
+			<button id="try-again-btn" class="popup-btn popup-btn-primary">Try Again</button>
+		</div>
+	</div>
+
+	<!-- Run Victory Screen (beat all rounds) -->
+	<div id="run-victory-popup" class="hidden">
+		<div class="popup-content">
+			<h2>🎉 Victory!</h2>
+			<p>You completed all 3 rounds!</p>
+			<div class="round-result">
+				<div class="result-row">
+					<span>Total Score:</span>
+					<span id="victory-total-value">0</span>
+				</div>
+			</div>
+			<div id="victory-rounds-summary"></div>
+			<button id="new-run-btn" class="popup-btn popup-btn-primary">New Run</button>
+		</div>
+	</div>
+
+	<!-- Start Run Screen -->
+	<div id="start-run-popup" class="hidden">
+		<div class="popup-content">
+			<h2>🎲 RogueLetters</h2>
+			<p>Beat escalating score targets across 3 rounds.</p>
+			<div class="targets-preview">
+				<div class="target-item">Round 1: 80 pts</div>
+				<div class="target-item">Round 2: 120 pts</div>
+				<div class="target-item">Round 3: 180 pts</div>
+			</div>
+			<button id="start-run-btn" class="popup-btn popup-btn-primary">Start Run</button>
+		</div>
+	</div>
 
     <!-- LZ-String compression library for shareable URLs -->
     <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
