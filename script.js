@@ -257,6 +257,34 @@ const runManager = {
     }
 };
 
+// Update target progress bar during run mode
+function updateTargetProgress() {
+    if (!runState.isRunMode) return;
+
+    const container = document.getElementById('target-progress-container');
+    const fill = document.getElementById('target-progress-fill');
+    const text = document.getElementById('target-progress-text');
+
+    if (!container) return;
+
+    container.classList.remove('hidden');
+
+    const current = gameState.score || 0;
+    const target = runState.targetScore;
+    const percentage = Math.min((current / target) * 100, 100);
+
+    fill.style.width = `${percentage}%`;
+    text.textContent = `${current}/${target}`;
+
+    // Color based on progress
+    fill.classList.remove('exceeded', 'danger');
+    if (current >= target) {
+        fill.classList.add('exceeded');
+    } else if (percentage < 50 && gameState.currentTurn > 3) {
+        fill.classList.add('danger');
+    }
+}
+
 // Board configuration
 const BOARD_SIZE = 9;
 const CENTER_POSITION = 4;
@@ -2803,6 +2831,7 @@ function submitWord() {
             // Update score
             gameState.score += turnScore;
             gameState.turnScores.push(turnScore);  // Save this turn's score
+            updateTargetProgress();
 
             // Note: Tiles have already been removed from rackTiles when placed on board
             // so gameState.rackTiles already contains only the tiles left in the rack
