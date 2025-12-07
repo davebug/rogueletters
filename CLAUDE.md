@@ -1,60 +1,71 @@
 # RogueLetters
 
-RogueLetters is a word puzzle game forked from WikiLetters. This project will evolve independently with its own unique features and gameplay mechanics.
+A roguelike word puzzle game - "Balatro for Scrabble". Forked from WikiLetters but evolving independently with run-based progression, escalating targets, and (eventually) modifiers/upgrades.
+
+## Current State
+
+**Phase 2 Complete:** Economy system working
+- Dark roguelike theme (deep purple/black, stone-textured tiles, red accents)
+- Set/Round/Turn structure with escalating score targets
+- Run state persisted in localStorage
+- Coin economy: $3/$4/$5 base per round + $1 per 10 surplus points
+- Full-page earnings screen after each round
+- Full-page set complete screen after Round 3
+
+### Game Structure
+```
+Game > Set > Round > Turn
+- 3 rounds per set
+- 5 turns per round
+- Targets escalate per set:
+  Set 1: 40 → 60 → 80
+  Set 2: 100 → 150 → 200
+  Set 3: 250 → 375 → 500
+  Set 4+: 650 → 975 → 1300
+- Beat Set 5 = Victory (can continue for high score)
+```
+
+### Key Files
+- `script.js` - Main game logic, includes `runState` and `runManager`
+- `styles.css` - Dark roguelike theme
+- `index.html` - UI structure including all popup screens
 
 ## Development
 
-- When making changes to css or js, use the cache-busting technique of implementing a version number in the html source
-- Local development runs on port 8086: http://localhost:8086
-
-## Quick Start
+- Cache-busting: Update version numbers in HTML when changing CSS/JS
+- Local dev: http://localhost:8086
 
 ```bash
-# Start development server
-./rogueletters_start.sh
-
-# Rebuild container (needed for Python changes)
-./rogueletters_rebuild.sh
-
-# Deploy to production
-./rogueletters_deploy.sh
+./rogueletters_start.sh      # Start dev server
+./rogueletters_rebuild.sh    # Rebuild container (Python changes)
+./rogueletters_deploy.sh     # Deploy to production (runs tests first)
 ```
 
 ## Testing
 
-### Core Gameplay Test Suite
-Located in `testing/core-gameplay/`, this test suite validates essential game mechanics:
-- Word validation & dictionary
-- Scoring calculations
-- Game completion flow
-- Share URL generation & round-trip
-- UI interactions (shuffle, recall, tile swap)
-
-**When to run tests:**
-- ✅ **Automatically:** Tests run automatically when you deploy with `./rogueletters_deploy.sh`
-- ✅ **Before risky changes:** Making major changes to game logic, scoring, or word validation
-- ✅ **After fixing bugs:** Verify the fix works and doesn't break other features
-- ✅ **When adding features:** Ensure new features don't break existing gameplay
-
-**How to run tests:**
 ```bash
 cd testing/core-gameplay
-
-# Run all tests (headless, fast)
-npm test
-
-# Run with browser visible (watch it play!)
-npm run test:headed
-
-# Run specific test suite
-npm run test:gameplay    # Core gameplay only
-npm run test:ui          # UI interactions only
-
-# Debug mode (step through)
-npm run test:debug
+npm test                     # Run all tests (headless)
+npm run test:headed          # Watch tests run in browser
 ```
+
+Tests run automatically on deploy. Run manually before risky changes.
+
+## Documentation
+
+- `docs/plans/2025-12-06-rogueletters-roguelike-design.md` - Full design doc
+- `docs/plans/2025-12-06-phase1-vertical-slice.md` - Phase 1 implementation plan
+- `docs/plans/IDEAS.md` - Brainstorming scratchpad for future features
+
+## Next Up: Phase 3 (Shop)
+
+See `docs/plans/IDEAS.md` for current thinking on:
+- Shop structure (3 options, skipped items increase in price)
+- Modifier/upgrade ideas
 
 ## Notes
 
-- Do not deploy to production without checking with me first. We always want to check on the localhost version first.
-- This project is independent from WikiLetters - changes here do not affect WikiLetters.
+- Do not deploy without checking localhost first
+- Share buttons are hidden (random seed model doesn't support deterministic sharing)
+- Wordlists are synced from WikiLetters at deploy time (single source of truth)
+- This project shares code ancestry with WikiLetters but evolves independently

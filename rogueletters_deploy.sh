@@ -158,6 +158,16 @@ mkdir -p /mnt/user/appdata/rogueletters/data/plays
 mkdir -p /mnt/user/appdata/rogueletters/data/highscores
 chmod -R 755 /mnt/user/appdata/rogueletters
 
+# Sync wordlist files from WikiLetters (single source of truth)
+echo "Syncing wordlist files from WikiLetters..."
+if [ -d /mnt/user/appdata/letters/data ]; then
+  cp /mnt/user/appdata/letters/data/enable.txt /mnt/user/appdata/rogueletters/data/ 2>/dev/null && echo "  Copied enable.txt"
+  cp /mnt/user/appdata/letters/data/daily_words.txt /mnt/user/appdata/rogueletters/data/ 2>/dev/null && echo "  Copied daily_words.txt"
+  cp /mnt/user/appdata/letters/data/starter_words.txt /mnt/user/appdata/rogueletters/data/ 2>/dev/null && echo "  Copied starter_words.txt"
+else
+  echo "  Warning: WikiLetters data not found, using bundled wordlists"
+fi
+
 # Start new container with restart policy and persistent data
 echo "Starting new ${CONTAINER_NAME} container..."
 docker run -d --name ${CONTAINER_NAME} \\
