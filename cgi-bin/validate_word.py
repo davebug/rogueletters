@@ -17,7 +17,8 @@ TILE_SCORES = {
     'F': 4, 'H': 4, 'V': 4, 'W': 4, 'Y': 4,
     'K': 5,
     'J': 8, 'X': 8,
-    'Q': 10, 'Z': 10
+    'Q': 10, 'Z': 10,
+    '_': 0  # Blank tiles score 0 points
 }
 
 # Board multiplier positions (9x9 board)
@@ -245,7 +246,7 @@ def validate_placement(board, placed_tiles, debug_mode=False):
 
     return True, "Valid placement", words_formed
 
-def calculate_score(board, placed_tiles, words_formed):
+def calculate_score(board, placed_tiles, words_formed, existing_blank_positions=None):
     """Calculate score for all words formed"""
     total_score = 0
 
@@ -257,6 +258,15 @@ def calculate_score(board, placed_tiles, words_formed):
     # Convert placed tiles to set for quick lookup
     placed_positions = {(t['row'], t['col']) for t in placed_tiles}
 
+    # Track blank tile positions (blanks score 0 regardless of letter)
+    # Include both blanks placed this turn AND blanks from previous turns
+    blank_positions = {(t['row'], t['col']) for t in placed_tiles if t.get('isBlank', False)}
+
+    # Add blanks from previous turns
+    if existing_blank_positions:
+        for blank in existing_blank_positions:
+            blank_positions.add((blank['row'], blank['col']))
+
     # Score each word formed
     for word_data in words_formed:
         word_score = 0
@@ -265,7 +275,12 @@ def calculate_score(board, placed_tiles, words_formed):
         # Score each letter in the word
         for row, col in word_data['positions']:
             letter = temp_board[row][col]
-            letter_score = TILE_SCORES.get(letter.upper(), 0)
+
+            # Blank tiles score 0 points
+            if (row, col) in blank_positions:
+                letter_score = 0
+            else:
+                letter_score = TILE_SCORES.get(letter.upper(), 0)
 
             # Apply multipliers ONLY if this is a newly placed tile
             if (row, col) in placed_positions:
@@ -321,6 +336,7 @@ def main():
 
     board = data.get('board', [])
     placed_tiles = data.get('placed_tiles', [])
+    blank_positions = data.get('blank_positions', [])  # Blanks from previous turns
     debug_mode = data.get('debug_mode', False)
 
     # Validate placement and words
@@ -333,7 +349,7 @@ def main():
     }
 
     if is_valid:
-        response["score"] = calculate_score(board, placed_tiles, words_formed)
+        response["score"] = calculate_score(board, placed_tiles, words_formed, blank_positions)
 
     # Send response
     print("Content-Type: application/json")

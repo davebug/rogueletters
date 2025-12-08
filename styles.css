@@ -149,7 +149,7 @@ a, .accent {
     color: var(--success-color);
 }
 
-#target-score.target-surplus {
+#target-score.target-extra {
     color: var(--success-color);
 }
 
@@ -161,7 +161,7 @@ a, .accent {
     padding: 0 10px;
 }
 
-#subtitle .target-surplus,
+#subtitle .target-extra,
 #subtitle .target-met {
     color: var(--success-color);
     font-weight: bold;
@@ -257,6 +257,18 @@ main {
 
 .invalid-word .word-text {
     color: var(--danger-color);
+}
+
+/* Unvalidated words (when API fails) */
+.word-item.unvalidated {
+    border: 2px dashed #999;
+    border-radius: 4px;
+    background: rgba(150, 150, 150, 0.1);
+    opacity: 0.7;
+}
+
+.unvalidated .word-text {
+    color: #666;
 }
 
 .word-score {
@@ -1205,6 +1217,56 @@ main {
     margin-bottom: 15px;
 }
 
+/* Blank Tiles - empty in rack, 70% opacity letter when assigned */
+.tile.blank-tile {
+    /* Same appearance as regular tile, just empty */
+}
+
+/* Letter on an assigned blank tile - 70% opacity */
+.tile .tile-letter.blank-letter {
+    opacity: 0.7;
+}
+
+/* Blank Letter Selection Modal */
+.blank-letter-modal-content h3 {
+    color: var(--text-color);
+    margin-bottom: 20px;
+}
+
+.letter-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin-bottom: 20px;
+    max-width: 280px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.letter-grid button {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    background: var(--tile-bg);
+    border: 2px solid var(--tile-border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    -webkit-appearance: none;  /* Prevent iOS Safari default styling */
+}
+
+.letter-grid button:hover {
+    background: #ffd700;
+    border-color: #daa520;
+    transform: scale(1.1);
+}
+
+.letter-grid button:active {
+    transform: scale(0.95);
+}
+
 
 @keyframes shuffle-animation {
     0% { transform: translateY(0) rotate(0deg); }
@@ -1780,7 +1842,7 @@ main {
     color: var(--text-color);
 }
 
-.result-row.surplus span:last-child {
+.result-row.extra span:last-child {
     color: #4caf50;
     font-weight: bold;
 }
@@ -1946,8 +2008,8 @@ main {
     color: var(--text-color);
 }
 
-/* Surplus / Target Reached Display */
-.surplus-display {
+/* Extra / Target Reached Display */
+.extra-display {
     font-size: 20px;
     color: #4caf50;
     font-weight: 600;

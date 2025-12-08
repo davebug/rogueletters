@@ -8,7 +8,7 @@ A roguelike word puzzle game - "Balatro for Scrabble". Forked from WikiLetters b
 - Dark roguelike theme (deep purple/black, stone-textured tiles, red accents)
 - Set/Round/Turn structure with escalating score targets
 - Run state persisted in localStorage
-- Coin economy: $3/$4/$5 base per round + $1 per 10 surplus points
+- Coin economy: $3/$4/$5 base per round + $1 per 10 extra points
 - Full-page earnings screen after each round
 - Full-page set complete screen after Round 3
 
@@ -55,13 +55,31 @@ Tests run automatically on deploy. Run manually before risky changes.
 
 - `docs/plans/2025-12-06-rogueletters-roguelike-design.md` - Full design doc
 - `docs/plans/2025-12-06-phase1-vertical-slice.md` - Phase 1 implementation plan
+- `docs/plans/2025-12-06-phase2-economy.md` - Phase 2 implementation plan
+- `docs/plans/2025-12-06-phase4-meta-progression.md` - Phase 4 design (gems, permanent upgrades)
 - `docs/plans/IDEAS.md` - Brainstorming scratchpad for future features
 
-## Next Up: Phase 3 (Shop)
+## Phase Roadmap
 
-See `docs/plans/IDEAS.md` for current thinking on:
-- Shop structure (3 options, skipped items increase in price)
-- Modifier/upgrade ideas
+| Phase | Status | Description |
+|-------|--------|-------------|
+| 1. Core Loop | ✅ Complete | Sets, rounds, turns, escalating targets |
+| 2. Economy | ✅ Complete | Coins, earnings screens, extra bonus |
+| 3. Shop | 📋 Planned | In-run shop, spend coins on modifiers |
+| 4. Meta-Progression | 📋 Planned | Gems, main menu, permanent upgrades |
+
+### Next Up: Phase 3 (Shop)
+- Shop screen after earnings (before next round)
+- 4 options: tile set upgrade + 3 random modifiers
+- Spend coins on in-run enhancements
+- See `docs/plans/IDEAS.md` for modifier ideas
+
+### Future: Phase 4 (Meta-Progression)
+- Main menu (new entry point)
+- Gems earned at set completion (persist forever)
+- Gem shop between runs for permanent upgrades
+- Tile set unlocks, starting bonuses, game rule tweaks
+- See `docs/plans/2025-12-06-phase4-meta-progression.md`
 
 ## Notes
 

@@ -25,7 +25,9 @@ let gameState = {
     totalTilesDrawn: 7,  // Track total tiles drawn from the bag (starts at 7 after turn 1)
     gameStartTime: null,  // Track when game started for analytics
     preGeneratedShareURL: null,  // Pre-generated shareable URL (created at game end)
-    isNewHighScore: false  // Track if player got a new high score
+    isNewHighScore: false,  // Track if player got a new high score
+    pendingBlankPlacement: null,  // Stores {cell, tile} when blank awaiting letter selection
+    blankPositions: []  // Track positions of blank tiles on the board [{row, col, letter}]
 };
 
 // Run state for roguelike mode
@@ -72,17 +74,17 @@ function getTargetScore(set, round) {
 }
 
 // Calculate earnings for a completed round
-// Base: $3 (R1), $4 (R2), $5 (R3) + $1 per 10 surplus points
+// Base: $3 (R1), $4 (R2), $5 (R3) + $1 per 10 extra points
 function calculateEarnings(score, target, roundInSet) {
     const basePayout = [3, 4, 5][roundInSet - 1] || 3;
-    const surplus = Math.max(0, score - target);
-    const surplusBonus = Math.floor(surplus / 10);
+    const extra = Math.max(0, score - target);
+    const extraBonus = Math.floor(extra / 10);
 
     return {
         base: basePayout,
-        surplusBonus: surplusBonus,
-        total: basePayout + surplusBonus,
-        surplusPoints: surplus
+        extraBonus: extraBonus,
+        total: basePayout + extraBonus,
+        extraPoints: extra
     };
 }
 
@@ -186,6 +188,8 @@ const runManager = {
         gameState.gameStartTime = Date.now();
         gameState.preGeneratedShareURL = null;
         gameState.isNewHighScore = false;
+        gameState.pendingBlankPlacement = null;
+        gameState.blankPositions = [];
 
         // Generate new seed for this round (as string for consistency)
         gameState.seed = String(runState.runSeed + runState.round);
@@ -243,9 +247,9 @@ const runManager = {
                     // Target not yet met
                     subtitle.innerHTML = `Score <span id="subtitle-target">${remaining}</span> in <span id="subtitle-turns">${turnsLeft}</span> turn${turnsLeft !== 1 ? 's' : ''} to advance`;
                 } else {
-                    // Target met - show surplus message
-                    const surplus = Math.abs(remaining);
-                    subtitle.innerHTML = `<span class="target-met">+${surplus} surplus</span> — keep playing for bonuses!`;
+                    // Target met - show extra message
+                    const extra = Math.abs(remaining);
+                    subtitle.innerHTML = `<span class="target-met">+${extra} extra</span> — keep playing for bonuses!`;
                 }
             }
         }
@@ -256,13 +260,13 @@ const runManager = {
         const popup = document.getElementById('round-complete-popup');
         const scoreEl = document.getElementById('round-score-value');
         const targetEl = document.getElementById('round-target-value');
-        const surplusEl = document.getElementById('round-surplus-value');
+        const extraEl = document.getElementById('round-extra-value');
 
-        const surplus = score - runState.targetScore;
+        const extra = score - runState.targetScore;
 
         scoreEl.textContent = score;
         targetEl.textContent = runState.targetScore;
-        surplusEl.textContent = `+${surplus}`;
+        extraEl.textContent = `+${extra}`;
 
         popup.classList.remove('hidden');
     },
@@ -360,32 +364,32 @@ const runManager = {
         document.getElementById('earnings-score').textContent = score;
         document.getElementById('earnings-target').textContent = runState.targetScore;
 
-        // Handle surplus vs exact match
-        const surplusDisplay = document.getElementById('earnings-surplus-display');
+        // Handle extra vs exact match
+        const extraDisplay = document.getElementById('earnings-extra-display');
         const targetReachedDisplay = document.getElementById('earnings-target-reached');
 
-        if (earnings.surplusPoints > 0) {
-            if (surplusDisplay) {
-                surplusDisplay.classList.remove('hidden');
-                document.getElementById('earnings-surplus-points').textContent = earnings.surplusPoints;
+        if (earnings.extraPoints > 0) {
+            if (extraDisplay) {
+                extraDisplay.classList.remove('hidden');
+                document.getElementById('earnings-extra-points').textContent = earnings.extraPoints;
             }
             if (targetReachedDisplay) targetReachedDisplay.classList.add('hidden');
         } else {
-            if (surplusDisplay) surplusDisplay.classList.add('hidden');
+            if (extraDisplay) extraDisplay.classList.add('hidden');
             if (targetReachedDisplay) targetReachedDisplay.classList.remove('hidden');
         }
 
         // Populate earnings breakdown
         document.getElementById('earnings-base').textContent = earnings.base;
-        document.getElementById('earnings-surplus-bonus').textContent = earnings.surplusBonus;
+        document.getElementById('earnings-extra-bonus').textContent = earnings.extraBonus;
         document.getElementById('earnings-total').textContent = earnings.total;
         document.getElementById('bank-before').textContent = previousCoins;
         document.getElementById('bank-after').textContent = runState.coins;
 
-        // Show/hide surplus bonus row based on whether there's a bonus
-        const surplusBonusRow = document.getElementById('earnings-surplus-row');
-        if (surplusBonusRow) {
-            surplusBonusRow.style.display = earnings.surplusBonus > 0 ? 'flex' : 'none';
+        // Show/hide extra bonus row based on whether there's a bonus
+        const extraBonusRow = document.getElementById('earnings-extra-row');
+        if (extraBonusRow) {
+            extraBonusRow.style.display = earnings.extraBonus > 0 ? 'flex' : 'none';
         }
 
         // Update coin display in header
@@ -420,7 +424,6 @@ const runManager = {
 
         // Populate set data
         document.getElementById('set-complete-number').textContent = runState.set;
-        document.getElementById('set-complete-total').textContent = runState.setScore;
 
         // Populate round scores summary
         const summaryEl = document.getElementById('set-rounds-summary');
@@ -561,7 +564,8 @@ const TILE_SCORES = {
     'F': 4, 'H': 4, 'V': 4, 'W': 4, 'Y': 4,
     'K': 5,
     'J': 8, 'X': 8,
-    'Q': 10, 'Z': 10
+    'Q': 10, 'Z': 10,
+    '_': 0  // Blank tiles
 };
 
 // Board multipliers (adjusted for 9x9 board)
@@ -1834,19 +1838,39 @@ function displayTiles(tiles) {
     });
 }
 
-function createTileElement(letter, index) {
+function createTileElement(letter, index, isBlank = false) {
     const tile = document.createElement('div');
     tile.className = 'tile';
     tile.dataset.letter = letter;
     tile.dataset.index = index;
 
+    // Check if this is a blank tile (either '_' or explicit isBlank flag)
+    const tileIsBlank = letter === '_' || isBlank;
+    if (tileIsBlank) {
+        tile.classList.add('blank-tile');
+        tile.dataset.isBlank = 'true';
+    }
+
     const letterSpan = document.createElement('span');
     letterSpan.className = 'tile-letter';
-    letterSpan.textContent = letter;
+    // Blank tiles in rack show nothing, assigned blanks show letter at 70% opacity
+    if (tileIsBlank && letter === '_') {
+        letterSpan.textContent = '';  // Empty in rack
+    } else if (tileIsBlank) {
+        letterSpan.textContent = letter.toUpperCase();  // Assigned blank shows letter
+        letterSpan.classList.add('blank-letter');  // 70% opacity styling
+    } else {
+        letterSpan.textContent = letter;
+    }
 
     const scoreSpan = document.createElement('span');
     scoreSpan.className = 'tile-score';
-    scoreSpan.textContent = TILE_SCORES[letter];
+    // Blank tiles show no score (empty like real Scrabble)
+    if (tileIsBlank) {
+        scoreSpan.textContent = '';
+    } else {
+        scoreSpan.textContent = TILE_SCORES[letter];
+    }
 
     tile.appendChild(letterSpan);
     tile.appendChild(scoreSpan);
@@ -1964,6 +1988,267 @@ function setupEventListeners() {
             e.target.closest('.popup-content').parentElement.classList.add('hidden');
         });
     });
+
+    // Initialize blank letter grid
+    initLetterGrid();
+}
+
+// ============================================================================
+// BLANK TILE FUNCTIONS
+// ============================================================================
+
+function initLetterGrid() {
+    const letterGrid = document.getElementById('letter-grid');
+    if (!letterGrid) return;
+
+    letterGrid.innerHTML = '';
+    for (let i = 0; i < 26; i++) {
+        const letter = String.fromCharCode(65 + i); // A-Z
+        const button = document.createElement('button');
+        button.textContent = letter;
+        button.addEventListener('click', () => handleBlankLetterSelection(letter));
+        letterGrid.appendChild(button);
+    }
+
+    // Cancel button handler
+    document.getElementById('cancel-blank-selection')?.addEventListener('click', hideBlankLetterModal);
+}
+
+function showBlankLetterModal(cell, tile) {
+    gameState.pendingBlankPlacement = { cell, tile };
+    const modal = document.getElementById('blank-letter-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+function hideBlankLetterModal() {
+    const modal = document.getElementById('blank-letter-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+
+    // Clear pending placement
+    gameState.pendingBlankPlacement = null;
+
+    // Deselect tile if selection was cancelled
+    if (selectedTile) {
+        selectedTile.classList.remove('selected');
+        selectedTile = null;
+    }
+}
+
+function handleBlankLetterSelection(letter) {
+    if (!gameState.pendingBlankPlacement) {
+        hideBlankLetterModal();
+        return;
+    }
+
+    const { cell, tile, isChanging, isSwap, boardLetter, boardIsBlank, rackTile, boardPosition } = gameState.pendingBlankPlacement;
+
+    // Hide modal first
+    const modal = document.getElementById('blank-letter-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+
+    if (isSwap) {
+        // Swapping blank from rack with a board tile
+        // Safety check: if boardLetter is missing, abort the swap
+        if (!boardLetter || !/^[A-Z]$/.test(boardLetter)) {
+            console.error('Swap aborted: invalid boardLetter', boardLetter);
+            gameState.pendingBlankPlacement = null;
+            return;
+        }
+
+        // 1. Update the rack tile DOM to show the board letter (or blank if board was blank)
+        if (boardIsBlank) {
+            // Board tile was a blank - it reverts to unassigned blank in rack
+            rackTile.dataset.letter = '_';
+            rackTile.dataset.isBlank = 'true';
+            rackTile.classList.add('blank-tile');
+            rackTile.querySelector('.tile-letter').textContent = '';
+            rackTile.querySelector('.tile-score').textContent = '';
+        } else {
+            // Board tile was a regular tile - it becomes that letter in rack
+            rackTile.dataset.letter = boardLetter;
+            rackTile.dataset.isBlank = 'false';
+            rackTile.classList.remove('blank-tile');
+            rackTile.querySelector('.tile-letter').textContent = boardLetter;
+            rackTile.querySelector('.tile-score').textContent = TILE_SCORES[boardLetter] || 0;
+        }
+
+        // 2. Update the board tile to show the blank with chosen letter
+        const boardTile = cell.querySelector('.tile');
+        if (boardTile) {
+            boardTile.dataset.letter = letter;
+            boardTile.dataset.isBlank = 'true';
+            boardTile.classList.add('blank-tile');
+            const letterSpan = boardTile.querySelector('.tile-letter');
+            letterSpan.textContent = letter;
+            letterSpan.classList.add('blank-letter');  // 70% opacity
+            boardTile.querySelector('.tile-value').textContent = '';  // Blanks show no score
+        }
+
+        // 3. Update gameState.board
+        gameState.board[boardPosition.row][boardPosition.col] = letter;
+
+        // 4. Update gameState.placedTiles - mark as blank
+        const placedTileIndex = gameState.placedTiles.findIndex(
+            t => t.row === boardPosition.row && t.col === boardPosition.col
+        );
+        if (placedTileIndex !== -1) {
+            gameState.placedTiles[placedTileIndex].letter = letter;
+            gameState.placedTiles[placedTileIndex].isBlank = true;
+        }
+
+        // 5. Rebuild rackTiles array from DOM
+        const rackBoard = document.getElementById('tile-rack-board');
+        const cells = rackBoard.querySelectorAll('.rack-cell');
+        gameState.rackTiles = [];
+        cells.forEach(rackCell => {
+            const rackTileInCell = rackCell.querySelector('.tile');
+            if (rackTileInCell && rackTileInCell.dataset.letter) {
+                gameState.rackTiles.push(rackTileInCell.dataset.letter);
+            }
+        });
+
+        // 6. Clear pending and update displays
+        gameState.pendingBlankPlacement = null;
+        saveGameState();
+        checkWordValidity();
+        updateWordPreview();
+        updatePotentialWordsSidebar();
+        return;
+    }
+
+    if (isChanging) {
+        // Changing an existing blank tile's letter
+        const row = parseInt(cell.dataset.row);
+        const col = parseInt(cell.dataset.col);
+
+        // Update board state
+        gameState.board[row][col] = letter;
+
+        // Update tile display
+        tile.dataset.letter = letter;
+        const letterSpan = tile.querySelector('.tile-letter');
+        if (letterSpan) {
+            letterSpan.textContent = letter;
+        }
+
+        // Update placedTiles array
+        const placedTile = gameState.placedTiles.find(t => t.row === row && t.col === col);
+        if (placedTile) {
+            placedTile.letter = letter;
+        }
+
+        // Clear pending and selection
+        gameState.pendingBlankPlacement = null;
+        if (selectedTile) {
+            selectedTile.classList.remove('selected');
+            selectedTile = null;
+        }
+        selectedTilePosition = null;
+
+        // Save and update
+        saveGameState();
+        checkWordValidity();
+        updateWordPreview();
+    } else {
+        // New blank placement - clear pending state
+        gameState.pendingBlankPlacement = null;
+        placeBlankTile(cell, tile, letter);
+    }
+}
+
+function changeBlankLetter(cell, currentTile) {
+    // Store the cell and tile for changing
+    gameState.pendingBlankPlacement = {
+        cell,
+        tile: currentTile,
+        isChanging: true,
+        oldLetter: currentTile.dataset.letter
+    };
+
+    // Show the modal
+    const modal = document.getElementById('blank-letter-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+function placeBlankTile(cell, tile, assignedLetter) {
+    const row = parseInt(cell.dataset.row);
+    const col = parseInt(cell.dataset.col);
+
+    // Validate assignedLetter is A-Z
+    if (!assignedLetter || !/^[A-Z]$/.test(assignedLetter)) {
+        console.error('placeBlankTile: invalid assignedLetter', assignedLetter);
+        return;
+    }
+
+    // Check if placement is valid (cell is empty)
+    if (!isValidPlacement(row, col)) {
+        return;
+    }
+
+    // Remove tile from its current location
+    if (tile.parentElement?.classList.contains('rack-cell')) {
+        // Get the original letter (underscore) before removing
+        const removedLetter = tile.dataset.letter;
+        tile.style.opacity = '';
+        tile.remove();
+
+        // Remove from rackTiles array
+        const index = gameState.rackTiles.indexOf(removedLetter);
+        if (index > -1) {
+            gameState.rackTiles.splice(index, 1);
+        }
+    }
+
+    // Place on board with assigned letter
+    gameState.board[row][col] = assignedLetter;
+
+    // Create tile element for the board
+    const tileDiv = document.createElement('div');
+    tileDiv.className = 'tile placed placed-this-turn blank-tile';
+    tileDiv.dataset.letter = assignedLetter;
+    tileDiv.dataset.isBlank = 'true';
+
+    const letterSpan = document.createElement('span');
+    letterSpan.className = 'tile-letter blank-letter';
+    letterSpan.textContent = assignedLetter;
+
+    const scoreSpan = document.createElement('span');
+    scoreSpan.className = 'tile-value';
+    scoreSpan.textContent = '';  // Blanks show empty score
+
+    tileDiv.appendChild(letterSpan);
+    tileDiv.appendChild(scoreSpan);
+
+    // Add click handler for board tiles
+    tileDiv.addEventListener('click', handleTileClick);
+
+    cell.innerHTML = '';
+    cell.appendChild(tileDiv);
+    cell.classList.add('occupied', 'placed-this-turn');
+
+    // Track placed tile with isBlank flag
+    gameState.placedTiles.push({ row, col, letter: assignedLetter, isBlank: true });
+
+    // Save game state
+    saveGameState();
+
+    // Clear selection
+    if (selectedTile) {
+        selectedTile.classList.remove('selected');
+    }
+    selectedTile = null;
+
+    // Check if word is valid for submission
+    checkWordValidity();
+    updateWordPreview();
 }
 
 // Tile selection handler
@@ -2037,6 +2322,300 @@ function swapTilesInRack(tile1, tile2) {
     saveGameState();
 }
 
+// Swap a rack tile with a board tile (placed-this-turn only)
+function swapRackAndBoardTile(rackTile, boardPosition) {
+    const rackLetter = rackTile.dataset.letter;
+    const rackIsBlank = rackTile.dataset.isBlank === 'true' || rackLetter === '_';
+
+    // Get board cell and tile
+    const boardCell = document.querySelector(
+        `.board-cell[data-row="${boardPosition.row}"][data-col="${boardPosition.col}"]`
+    );
+    if (!boardCell || !boardCell.classList.contains('placed-this-turn')) return;
+
+    const boardTile = boardCell.querySelector('.tile');
+    if (!boardTile) return;
+    const boardLetter = boardTile.dataset.letter;
+
+    // Validate boardLetter exists
+    if (!boardLetter || !/^[A-Z]$/.test(boardLetter)) {
+        console.error('swapRackAndBoardTile: invalid boardLetter', boardLetter);
+        return;
+    }
+
+    // Check if board tile is a blank
+    const placedTileIndex = gameState.placedTiles.findIndex(
+        t => t.row === boardPosition.row && t.col === boardPosition.col
+    );
+    const boardTileData = placedTileIndex !== -1 ? gameState.placedTiles[placedTileIndex] : null;
+    const boardIsBlank = boardTileData?.isBlank || false;
+
+    // If rack tile is a blank, show letter selection modal for swap
+    if (rackIsBlank) {
+        // Store swap context and show modal
+        gameState.pendingBlankPlacement = {
+            cell: boardCell,
+            tile: rackTile,
+            isSwap: true,
+            boardLetter: boardLetter,
+            boardIsBlank: boardIsBlank,
+            rackTile: rackTile,
+            boardPosition: boardPosition
+        };
+
+        // Clear selection before showing modal
+        if (selectedTile) {
+            selectedTile.classList.remove('selected');
+        }
+        selectedTile = null;
+        selectedTilePosition = null;
+
+        // Show the letter selection modal
+        const modal = document.getElementById('blank-letter-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+        }
+        return;
+    }
+
+    // Update gameState.board with the rack letter
+    gameState.board[boardPosition.row][boardPosition.col] = rackLetter;
+
+    // Update gameState.placedTiles
+    if (placedTileIndex !== -1) {
+        gameState.placedTiles[placedTileIndex].letter = rackLetter;
+        gameState.placedTiles[placedTileIndex].isBlank = false; // No longer a blank
+    }
+
+    // Update board tile DOM - remove blank styling, add regular tile
+    boardTile.dataset.letter = rackLetter;
+    boardTile.dataset.isBlank = 'false';
+    boardTile.classList.remove('blank-tile');
+    const boardLetterSpan = boardTile.querySelector('.tile-letter');
+    boardLetterSpan.textContent = rackLetter;
+    boardLetterSpan.classList.remove('blank-letter');
+    boardTile.querySelector('.tile-value').textContent = TILE_SCORES[rackLetter] || 0;
+
+    // Update rack tile DOM - if board was blank, revert to blank
+    if (boardIsBlank) {
+        rackTile.dataset.letter = '_';
+        rackTile.dataset.isBlank = 'true';
+        rackTile.classList.add('blank-tile');
+        rackTile.querySelector('.tile-letter').textContent = '';
+        rackTile.querySelector('.tile-score').textContent = '';
+    } else {
+        rackTile.dataset.letter = boardLetter;
+        rackTile.dataset.isBlank = 'false';
+        rackTile.classList.remove('blank-tile');
+        rackTile.querySelector('.tile-letter').textContent = boardLetter;
+        rackTile.querySelector('.tile-score').textContent = TILE_SCORES[boardLetter] || 0;
+    }
+
+    // Rebuild rackTiles array from DOM
+    const rackBoard = document.getElementById('tile-rack-board');
+    const cells = rackBoard.querySelectorAll('.rack-cell');
+    gameState.rackTiles = [];
+    cells.forEach(cell => {
+        const tile = cell.querySelector('.tile');
+        if (tile && tile.dataset.letter) {
+            gameState.rackTiles.push(tile.dataset.letter);
+        }
+    });
+
+    // Clear selection
+    if (selectedTile) {
+        selectedTile.classList.remove('selected');
+    }
+    selectedTile = null;
+    selectedTilePosition = null;
+
+    // Update displays and save
+    updateWordPreview();
+    checkWordValidity();
+    updatePotentialWordsSidebar();
+    saveGameState();
+}
+
+// Swap two board tiles (both placed-this-turn)
+function swapBoardTiles(position1, position2) {
+    const cell1 = document.querySelector(
+        `.board-cell[data-row="${position1.row}"][data-col="${position1.col}"]`
+    );
+    const cell2 = document.querySelector(
+        `.board-cell[data-row="${position2.row}"][data-col="${position2.col}"]`
+    );
+
+    if (!cell1 || !cell2) return;
+    if (!cell1.classList.contains('placed-this-turn') || !cell2.classList.contains('placed-this-turn')) return;
+
+    const tile1 = cell1.querySelector('.tile');
+    const tile2 = cell2.querySelector('.tile');
+    if (!tile1 || !tile2) return;
+
+    const letter1 = tile1.dataset.letter;
+    const letter2 = tile2.dataset.letter;
+
+    // Update gameState.board
+    gameState.board[position1.row][position1.col] = letter2;
+    gameState.board[position2.row][position2.col] = letter1;
+
+    // Update gameState.placedTiles
+    const idx1 = gameState.placedTiles.findIndex(
+        t => t.row === position1.row && t.col === position1.col
+    );
+    const idx2 = gameState.placedTiles.findIndex(
+        t => t.row === position2.row && t.col === position2.col
+    );
+    if (idx1 !== -1) gameState.placedTiles[idx1].letter = letter2;
+    if (idx2 !== -1) gameState.placedTiles[idx2].letter = letter1;
+
+    // Check if tiles are blanks
+    const tile1IsBlank = tile1.dataset.isBlank === 'true';
+    const tile2IsBlank = tile2.dataset.isBlank === 'true';
+
+    // Also swap isBlank status in placedTiles
+    if (idx1 !== -1 && idx2 !== -1) {
+        const temp = gameState.placedTiles[idx1].isBlank;
+        gameState.placedTiles[idx1].isBlank = gameState.placedTiles[idx2].isBlank;
+        gameState.placedTiles[idx2].isBlank = temp;
+    }
+
+    // Update DOM for tile1 (gets letter2 and tile2's blank status)
+    tile1.dataset.letter = letter2;
+    const tile1LetterSpan = tile1.querySelector('.tile-letter');
+    tile1LetterSpan.textContent = letter2;
+    if (tile2IsBlank) {
+        tile1.classList.add('blank-tile');
+        tile1.dataset.isBlank = 'true';
+        tile1LetterSpan.classList.add('blank-letter');
+        tile1.querySelector('.tile-value').textContent = '';
+    } else {
+        tile1.classList.remove('blank-tile');
+        delete tile1.dataset.isBlank;
+        tile1LetterSpan.classList.remove('blank-letter');
+        tile1.querySelector('.tile-value').textContent = TILE_SCORES[letter2] || 0;
+    }
+
+    // Update DOM for tile2 (gets letter1 and tile1's blank status)
+    tile2.dataset.letter = letter1;
+    const tile2LetterSpan = tile2.querySelector('.tile-letter');
+    tile2LetterSpan.textContent = letter1;
+    if (tile1IsBlank) {
+        tile2.classList.add('blank-tile');
+        tile2.dataset.isBlank = 'true';
+        tile2LetterSpan.classList.add('blank-letter');
+        tile2.querySelector('.tile-value').textContent = '';
+    } else {
+        tile2.classList.remove('blank-tile');
+        delete tile2.dataset.isBlank;
+        tile2LetterSpan.classList.remove('blank-letter');
+        tile2.querySelector('.tile-value').textContent = TILE_SCORES[letter1] || 0;
+    }
+
+    // Clear selection
+    if (selectedTile) {
+        selectedTile.classList.remove('selected');
+    }
+    selectedTile = null;
+    selectedTilePosition = null;
+
+    // Update displays and save
+    updateWordPreview();
+    checkWordValidity();
+    updatePotentialWordsSidebar();
+    saveGameState();
+}
+
+// Move a rack tile to an empty rack cell
+function moveRackTileToEmptyCell(rackTile, emptyCell) {
+    // Move tile in DOM
+    emptyCell.appendChild(rackTile);
+
+    // Rebuild rackTiles array from DOM
+    const rackBoard = document.getElementById('tile-rack-board');
+    const cells = rackBoard.querySelectorAll('.rack-cell');
+    gameState.rackTiles = [];
+    cells.forEach(cell => {
+        const tile = cell.querySelector('.tile');
+        if (tile && tile.dataset.letter) {
+            gameState.rackTiles.push(tile.dataset.letter);
+        }
+    });
+
+    // Clear selection
+    rackTile.classList.remove('selected');
+    selectedTile = null;
+    selectedTilePosition = null;
+
+    // Save state
+    saveGameState();
+}
+
+// Return a board tile to a specific rack cell (not just first empty)
+function returnBoardTileToSpecificRackCell(fromPos, targetRackCell) {
+    const fromCell = document.querySelector(
+        `.board-cell[data-row="${fromPos.row}"][data-col="${fromPos.col}"]`
+    );
+
+    if (!fromCell || !fromCell.classList.contains('placed-this-turn')) {
+        return;
+    }
+
+    // Find the tile in placedTiles
+    const tileIndex = gameState.placedTiles.findIndex(
+        t => t.row === fromPos.row && t.col === fromPos.col
+    );
+
+    if (tileIndex === -1) return;
+
+    // Get the tile data and remove from placedTiles
+    const tileData = gameState.placedTiles.splice(tileIndex, 1)[0];
+
+    // Clear board position
+    gameState.board[fromPos.row][fromPos.col] = null;
+    fromCell.innerHTML = '';
+    fromCell.classList.remove('occupied', 'placed-this-turn');
+
+    // Restore multiplier text if needed
+    const cellType = getCellType(fromPos.row, fromPos.col);
+    if (cellType && cellType !== 'normal') {
+        const multiplierSpan = document.createElement('span');
+        multiplierSpan.className = 'multiplier-text';
+        multiplierSpan.textContent = getMultiplierText(cellType);
+        fromCell.appendChild(multiplierSpan);
+    }
+
+    // Create new tile element for the specific rack cell
+    // Blanks revert to '_' when returned to rack
+    const rackLetter = tileData.isBlank ? '_' : tileData.letter;
+    const newTile = createTileElement(rackLetter, 0, tileData.isBlank);
+    targetRackCell.appendChild(newTile);
+
+    // Rebuild rackTiles array from DOM
+    const rackBoard = document.getElementById('tile-rack-board');
+    const cells = rackBoard.querySelectorAll('.rack-cell');
+    gameState.rackTiles = [];
+    cells.forEach(cell => {
+        const tile = cell.querySelector('.tile');
+        if (tile && tile.dataset.letter) {
+            gameState.rackTiles.push(tile.dataset.letter);
+        }
+    });
+
+    // Clear selection
+    if (selectedTile) {
+        selectedTile.classList.remove('selected');
+    }
+    selectedTile = null;
+    selectedTilePosition = null;
+
+    // Update displays and save
+    updateWordPreview();
+    checkWordValidity();
+    updatePotentialWordsSidebar();
+    saveGameState();
+}
+
 function handleTileClick(e) {
     e.stopPropagation(); // Prevent event bubbling
 
@@ -2075,12 +2654,9 @@ function handleTileClick(e) {
                 selectedTile = null;
                 window.selectedTile = null;
             }
-            // If selected tile is from board, select this rack tile instead
+            // If selected tile is from board, swap board tile with this rack tile
             else {
-                selectedTile.classList.remove('selected');
-                selectedTile = tile;
-                selectedTilePosition = null;
-                tile.classList.add('selected');
+                swapRackAndBoardTile(tile, selectedTilePosition);
             }
         } else {
             // Select this tile
@@ -2096,15 +2672,35 @@ function handleTileClick(e) {
         }
 
         if (selectedTile === tile) {
-            // Deselect
-            selectedTile.classList.remove('selected');
-            selectedTile = null;
-            selectedTilePosition = null;
-        } else {
-            // Select this board tile
-            if (selectedTile) {
+            // Clicking same tile - if blank, show letter change modal; else deselect
+            if (tile.dataset.isBlank === 'true') {
+                // Second tap on blank - show letter change modal
+                changeBlankLetter(parentCell, tile);
                 selectedTile.classList.remove('selected');
+                selectedTile = null;
+                selectedTilePosition = null;
+            } else {
+                // Regular tile - just deselect
+                selectedTile.classList.remove('selected');
+                selectedTile = null;
+                selectedTilePosition = null;
             }
+        } else if (selectedTile && !selectedTilePosition) {
+            // Rack tile is selected, swap with this board tile
+            const boardPosition = {
+                row: parseInt(parentCell.dataset.row),
+                col: parseInt(parentCell.dataset.col)
+            };
+            swapRackAndBoardTile(selectedTile, boardPosition);
+        } else if (selectedTile && selectedTilePosition) {
+            // Another board tile is selected, swap the two board tiles
+            const newPosition = {
+                row: parseInt(parentCell.dataset.row),
+                col: parseInt(parentCell.dataset.col)
+            };
+            swapBoardTiles(selectedTilePosition, newPosition);
+        } else {
+            // No tile selected, select this board tile
             selectedTile = tile;
             selectedTilePosition = {
                 row: parseInt(parentCell.dataset.row),
@@ -2151,17 +2747,15 @@ function handleRackBoardClick(e) {
         return;
     }
 
-    // Check if cell is empty and we have a selected tile from the board
-    if (!cell.querySelector('.tile') && selectedTile && selectedTilePosition) {
-        // Clear selection before moving (tile will be destroyed)
-        if (selectedTile) {
-            selectedTile.classList.remove('selected');
+    // Check if cell is empty and we have a selected tile
+    if (!cell.querySelector('.tile') && selectedTile) {
+        if (selectedTilePosition) {
+            // Board tile selected - move it to this specific rack cell
+            returnBoardTileToSpecificRackCell(selectedTilePosition, cell);
+        } else {
+            // Rack tile selected - move it to this empty rack cell
+            moveRackTileToEmptyCell(selectedTile, cell);
         }
-        // Move tile from board back to rack
-        returnBoardTileToRack(selectedTilePosition);
-        // Clear selection references
-        selectedTile = null;
-        selectedTilePosition = null;
     }
 }
 
@@ -2258,11 +2852,12 @@ function returnBoardTileToRack(fromPos) {
         fromCell.appendChild(multiplierSpan);
     }
 
-    // Add back to rackTiles array
-    gameState.rackTiles.push(tileData.letter);
+    // Add back to rackTiles array - blanks revert to '_'
+    const rackLetter = tileData.isBlank ? '_' : tileData.letter;
+    gameState.rackTiles.push(rackLetter);
 
-    // Create new tile element for rack
-    const newTile = createTileElement(tileData.letter, gameState.rackTiles.length - 1);
+    // Create new tile element for rack - blanks show as empty tiles
+    const newTile = createTileElement(rackLetter, gameState.rackTiles.length - 1, tileData.isBlank);
     const rackBoard = document.getElementById('tile-rack-board');
     const firstEmptyCell = Array.from(rackBoard.querySelectorAll('.rack-cell'))
         .find(cell => !cell.querySelector('.tile'));
@@ -2285,6 +2880,10 @@ function returnTileToRack(cell, addToRack = true) {
 
     if (!letter) return;
 
+    // Find tile data before removing (to check if blank)
+    const tileData = gameState.placedTiles.find(t => t.row === row && t.col === col);
+    const isBlank = tileData?.isBlank || false;
+
     // Clear from board
     gameState.board[row][col] = null;
     cell.innerHTML = '';
@@ -2299,19 +2898,26 @@ function returnTileToRack(cell, addToRack = true) {
     restoreMultiplierText(cell, row, col);
 
     if (addToRack) {
+        // Blanks revert to '_' when returned to rack
+        const rackLetter = isBlank ? '_' : letter;
+
         // Create new tile for rack
         const newTile = document.createElement('div');
         newTile.className = 'tile';
-        newTile.dataset.letter = letter;
+        if (isBlank) {
+            newTile.classList.add('blank-tile');
+            newTile.dataset.isBlank = 'true';
+        }
+        newTile.dataset.letter = rackLetter;
         newTile.draggable = true;
 
         const letterSpan = document.createElement('span');
         letterSpan.className = 'tile-letter';
-        letterSpan.textContent = letter;
+        letterSpan.textContent = isBlank ? '' : letter;  // Blank shows empty
 
         const scoreSpan = document.createElement('span');
         scoreSpan.className = 'tile-score';
-        scoreSpan.textContent = TILE_SCORES[letter] || 0;
+        scoreSpan.textContent = isBlank ? '' : (TILE_SCORES[letter] || 0);
 
         newTile.appendChild(letterSpan);
         newTile.appendChild(scoreSpan);
@@ -2389,9 +2995,21 @@ function placeTile(cell, tile) {
     const col = parseInt(cell.dataset.col);
     const letter = tile.dataset.letter || tile.textContent?.charAt(0); // Handle both rack and board tiles
 
+    // Validate letter exists (except for blanks which use '_')
+    if (!letter) {
+        console.error('placeTile: tile has no letter', tile);
+        return;
+    }
+
     // Check if placement is valid (cell is empty)
     if (!isValidPlacement(row, col)) {
         return;
+    }
+
+    // Check if this is a blank tile - show letter selection modal
+    if (letter === '_' || tile.dataset.isBlank === 'true') {
+        showBlankLetterModal(cell, tile);
+        return;  // Modal will handle the actual placement
     }
 
     // Remove tile from its current location
@@ -2436,7 +3054,7 @@ function placeTile(cell, tile) {
     cell.classList.add('occupied', 'placed-this-turn');
 
     // Track placed tile (don't save tile DOM element)
-    gameState.placedTiles.push({ row, col, letter });
+    gameState.placedTiles.push({ row, col, letter, isBlank: false });
 
     // Save game state
     saveGameState();
@@ -2587,7 +3205,14 @@ function calculateWordScore(positions) {
 
     positions.forEach(({ row, col }) => {
         const letter = gameState.board[row][col];
-        let letterScore = TILE_SCORES[letter] || 0;
+
+        // Check if this tile is a blank (blanks score 0 regardless of assigned letter)
+        // Check both placedTiles (this turn) and blankPositions (previous turns)
+        const placedTile = gameState.placedTiles.find(t => t.row === row && t.col === col);
+        const isBlank = placedTile?.isBlank ||
+            gameState.blankPositions?.some(b => b.row === row && b.col === col) || false;
+
+        let letterScore = isBlank ? 0 : (TILE_SCORES[letter] || 0);
 
         // Check if this is a newly placed tile for multipliers
         const isNew = gameState.placedTiles.some(t => t.row === row && t.col === col);
@@ -2811,102 +3436,102 @@ function updatePotentialWordsSidebar() {
         if (words.length === 0) {
             potentialWordsDiv.innerHTML = '';
         } else {
-            // Check validity of all words
+            // Check validity of all words with retry
             const wordStrings = words.map(w => w.word);
             if (wordStrings.length > 0) {
-                fetch(`${API_BASE}/check_word.py?words=${encodeURIComponent(JSON.stringify(wordStrings))}`)
-                    .then(response => {
-                        // Check HTTP status before parsing JSON
-                        if (!response.ok) {
-                            throw new Error(`check_word_http_${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        let html = '';
-                        let totalScore = 0;
-                        let hasInvalidWords = false;
+                const maxRetries = 2;
+                const retryDelay = 300; // ms
 
-                        words.forEach(word => {
-                            totalScore += word.score;
-                            const isValid = data.results ? data.results[word.word] : true;
-                            if (!isValid) hasInvalidWords = true;
+                const attemptValidation = (attempt = 0) => {
+                    fetch(`${API_BASE}/check_word.py?words=${encodeURIComponent(JSON.stringify(wordStrings))}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`check_word_http_${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            let html = '';
+                            let totalScore = 0;
+                            let hasInvalidWords = false;
 
-                            html += `<span class="word-item ${isValid ? '' : 'invalid-word'}">
-                                <span class="word-text">${word.word}</span>
-                                <span class="word-score">${word.score}</span>
-                            </span>`;
+                            words.forEach(word => {
+                                totalScore += word.score;
+                                const isValid = data.results ? data.results[word.word] : true;
+                                if (!isValid) hasInvalidWords = true;
+
+                                html += `<span class="word-item ${isValid ? '' : 'invalid-word'}">
+                                    <span class="word-text">${word.word}</span>
+                                    <span class="word-score">${word.score}</span>
+                                </span>`;
+                            });
+
+                            let disabledClass = '';
+                            let disabledReason = '';
+                            let onclickHandler = 'submitWord()';
+                            let disabledAttr = '';
+
+                            if (!placementValidation.valid) {
+                                disabledClass = ' disabled';
+                                disabledReason = placementValidation.message;
+                                onclickHandler = 'animateInvalidPlacementTiles()';
+                            } else if (hasInvalidWords) {
+                                disabledClass = ' disabled';
+                                disabledReason = 'Invalid words present';
+                                onclickHandler = '';
+                                disabledAttr = 'disabled';
+                            } else {
+                                disabledClass = ' pulse-once';
+                            }
+
+                            html += `<button class="total-score submit-score${disabledClass}"
+                                     onclick="${onclickHandler}"
+                                     title="${disabledReason || 'Submit Word'}"
+                                     ${disabledAttr}>
+                                     ${totalScore} pts ${disabledReason ? '✗' : '→'}
+                                    </button>`;
+                            potentialWordsDiv.innerHTML = html;
+                        })
+                        .catch(error => {
+                            // Retry if attempts remaining
+                            if (attempt < maxRetries) {
+                                console.log(`[DEBUG] Word validation failed, retrying (${attempt + 1}/${maxRetries})...`);
+                                setTimeout(() => attemptValidation(attempt + 1), retryDelay);
+                                return;
+                            }
+
+                            // Final failure - show disabled state
+                            console.error('Error checking word validity after retries:', error);
+                            let errorType = 'check_word_network_error';
+                            if (error.message.startsWith('check_word_http_')) {
+                                errorType = error.message;
+                            } else if (error.name === 'SyntaxError') {
+                                errorType = 'check_word_json_parse_error';
+                            } else if (error.message) {
+                                errorType = 'check_word_' + error.message.substring(0, 40);
+                            }
+                            Analytics.error(errorType, error.message, 'checkWordValidity', false);
+
+                            let html = '';
+                            let totalScore = 0;
+                            words.forEach(word => {
+                                totalScore += word.score;
+                                html += `<span class="word-item unvalidated">
+                                    <span class="word-text">${word.word}</span>
+                                    <span class="word-score">${word.score}</span>
+                                </span>`;
+                            });
+
+                            const isInvalidPlacement = !placementValidation.valid;
+                            const titleText = isInvalidPlacement ? placementValidation.message : 'Checking words...';
+                            html += `<button class="total-score submit-score disabled"
+                                     title="${titleText}"
+                                     disabled>${totalScore} pts ⏳</button>`;
+                            potentialWordsDiv.innerHTML = html;
                         });
+                };
 
-                        // Determine disabled state and message
-                        let disabledClass = '';
-                        let disabledReason = '';
-                        let onclickHandler = 'submitWord()';
-                        let disabledAttr = '';
-
-                        if (!placementValidation.valid) {
-                            // Invalid placement - show disabled but allow click for animation
-                            disabledClass = ' disabled';
-                            disabledReason = placementValidation.message;
-                            onclickHandler = 'animateInvalidPlacementTiles()';
-                            // Don't add disabled attribute - we want clicks to work
-                        } else if (hasInvalidWords) {
-                            // Invalid words - truly disable, no animation
-                            disabledClass = ' disabled';
-                            disabledReason = 'Invalid words present';
-                            onclickHandler = '';
-                            disabledAttr = 'disabled';
-                        } else {
-                            // Valid - enable with pulse
-                            disabledClass = ' pulse-once';
-                        }
-
-                        // Make total score clickable as submit button
-                        html += `<button class="total-score submit-score${disabledClass}"
-                                 onclick="${onclickHandler}"
-                                 title="${disabledReason || 'Submit Word'}"
-                                 ${disabledAttr}>
-                                 ${totalScore} pts ${disabledReason ? '✗' : '→'}
-                                </button>`;
-                        potentialWordsDiv.innerHTML = html;
-                        console.log('[DEBUG] Set potential words HTML with validation:', html);
-                    })
-                    .catch(error => {
-                        // Fallback: show words without validation on error
-                        console.error('Error checking word validity:', error);
-
-                        // Track error to analytics
-                        let errorType = 'check_word_network_error';
-                        if (error.message.startsWith('check_word_http_')) {
-                            errorType = error.message;
-                        } else if (error.name === 'SyntaxError') {
-                            errorType = 'check_word_json_parse_error';
-                        } else if (error.message) {
-                            errorType = 'check_word_' + error.message.substring(0, 40);
-                        }
-                        Analytics.error(errorType, error.message, 'checkWordValidity', false);
-                        let html = '';
-                        let totalScore = 0;
-
-                        words.forEach(word => {
-                            totalScore += word.score;
-                            html += `<span class="word-item">
-                                <span class="word-text">${word.word}</span>
-                                <span class="word-score">${word.score}</span>
-                            </span>`;
-                        });
-
-                        // Still check placement validation in fallback
-                        const isInvalidPlacement = !placementValidation.valid;
-                        const disabledClass = isInvalidPlacement ? ' disabled' : ' pulse-once';
-                        const onclickHandler = isInvalidPlacement ? 'animateInvalidPlacementTiles()' : 'submitWord()';
-                        const titleText = isInvalidPlacement ? placementValidation.message : 'Submit Word';
-                        // Don't add disabled attribute for invalid placement - we want clicks for animation
-                        html += `<button class="total-score submit-score${disabledClass}"
-                                 onclick="${onclickHandler}"
-                                 title="${titleText}">${totalScore} pts ${isInvalidPlacement ? '✗' : '→'}</button>`;
-                        potentialWordsDiv.innerHTML = html;
-                    });
+                attemptValidation();
             }
         }
     }
@@ -3019,7 +3644,7 @@ function recallTiles() {
     // Track tiles recalled
     Analytics.ui.tilesRecalled(gameState.currentTurn, gameState.placedTiles.length);
 
-    gameState.placedTiles.forEach(({ row, col, letter }) => {
+    gameState.placedTiles.forEach(({ row, col, letter, isBlank }) => {
         // Clear from board
         gameState.board[row][col] = null;
         const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
@@ -3029,20 +3654,30 @@ function recallTiles() {
         // Restore multiplier text if this is a special square
         restoreMultiplierText(cell, row, col);
 
+        // For blank tiles, restore as '_' (unassigned blank)
+        const rackLetter = isBlank ? '_' : letter;
+
         // Add back to rackTiles array
-        gameState.rackTiles.push(letter);
+        gameState.rackTiles.push(rackLetter);
 
         // Create new tile for rack
         const newTile = document.createElement('div');
         newTile.className = 'tile';
-        newTile.dataset.letter = letter;
+        newTile.dataset.letter = rackLetter;
+
+        // Handle blank tile display in rack
+        if (isBlank) {
+            newTile.classList.add('blank-tile');
+            newTile.dataset.isBlank = 'true';
+        }
+
         const letterSpan = document.createElement('span');
         letterSpan.className = 'tile-letter';
-        letterSpan.textContent = letter;
+        letterSpan.textContent = isBlank ? '' : rackLetter;  // Empty for blanks in rack
 
         const scoreSpan = document.createElement('span');
         scoreSpan.className = 'tile-value';
-        scoreSpan.textContent = TILE_SCORES[letter] || 0;
+        scoreSpan.textContent = isBlank ? '' : (TILE_SCORES[rackLetter] || 0);
 
         newTile.appendChild(letterSpan);
         newTile.appendChild(scoreSpan);
@@ -3087,7 +3722,8 @@ function submitWord() {
     const placedWord = gameState.placedTiles.map(p => ({
         row: p.row,
         col: p.col,
-        letter: p.letter
+        letter: p.letter,
+        isBlank: p.isBlank || false
     }));
 
     fetch(`${API_BASE}/validate_word.py`, {
@@ -3097,6 +3733,7 @@ function submitWord() {
             seed: gameState.seed,
             board: gameState.board,
             placed_tiles: placedWord,
+            blank_positions: gameState.blankPositions || [],  // Blanks from previous turns
             debug_mode: gameState.debugMode
         })
     })
@@ -3144,6 +3781,16 @@ function submitWord() {
                 score: turnScore,
                 bingo: placedWord.length === 7,
                 originalRack: gameState.turnStartRack || []  // Cache original rack from turn START (before shuffle/placement)
+            });
+
+            // Store blank positions for future turns (blanks always score 0)
+            placedWord.forEach(tile => {
+                if (tile.isBlank) {
+                    if (!gameState.blankPositions) {
+                        gameState.blankPositions = [];
+                    }
+                    gameState.blankPositions.push({ row: tile.row, col: tile.col, letter: tile.letter });
+                }
             });
 
             // Clear placed tiles tracking
@@ -4055,30 +4702,45 @@ function renderSharedBoard(gameData) {
     gameData.t.forEach(([row, col, letter, turn, blank]) => {
         const turnIndex = turn - 1; // turn is 1-based, array is 0-based
         if (turnIndex >= 0 && turnIndex < 5) {
-            gameState.turnHistory[turnIndex].tiles.push({ row, col, letter });
+            // Detect blank by flag or lowercase letter, store uppercase
+            const isBlank = blank || (letter !== letter.toUpperCase());
+            const upperLetter = String(letter).toUpperCase();
+            gameState.turnHistory[turnIndex].tiles.push({ row, col, letter: upperLetter, isBlank });
             gameState.turnHistory[turnIndex].score = gameData.s[turnIndex] || 0;
         }
     });
 
     // Place all tiles from the shared game
-    gameData.t.forEach(([row, col, letter, turn, blank]) => {
-        gameState.board[row][col] = letter;
+    gameData.t.forEach(([row, col, letter, turn, isBlank]) => {
+        // For blanks, letter comes as lowercase - convert to uppercase for display
+        const displayLetter = String(letter).toUpperCase();
+        gameState.board[row][col] = displayLetter;
 
         const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
         if (!cell) return;
+
+        // Detect blank: either explicit flag or lowercase letter indicates blank
+        const tileIsBlank = isBlank || (letter !== letter.toUpperCase());
 
         // Create tile element
         const tileDiv = document.createElement('div');
         tileDiv.className = 'tile placed';
         tileDiv.dataset.turn = turn;
+        if (tileIsBlank) {
+            tileDiv.classList.add('blank-tile');
+            tileDiv.dataset.isBlank = 'true';
+        }
 
         const letterSpan = document.createElement('span');
         letterSpan.className = 'tile-letter';
-        letterSpan.textContent = letter;
+        if (tileIsBlank) {
+            letterSpan.classList.add('blank-letter');  // 70% opacity
+        }
+        letterSpan.textContent = displayLetter;
 
         const scoreSpan = document.createElement('span');
         scoreSpan.className = 'tile-value';
-        scoreSpan.textContent = TILE_SCORES[letter] || 0;
+        scoreSpan.textContent = tileIsBlank ? '' : (TILE_SCORES[displayLetter] || 0);
 
         tileDiv.appendChild(letterSpan);
         tileDiv.appendChild(scoreSpan);
@@ -4666,12 +5328,12 @@ function loadGameState() {
             // Check if it's the same day
             if (parsedState.seed === gameState.seed) {
                 // VALIDATION: Check if saved tiles are valid before restoring
-                const validLetters = /^[A-Z]$/;
+                const validTiles = /^[A-Z_]$/;  // A-Z or blank tile (_)
 
                 // Validate rackTiles array
                 if (parsedState.rackTiles && Array.isArray(parsedState.rackTiles)) {
                     const hasInvalidTiles = parsedState.rackTiles.some(t =>
-                        typeof t !== 'string' || !validLetters.test(t)
+                        typeof t !== 'string' || !validTiles.test(t)
                     );
                     if (hasInvalidTiles) {
                         console.warn('Corrupted rackTiles in localStorage, discarding saved state');
@@ -4682,7 +5344,7 @@ function loadGameState() {
                 // Validate tiles array
                 if (parsedState.tiles && Array.isArray(parsedState.tiles)) {
                     const hasInvalidTiles = parsedState.tiles.some(t =>
-                        typeof t !== 'string' || !validLetters.test(t)
+                        typeof t !== 'string' || !validTiles.test(t)
                     );
                     if (hasInvalidTiles) {
                         console.warn('Corrupted tiles in localStorage, discarding saved state');
@@ -4710,13 +5372,23 @@ function restoreBoard() {
                 const tileDiv = document.createElement('div');
                 tileDiv.className = 'tile placed';
 
+                // Check if this position is a blank tile
+                const isBlank = gameState.blankPositions?.some(b => b.row === row && b.col === col) || false;
+                if (isBlank) {
+                    tileDiv.classList.add('blank-tile');
+                    tileDiv.dataset.isBlank = 'true';
+                }
+
                 const letterSpan = document.createElement('span');
                 letterSpan.className = 'tile-letter';
+                if (isBlank) {
+                    letterSpan.classList.add('blank-letter');  // 70% opacity
+                }
                 letterSpan.textContent = letter;
 
                 const scoreSpan = document.createElement('span');
                 scoreSpan.className = 'tile-value';
-                scoreSpan.textContent = TILE_SCORES[letter] || 0;
+                scoreSpan.textContent = isBlank ? '' : (TILE_SCORES[letter] || 0);
 
                 tileDiv.appendChild(letterSpan);
                 tileDiv.appendChild(scoreSpan);

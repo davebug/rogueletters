@@ -13,7 +13,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui, viewport-fit=cover">
     <title>RogueLetters - A Daily Word Game</title>
-    <link rel="stylesheet" href="./styles.css?v=13.0">
+    <link rel="stylesheet" href="./styles.css?v=13.3">
     <meta name="description" content="Play RogueLetters - a daily word puzzle game. Build words on a letter-tile board to maximize your score!">
 
 
@@ -162,6 +162,17 @@
             </div>
         </div>
 
+        <!-- Blank Tile Letter Selection Modal -->
+        <div id="blank-letter-modal" class="modal" style="display: none;">
+            <div class="modal-content blank-letter-modal-content">
+                <h3>Choose a Letter</h3>
+                <div id="letter-grid" class="letter-grid">
+                    <!-- A-Z buttons generated dynamically -->
+                </div>
+                <button id="cancel-blank-selection" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+
         <!-- Game Completion Popup -->
         <div id="game-popup" class="hidden">
             <div class="popup-content">
@@ -219,9 +230,9 @@
 					<span>Target:</span>
 					<span id="round-target-value">80</span>
 				</div>
-				<div class="result-row surplus">
-					<span>Surplus:</span>
-					<span id="round-surplus-value">+0</span>
+				<div class="result-row extra">
+					<span>Extra:</span>
+					<span id="round-extra-value">+0</span>
 				</div>
 			</div>
 			<button id="next-round-btn" class="popup-btn popup-btn-primary">Next Round</button>
@@ -297,8 +308,8 @@
 				</div>
 			</div>
 
-			<div id="earnings-surplus-display" class="surplus-display">
-				Surplus: +<span id="earnings-surplus-points">0</span> points
+			<div id="earnings-extra-display" class="extra-display">
+				Extra: +<span id="earnings-extra-points">0</span> points
 			</div>
 			<div id="earnings-target-reached" class="target-reached-display hidden">
 				Target reached!
@@ -310,9 +321,9 @@
 					<span>Round bonus</span>
 					<span>$<span id="earnings-base">0</span></span>
 				</div>
-				<div class="earnings-row" id="earnings-surplus-row">
-					<span>Surplus bonus</span>
-					<span>$<span id="earnings-surplus-bonus">0</span></span>
+				<div class="earnings-row" id="earnings-extra-row">
+					<span>Extra bonus</span>
+					<span>$<span id="earnings-extra-bonus">0</span></span>
 				</div>
 				<div class="earnings-row earnings-total">
 					<span>Total earned</span>
@@ -332,13 +343,6 @@
 		<div class="full-screen-content">
 			<h2>Set <span id="set-complete-number">1</span> Complete!</h2>
 
-			<div class="set-summary">
-				<div class="set-total">
-					<span class="set-total-label">Set Score</span>
-					<span class="set-total-value" id="set-complete-total">0</span>
-				</div>
-			</div>
-
 			<div id="set-rounds-summary" class="rounds-summary">
 				<!-- Populated by JS -->
 			</div>
@@ -357,6 +361,6 @@
     <!-- LZ-String compression library for shareable URLs -->
     <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 
-    <script src="./script.js?v=13.2"></script>
+    <script src="./script.js?v=14.1"></script>
 </body>
 </html>
