@@ -232,11 +232,9 @@ const runManager = {
     updateRunUI() {
         const progressSet = document.getElementById('progress-set');
         const progressRound = document.getElementById('progress-round');
-        const progressTurn = document.getElementById('progress-turn');
         const subtitle = document.getElementById('subtitle');
 
         if (runState.isRunMode) {
-            if (progressTurn) progressTurn.textContent = `Turn ${gameState.currentTurn}`;
             if (progressRound) progressRound.textContent = `Round ${runState.round}`;
             if (progressSet) progressSet.textContent = `Set ${runState.set}`;
 
