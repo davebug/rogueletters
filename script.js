@@ -5446,7 +5446,8 @@ function updateFooterSquares() {
     // Reset all squares
     squares.forEach((square, index) => {
         const turnNum = index + 1;
-        square.classList.remove('current-turn', 'completed');
+        square.classList.remove('current-turn', 'completed', 'score-low', 'score-medium', 'score-good', 'score-great', 'score-excellent', 'score-amazing');
+        square.textContent = '';
 
         // Remove old click handlers
         square.replaceWith(square.cloneNode(true));
