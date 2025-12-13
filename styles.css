@@ -205,7 +205,7 @@ footer p {
 }
 
 main {
-    padding: 50px 5px 5px 5px; /* Adjusted for iOS - prevents board top being cut off */
+    padding: 60px 5px 5px 5px; /* Adjusted for iOS - prevents board top being cut off */
     display: flex;
     flex-direction: column;
     align-items: center;
