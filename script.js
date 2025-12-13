@@ -3830,19 +3830,12 @@ function checkWordValidity() {
         }
     }
 
-    // Show/hide Start Over button based on game state
+    // Always show Start Over button (it resets to a completely new game)
     const startOverBtn = document.getElementById('start-over');
-    if (startOverBtn) {
-        // Show only if score > 0 (meaning at least one word has been submitted)
-        const shouldShow = gameState.score > 0;
-        if (shouldShow) {
-            startOverBtn.style.display = 'flex';
-            startOverBtn.style.opacity = '0';
-            setTimeout(() => { startOverBtn.style.opacity = '1'; }, 10);
-        } else {
-            startOverBtn.style.opacity = '0';
-            setTimeout(() => { startOverBtn.style.display = 'none'; }, 300);
-        }
+    if (startOverBtn && startOverBtn.style.display === 'none') {
+        startOverBtn.style.display = 'flex';
+        startOverBtn.style.opacity = '0';
+        setTimeout(() => { startOverBtn.style.opacity = '1'; }, 10);
     }
 
     // Update the potential words sidebar
@@ -5708,19 +5701,12 @@ function updateUI() {
     //     showWikipediaLink(gameState.startingWord || '', gameState.wikiText || '', gameState.wikiUrl);
     // }
 
-    // Show/hide Start Over button based on game state
+    // Always show Start Over button (it resets to a completely new game)
     const startOverBtn = document.getElementById('start-over');
-    if (startOverBtn) {
-        // Show only if score > 0 (meaning at least one word has been submitted)
-        const shouldShow = gameState.score > 0;
-        if (shouldShow) {
-            startOverBtn.style.display = 'flex';
-            startOverBtn.style.opacity = '0';
-            setTimeout(() => { startOverBtn.style.opacity = '1'; }, 10);
-        } else {
-            startOverBtn.style.opacity = '0';
-            setTimeout(() => { startOverBtn.style.display = 'none'; }, 300);
-        }
+    if (startOverBtn && startOverBtn.style.display === 'none') {
+        startOverBtn.style.display = 'flex';
+        startOverBtn.style.opacity = '0';
+        setTimeout(() => { startOverBtn.style.opacity = '1'; }, 10);
     }
 
     // Show/hide Recall button based on placed tiles
