@@ -27,7 +27,8 @@ let gameState = {
     preGeneratedShareURL: null,  // Pre-generated shareable URL (created at game end)
     isNewHighScore: false,  // Track if player got a new high score
     pendingBlankPlacement: null,  // Stores {cell, tile} when blank awaiting letter selection
-    blankPositions: []  // Track positions of blank tiles on the board [{row, col, letter}]
+    blankPositions: [],  // Track positions of blank tiles on the board [{row, col, letter}]
+    tilesDrawnFromBag: []  // All tile letters drawn from bag this round (for bag viewer)
 };
 
 // Run state for roguelike mode
@@ -192,6 +193,7 @@ const runManager = {
         gameState.isNewHighScore = false;
         gameState.pendingBlankPlacement = null;
         gameState.blankPositions = [];
+        gameState.tilesDrawnFromBag = [];
 
         // Generate new seed for this round (as string for consistency)
         gameState.seed = String(runState.runSeed + runState.round);
@@ -676,6 +678,89 @@ const TILE_DISTRIBUTION = {
     'Q': 1, 'R': 6, 'S': 4, 'T': 6, 'U': 4, 'V': 2, 'W': 2, 'X': 1,
     'Y': 2, 'Z': 1, '_': 2  // Blank tiles
 };  // Total: 100 tiles
+
+// ============================================================================
+// BAG VIEWER
+// ============================================================================
+
+function showBagViewer() {
+    const popup = document.getElementById('bag-viewer-popup');
+    if (!popup) return;
+
+    // Calculate remaining tiles per letter
+    const remaining = calculateRemainingTiles();
+
+    // Calculate totals
+    let totalRemaining = 0;
+    let totalPool = 0;
+    for (const letter of Object.keys(TILE_DISTRIBUTION)) {
+        totalRemaining += remaining[letter];
+        totalPool += TILE_DISTRIBUTION[letter];
+    }
+    // Add purchased tiles to pool total
+    totalPool += (runState.purchasedTiles?.length || 0);
+    // Subtract starting word from pool (those tiles were never drawable)
+    totalPool -= (gameState.startingWord?.length || 0);
+
+    // Update summary
+    document.getElementById('bag-remaining').textContent = totalRemaining;
+    document.getElementById('bag-total').textContent = totalPool;
+
+    // Build grid (A-Z + blank = 27 tiles, display in 3 rows of 9)
+    const grid = document.getElementById('bag-tiles-grid');
+    grid.innerHTML = '';
+
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_'.split('');
+    for (const letter of letters) {
+        const count = remaining[letter];
+        const entry = document.createElement('div');
+        entry.className = 'bag-tile-entry' + (count === 0 ? ' empty' : '');
+
+        const letterSpan = document.createElement('span');
+        letterSpan.className = 'bag-tile-letter';
+        letterSpan.textContent = letter === '_' ? '?' : letter;
+
+        const countSpan = document.createElement('span');
+        countSpan.className = 'bag-tile-count';
+        countSpan.textContent = count;
+
+        entry.appendChild(letterSpan);
+        entry.appendChild(countSpan);
+        grid.appendChild(entry);
+    }
+
+    popup.classList.remove('hidden');
+}
+
+function hideBagViewer() {
+    const popup = document.getElementById('bag-viewer-popup');
+    if (popup) popup.classList.add('hidden');
+}
+
+function calculateRemainingTiles() {
+    // Start with base distribution
+    const remaining = {};
+    for (const [letter, count] of Object.entries(TILE_DISTRIBUTION)) {
+        remaining[letter] = count;
+    }
+
+    // Add purchased tiles
+    for (const tile of (runState.purchasedTiles || [])) {
+        remaining[tile] = (remaining[tile] || 0) + 1;
+    }
+
+    // Subtract starting word
+    for (const letter of (gameState.startingWord || '')) {
+        if (remaining[letter] > 0) remaining[letter]--;
+    }
+
+    // Subtract tiles drawn from bag
+    for (const tile of (gameState.tilesDrawnFromBag || [])) {
+        if (remaining[tile] > 0) remaining[tile]--;
+    }
+
+    return remaining;
+}
 
 // Board multipliers (adjusted for 9x9 board)
 const MULTIPLIERS = {
@@ -1765,6 +1850,9 @@ function fetchGameData(seed) {
             gameState.wordContext = data.word_context;
             gameState.wikipediaUrl = data.wikipedia_url;
 
+            // Track tiles drawn from bag (for bag viewer)
+            gameState.tilesDrawnFromBag = [...data.tiles];
+
             // Save original rack at turn START (before shuffle/placement)
             // This prevents corruption when user shuffles after placing tiles
             gameState.turnStartRack = [...data.tiles];
@@ -2104,6 +2192,14 @@ function setupEventListeners() {
     });
     document.getElementById('shop-buy-1')?.addEventListener('click', () => {
         runManager.purchaseTile(1);
+    });
+
+    // Bag viewer buttons
+    document.getElementById('bag-viewer-btn')?.addEventListener('click', showBagViewer);
+    document.getElementById('bag-close-btn')?.addEventListener('click', hideBagViewer);
+    document.getElementById('bag-viewer-popup')?.addEventListener('click', (e) => {
+        // Close when clicking outside the content
+        if (e.target.id === 'bag-viewer-popup') hideBagViewer();
     });
 
     // Close buttons for run popups
@@ -4039,6 +4135,11 @@ function nextTurn() {
             // Update total tiles drawn (add the new tiles we just got)
             const newTilesCount = data.tiles.length - gameState.rackTiles.length;
             gameState.totalTilesDrawn += newTilesCount;
+
+            // Track NEW tiles drawn from bag (skip the kept rack tiles)
+            // The server returns rackTiles + newTiles, so slice off the rack portion
+            const newTiles = data.tiles.slice(gameState.rackTiles.length);
+            gameState.tilesDrawnFromBag.push(...newTiles);
 
             // Save original rack at turn START (before shuffle/placement)
             // This prevents corruption when user shuffles after placing tiles

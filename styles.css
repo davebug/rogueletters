@@ -2250,3 +2250,131 @@ main {
     font-size: 0.9rem;
     margin-bottom: 1.5rem;
 }
+
+/* ============================================
+   Bag Viewer
+   ============================================ */
+
+.bag-icon-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    margin-left: 8px;
+    color: var(--text-muted);
+    transition: color 0.2s, transform 0.2s;
+    vertical-align: middle;
+}
+
+.bag-icon-btn:hover {
+    color: var(--accent);
+    transform: scale(1.1);
+}
+
+.bag-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.bag-popup.hidden {
+    display: none;
+}
+
+.bag-popup-content {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 1.5rem;
+    max-width: 400px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.bag-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.bag-popup-header h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 1.3rem;
+}
+
+.bag-close-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.bag-close-btn:hover {
+    color: var(--text);
+}
+
+.bag-summary {
+    text-align: center;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.bag-summary #bag-remaining {
+    color: var(--accent);
+    font-weight: bold;
+}
+
+.bag-tiles-grid {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: 4px;
+}
+
+.bag-tile-entry {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px 2px;
+    border-radius: 6px;
+    background: var(--tile-bg);
+    transition: opacity 0.2s;
+}
+
+.bag-tile-entry.empty {
+    opacity: 0.3;
+}
+
+.bag-tile-letter {
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--text);
+    line-height: 1.2;
+}
+
+.bag-tile-count {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    line-height: 1.2;
+}
+
+.bag-tile-entry.empty .bag-tile-count {
+    color: var(--danger);
+}
