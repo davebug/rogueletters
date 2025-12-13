@@ -2137,3 +2137,116 @@ main {
     color: #4caf50;
     font-weight: 600;
 }
+
+/* ============================================================================
+   SHOP SCREEN
+   ============================================================================ */
+
+.shop-subtitle {
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    font-size: 14px;
+}
+
+.shop-bank {
+    font-size: 1.5rem;
+    color: #4caf50;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+}
+
+.shop-tiles {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.shop-tile-option {
+    background: var(--bg-secondary);
+    border: 2px solid var(--board-border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    transition: opacity 0.3s, transform 0.2s, border-color 0.2s;
+}
+
+.shop-tile-option:hover:not(.purchased):not(.cannot-afford) {
+    transform: translateY(-4px);
+    border-color: var(--accent);
+}
+
+.shop-tile-option.purchased {
+    opacity: 0.5;
+    border-color: var(--board-border);
+}
+
+.shop-tile-option.purchased .shop-buy-btn {
+    background: var(--text-muted);
+    cursor: default;
+}
+
+.shop-tile-option.purchased .shop-buy-btn::after {
+    content: " (Bought)";
+}
+
+.shop-tile-option.cannot-afford .shop-buy-btn {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.shop-tile-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.shop-tile {
+    width: 60px;
+    height: 60px;
+    font-size: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--tile-bg);
+    border-radius: 6px;
+    color: var(--text-color);
+    font-weight: bold;
+    box-shadow: 0 3px 0 var(--tile-shadow);
+}
+
+.shop-tile-score {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.shop-buy-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.25rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.shop-buy-btn:hover:not(:disabled) {
+    background: var(--accent-hover);
+    transform: scale(1.05);
+}
+
+.shop-buy-btn:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.shop-pool-info {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+}

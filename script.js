@@ -56,6 +56,8 @@ let runState = {
     // Economy
     coins: 0,                       // Current bank balance
     lastEarnings: null,             // Most recent round earnings (for display)
+    // Shop
+    purchasedTiles: [],             // Tiles bought from shop this run (e.g. ['E', 'S'])
     // Meta
     runStartTime: null,
     runSeed: null
@@ -335,6 +337,7 @@ const runManager = {
         document.getElementById('start-run-popup')?.classList.add('hidden');
         document.getElementById('game-popup')?.classList.add('hidden');
         document.getElementById('earnings-screen')?.classList.add('hidden');
+        document.getElementById('shop-screen')?.classList.add('hidden');
         document.getElementById('set-complete-screen')?.classList.add('hidden');
         // Show game container when hiding screens
         document.getElementById('game-container')?.classList.remove('hidden');
@@ -404,6 +407,104 @@ const runManager = {
 
     // Handle Continue button from earnings screen
     continueFromEarnings() {
+        this.hideAllRunPopups();
+        this.showShopScreen();  // Always show shop after earnings
+    },
+
+    // ========================================================================
+    // SHOP SYSTEM
+    // ========================================================================
+
+    // Shop state (reset each shop visit)
+    shopTiles: [],           // The 2 tiles offered this visit
+    shopPurchased: [false, false],  // Which tiles have been purchased
+
+    // Generate random tiles for shop based on Scrabble distribution
+    generateShopTiles() {
+        // Build weighted array from distribution
+        const weightedTiles = [];
+        for (const [letter, count] of Object.entries(TILE_DISTRIBUTION)) {
+            for (let i = 0; i < count; i++) {
+                weightedTiles.push(letter);
+            }
+        }
+        // Pick 2 random tiles
+        this.shopTiles = [
+            weightedTiles[Math.floor(Math.random() * weightedTiles.length)],
+            weightedTiles[Math.floor(Math.random() * weightedTiles.length)]
+        ];
+        this.shopPurchased = [false, false];
+    },
+
+    // Show the shop screen
+    showShopScreen() {
+        this.generateShopTiles();
+
+        // Hide game container, show shop screen
+        document.getElementById('game-container')?.classList.add('hidden');
+        const shopScreen = document.getElementById('shop-screen');
+        if (!shopScreen) return;
+
+        // Update coin display
+        document.getElementById('shop-coins').textContent = runState.coins;
+
+        // Update pool count
+        const poolCount = 100 + (runState.purchasedTiles?.length || 0);
+        document.getElementById('shop-pool-count').textContent = poolCount;
+
+        // Update tile displays
+        for (let i = 0; i < 2; i++) {
+            const tile = this.shopTiles[i];
+            const score = TILE_SCORES[tile] || 0;
+            const option = document.getElementById(`shop-tile-${i}`);
+
+            document.getElementById(`shop-tile-letter-${i}`).textContent = tile === '_' ? '' : tile;
+            document.getElementById(`shop-tile-score-${i}`).textContent = `${score} pt${score !== 1 ? 's' : ''}`;
+
+            // Reset classes
+            option.classList.remove('purchased', 'cannot-afford');
+
+            // Check if can afford
+            if (runState.coins < 1) {
+                option.classList.add('cannot-afford');
+            }
+        }
+
+        shopScreen.classList.remove('hidden');
+    },
+
+    // Purchase a tile at the given index
+    purchaseTile(index) {
+        if (runState.coins < 1 || this.shopPurchased[index]) return;
+
+        // Deduct coin and add tile
+        runState.coins -= 1;
+        runState.purchasedTiles = runState.purchasedTiles || [];
+        runState.purchasedTiles.push(this.shopTiles[index]);
+        this.shopPurchased[index] = true;
+        this.saveRunState();
+
+        // Update UI
+        document.getElementById('shop-coins').textContent = runState.coins;
+        const poolCount = 100 + runState.purchasedTiles.length;
+        document.getElementById('shop-pool-count').textContent = poolCount;
+
+        // Mark as purchased
+        const option = document.getElementById(`shop-tile-${index}`);
+        option.classList.add('purchased');
+
+        // Check if other tile is now unaffordable
+        const otherIndex = index === 0 ? 1 : 0;
+        if (!this.shopPurchased[otherIndex] && runState.coins < 1) {
+            document.getElementById(`shop-tile-${otherIndex}`).classList.add('cannot-afford');
+        }
+
+        // Update header coin display too
+        this.updateCoinDisplay();
+    },
+
+    // Handle Continue button from shop screen
+    continueFromShop() {
         this.hideAllRunPopups();
 
         if (runState.round >= runState.maxRounds) {
@@ -567,6 +668,14 @@ const TILE_SCORES = {
     'Q': 10, 'Z': 10,
     '_': 0  // Blank tiles
 };
+
+// Tile distribution for shop (same as Scrabble)
+const TILE_DISTRIBUTION = {
+    'A': 9, 'B': 2, 'C': 2, 'D': 4, 'E': 12, 'F': 2, 'G': 3, 'H': 2,
+    'I': 9, 'J': 1, 'K': 1, 'L': 4, 'M': 2, 'N': 6, 'O': 8, 'P': 2,
+    'Q': 1, 'R': 6, 'S': 4, 'T': 6, 'U': 4, 'V': 2, 'W': 2, 'X': 1,
+    'Y': 2, 'Z': 1, '_': 2  // Blank tiles
+};  // Total: 100 tiles
 
 // Board multipliers (adjusted for 9x9 board)
 const MULTIPLIERS = {
@@ -1633,7 +1742,11 @@ function createBoard() {
 function fetchGameData(seed) {
     showLoading(true);
 
-    fetch(`${API_BASE}/letters.py?seed=${seed}`)
+    // Include purchased tiles if any (for pool expansion)
+    const purchasedParam = runState.purchasedTiles?.length
+        ? `&purchased_tiles=${encodeURIComponent(JSON.stringify(runState.purchasedTiles))}`
+        : '';
+    fetch(`${API_BASE}/letters.py?seed=${seed}${purchasedParam}`)
         .then(response => {
             // Check HTTP status before parsing JSON
             if (!response.ok) {
@@ -1980,6 +2093,17 @@ function setupEventListeners() {
     // Set Complete screen Continue button
     document.getElementById('set-continue-btn')?.addEventListener('click', () => {
         runManager.continueFromSetComplete();
+    });
+
+    // Shop screen buttons
+    document.getElementById('shop-continue-btn')?.addEventListener('click', () => {
+        runManager.continueFromShop();
+    });
+    document.getElementById('shop-buy-0')?.addEventListener('click', () => {
+        runManager.purchaseTile(0);
+    });
+    document.getElementById('shop-buy-1')?.addEventListener('click', () => {
+        runManager.purchaseTile(1);
     });
 
     // Close buttons for run popups
@@ -3898,7 +4022,8 @@ function nextTurn() {
         seed: gameState.seed,
         turn: gameState.currentTurn,
         rack_tiles: JSON.stringify(gameState.rackTiles),
-        tiles_drawn: gameState.totalTilesDrawn
+        tiles_drawn: gameState.totalTilesDrawn,
+        purchased_tiles: JSON.stringify(runState.purchasedTiles || [])
     });
 
     fetch(`${API_BASE}/letters.py?${params.toString()}`)
