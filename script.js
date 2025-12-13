@@ -694,13 +694,21 @@ function showBagViewer() {
 }
 
 function updateBagViewerGrid() {
-    // Calculate both views
-    const poolTiles = calculatePoolTiles();      // Pool after starting word removed
+    // Calculate views
     const remaining = calculateRemainingTiles(); // What's not yet on board
+
+    // Build total distribution (base + purchased)
+    const totalTiles = {};
+    for (const [letter, count] of Object.entries(TILE_DISTRIBUTION)) {
+        totalTiles[letter] = count;
+    }
+    for (const tile of (runState.purchasedTiles || [])) {
+        totalTiles[tile] = (totalTiles[tile] || 0) + 1;
+    }
 
     // Calculate totals
     let totalRemaining = 0;
-    let totalBag = 100 + (runState.purchasedTiles?.length || 0); // Original bag size
+    let totalBag = 100 + (runState.purchasedTiles?.length || 0);
     for (const letter of Object.keys(TILE_DISTRIBUTION)) {
         totalRemaining += remaining[letter];
     }
@@ -714,7 +722,7 @@ function updateBagViewerGrid() {
     document.getElementById('bag-toggle-total')?.classList.toggle('active', bagViewMode === 'total');
 
     // Choose which counts to display
-    const displayCounts = bagViewMode === 'remaining' ? remaining : poolTiles;
+    const displayCounts = bagViewMode === 'remaining' ? remaining : totalTiles;
 
     // Build grid (A-Z + blank = 27 tiles, display in 3 rows of 9)
     const grid = document.getElementById('bag-tiles-grid');
@@ -748,27 +756,6 @@ function setBagViewMode(mode) {
 function hideBagViewer() {
     const popup = document.getElementById('bag-viewer-popup');
     if (popup) popup.classList.add('hidden');
-}
-
-function calculatePoolTiles() {
-    // Total tiles available to draw (before any drawing)
-    // = base distribution + purchased - starting word
-    const pool = {};
-    for (const [letter, count] of Object.entries(TILE_DISTRIBUTION)) {
-        pool[letter] = count;
-    }
-
-    // Add purchased tiles
-    for (const tile of (runState.purchasedTiles || [])) {
-        pool[tile] = (pool[tile] || 0) + 1;
-    }
-
-    // Subtract starting word
-    for (const letter of (gameState.startingWord || '')) {
-        if (pool[letter] > 0) pool[letter]--;
-    }
-
-    return pool;
 }
 
 function calculateRemainingTiles() {
