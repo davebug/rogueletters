@@ -59,6 +59,7 @@ let runState = {
     lastEarnings: null,             // Most recent round earnings (for display)
     // Shop
     purchasedTiles: [],             // Tiles bought from shop this run (e.g. ['E', 'S'])
+    removedTiles: [],               // Tiles removed via "Replace" option (e.g. ['Q', 'Z'])
     // Meta
     runStartTime: null,
     runSeed: null
@@ -421,6 +422,7 @@ const runManager = {
     // Shop state (reset each shop visit)
     shopTiles: [],           // The 2 tiles offered this visit
     shopPurchased: [false, false],  // Which tiles have been purchased
+    pendingReplacementTileIndex: null,  // Index of tile being purchased via Replace (waiting for bag selection)
 
     // Generate random tiles for shop based on Scrabble distribution
     generateShopTiles() {
@@ -465,19 +467,30 @@ const runManager = {
             document.getElementById(`shop-tile-score-${i}`).textContent = `${score} pt${score !== 1 ? 's' : ''}`;
 
             // Reset classes
-            option.classList.remove('purchased', 'cannot-afford');
+            option.classList.remove('purchased', 'cannot-afford', 'cannot-afford-add', 'cannot-afford-replace');
 
-            // Check if can afford
+            // Check affordability for each button type
+            const addBtn = document.getElementById(`shop-add-${i}`);
+            const replaceBtn = document.getElementById(`shop-replace-${i}`);
+
             if (runState.coins < 1) {
-                option.classList.add('cannot-afford');
+                addBtn?.classList.add('cannot-afford');
+            } else {
+                addBtn?.classList.remove('cannot-afford');
+            }
+
+            if (runState.coins < 2) {
+                replaceBtn?.classList.add('cannot-afford');
+            } else {
+                replaceBtn?.classList.remove('cannot-afford');
             }
         }
 
         shopScreen.classList.remove('hidden');
     },
 
-    // Purchase a tile at the given index
-    purchaseTile(index) {
+    // Purchase a tile via "Add" - adds to bag, costs $1
+    purchaseTileAdd(index) {
         if (runState.coins < 1 || this.shopPurchased[index]) return;
 
         // Deduct coin and add tile
@@ -488,8 +501,57 @@ const runManager = {
         this.saveRunState();
 
         // Update UI
+        this.updateShopAfterPurchase(index);
+    },
+
+    // Purchase a tile via "Replace" - costs $2, then pick a tile to remove
+    purchaseTileReplace(index) {
+        if (runState.coins < 2 || this.shopPurchased[index]) return;
+
+        // Store pending replacement and show bag viewer for selection
+        this.pendingReplacementTileIndex = index;
+
+        // Show bag viewer in "replace mode" - clicking a tile will remove it
+        showBagViewerForReplacement();
+    },
+
+    // Complete the replacement after user selects a tile from bag
+    completeReplacement(letterToRemove) {
+        const index = this.pendingReplacementTileIndex;
+        if (index === null) return;
+
+        // Deduct $2 and add the new tile
+        runState.coins -= 2;
+        runState.purchasedTiles = runState.purchasedTiles || [];
+        runState.purchasedTiles.push(this.shopTiles[index]);
+
+        // Track the removed tile
+        runState.removedTiles = runState.removedTiles || [];
+        runState.removedTiles.push(letterToRemove);
+
+        this.shopPurchased[index] = true;
+        this.pendingReplacementTileIndex = null;
+        this.saveRunState();
+
+        // Hide bag viewer and update shop UI
+        hideBagViewer();
+        this.updateShopAfterPurchase(index);
+    },
+
+    // Cancel replacement mode
+    cancelReplacement() {
+        this.pendingReplacementTileIndex = null;
+        hideBagViewer();
+    },
+
+    // Update shop UI after a purchase
+    updateShopAfterPurchase(index) {
+        // Update coin display
         document.getElementById('shop-coins').textContent = runState.coins;
-        const poolCount = 100 + runState.purchasedTiles.length;
+
+        // Update pool count (purchased - removed = net change)
+        const netTiles = (runState.purchasedTiles?.length || 0) - (runState.removedTiles?.length || 0);
+        const poolCount = 100 + netTiles;
         document.getElementById('shop-pool-count').textContent = poolCount;
 
         // Mark as purchased
@@ -498,8 +560,16 @@ const runManager = {
 
         // Check if other tile is now unaffordable
         const otherIndex = index === 0 ? 1 : 0;
-        if (!this.shopPurchased[otherIndex] && runState.coins < 1) {
-            document.getElementById(`shop-tile-${otherIndex}`).classList.add('cannot-afford');
+        if (!this.shopPurchased[otherIndex]) {
+            const otherAddBtn = document.getElementById(`shop-add-${otherIndex}`);
+            const otherReplaceBtn = document.getElementById(`shop-replace-${otherIndex}`);
+
+            if (runState.coins < 1) {
+                otherAddBtn?.classList.add('cannot-afford');
+            }
+            if (runState.coins < 2) {
+                otherReplaceBtn?.classList.add('cannot-afford');
+            }
         }
 
         // Update header coin display too
@@ -616,6 +686,8 @@ const runManager = {
         runState.roundScores = [];
         runState.coins = 0;
         runState.lastEarnings = null;
+        runState.purchasedTiles = [];
+        runState.removedTiles = [];
         runState.runStartTime = null;
         runState.runSeed = null;
     },
@@ -685,10 +757,31 @@ const TILE_DISTRIBUTION = {
 // ============================================================================
 
 let bagViewMode = 'remaining'; // 'remaining' or 'total'
+let bagReplacementMode = false; // true when selecting a tile to remove for shop replacement
 
 function showBagViewer() {
+    bagReplacementMode = false;
     const popup = document.getElementById('bag-viewer-popup');
     if (!popup) return;
+
+    // Reset header text
+    const header = popup.querySelector('.bag-popup-header h3');
+    if (header) header.textContent = 'Tile Bag';
+
+    updateBagViewerGrid();
+    popup.classList.remove('hidden');
+}
+
+function showBagViewerForReplacement() {
+    bagReplacementMode = true;
+    bagViewMode = 'total'; // Show total bag when replacing
+
+    const popup = document.getElementById('bag-viewer-popup');
+    if (!popup) return;
+
+    // Update header to indicate selection mode
+    const header = popup.querySelector('.bag-popup-header h3');
+    if (header) header.textContent = 'Select tile to remove';
 
     updateBagViewerGrid();
     popup.classList.remove('hidden');
@@ -698,7 +791,7 @@ function updateBagViewerGrid() {
     // Calculate views
     const remaining = calculateRemainingTiles(); // What's not yet on board
 
-    // Build total distribution (base + purchased)
+    // Build total distribution (base + purchased - removed)
     const totalTiles = {};
     for (const [letter, count] of Object.entries(TILE_DISTRIBUTION)) {
         totalTiles[letter] = count;
@@ -706,46 +799,71 @@ function updateBagViewerGrid() {
     for (const tile of (runState.purchasedTiles || [])) {
         totalTiles[tile] = (totalTiles[tile] || 0) + 1;
     }
+    for (const tile of (runState.removedTiles || [])) {
+        totalTiles[tile] = Math.max(0, (totalTiles[tile] || 0) - 1);
+    }
 
     // Calculate totals
     let totalRemaining = 0;
-    let totalBag = 100 + (runState.purchasedTiles?.length || 0);
+    const netTileChange = (runState.purchasedTiles?.length || 0) - (runState.removedTiles?.length || 0);
+    let totalBag = 100 + netTileChange;
     for (const letter of Object.keys(TILE_DISTRIBUTION)) {
-        totalRemaining += remaining[letter];
+        totalRemaining += remaining[letter] || 0;
     }
 
     // Update summary: "X / Y tiles remaining" where Y is original bag
     document.getElementById('bag-remaining').textContent = totalRemaining;
     document.getElementById('bag-total').textContent = totalBag;
 
-    // Update toggle button states
+    // Update toggle button states (hide toggles in replacement mode)
+    const toggleContainer = document.querySelector('.bag-toggle');
+    if (toggleContainer) {
+        toggleContainer.style.display = bagReplacementMode ? 'none' : 'flex';
+    }
     document.getElementById('bag-toggle-remaining')?.classList.toggle('active', bagViewMode === 'remaining');
     document.getElementById('bag-toggle-total')?.classList.toggle('active', bagViewMode === 'total');
 
     // Choose which counts to display
     const displayCounts = bagViewMode === 'remaining' ? remaining : totalTiles;
 
-    // Build grid (A-Z + blank = 27 tiles, display in 3 rows of 9)
+    // Build grid of individual tiles (showing each tile separately)
     const grid = document.getElementById('bag-tiles-grid');
     grid.innerHTML = '';
 
+    // Add replacement mode class to grid
+    grid.classList.toggle('replacement-mode', bagReplacementMode);
+
+    // Create individual tiles for each letter, sorted alphabetically
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_'.split('');
     for (const letter of letters) {
-        const count = displayCounts[letter];
-        const entry = document.createElement('div');
-        entry.className = 'bag-tile-entry' + (count === 0 ? ' empty' : '');
+        const count = displayCounts[letter] || 0;
+        const score = TILE_SCORES[letter] || 0;
 
-        const letterSpan = document.createElement('span');
-        letterSpan.className = 'bag-tile-letter';
-        letterSpan.textContent = letter === '_' ? '?' : letter;
+        // Create one mini-tile for each instance of this letter
+        for (let i = 0; i < count; i++) {
+            const tile = document.createElement('div');
+            tile.className = 'bag-mini-tile';
 
-        const countSpan = document.createElement('span');
-        countSpan.className = 'bag-tile-count';
-        countSpan.textContent = count;
+            // In replacement mode, make tiles clickable
+            if (bagReplacementMode) {
+                tile.classList.add('selectable');
+                tile.addEventListener('click', () => {
+                    runManager.completeReplacement(letter);
+                });
+            }
 
-        entry.appendChild(letterSpan);
-        entry.appendChild(countSpan);
-        grid.appendChild(entry);
+            const letterSpan = document.createElement('span');
+            letterSpan.className = 'bag-mini-tile-letter';
+            letterSpan.textContent = letter === '_' ? '' : letter;
+
+            const scoreSpan = document.createElement('span');
+            scoreSpan.className = 'bag-mini-tile-score';
+            scoreSpan.textContent = score;
+
+            tile.appendChild(letterSpan);
+            tile.appendChild(scoreSpan);
+            grid.appendChild(tile);
+        }
     }
 }
 
@@ -755,13 +873,18 @@ function setBagViewMode(mode) {
 }
 
 function hideBagViewer() {
+    // Cancel any pending replacement
+    if (bagReplacementMode) {
+        runManager.pendingReplacementTileIndex = null;
+        bagReplacementMode = false;
+    }
     const popup = document.getElementById('bag-viewer-popup');
     if (popup) popup.classList.add('hidden');
 }
 
 function calculateRemainingTiles() {
     // Remaining = tiles NOT on the board
-    // = base distribution + purchased - starting word - tiles placed on board
+    // = base distribution + purchased - removed - starting word - tiles placed on board
 
     // Start with full distribution
     const remaining = {};
@@ -772,6 +895,11 @@ function calculateRemainingTiles() {
     // Add purchased tiles
     for (const tile of (runState.purchasedTiles || [])) {
         remaining[tile] = (remaining[tile] || 0) + 1;
+    }
+
+    // Subtract removed tiles (from shop "Replace" option)
+    for (const tile of (runState.removedTiles || [])) {
+        remaining[tile] = Math.max(0, (remaining[tile] || 0) - 1);
     }
 
     // Subtract starting word (on board from start)
@@ -2227,11 +2355,17 @@ function setupEventListeners() {
     document.getElementById('shop-continue-btn')?.addEventListener('click', () => {
         runManager.continueFromShop();
     });
-    document.getElementById('shop-buy-0')?.addEventListener('click', () => {
-        runManager.purchaseTile(0);
+    document.getElementById('shop-add-0')?.addEventListener('click', () => {
+        runManager.purchaseTileAdd(0);
     });
-    document.getElementById('shop-buy-1')?.addEventListener('click', () => {
-        runManager.purchaseTile(1);
+    document.getElementById('shop-add-1')?.addEventListener('click', () => {
+        runManager.purchaseTileAdd(1);
+    });
+    document.getElementById('shop-replace-0')?.addEventListener('click', () => {
+        runManager.purchaseTileReplace(0);
+    });
+    document.getElementById('shop-replace-1')?.addEventListener('click', () => {
+        runManager.purchaseTileReplace(1);
     });
 
     // Bag viewer buttons

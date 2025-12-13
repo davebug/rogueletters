@@ -13,7 +13,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui, viewport-fit=cover">
     <title>RogueLetters - A Daily Word Game</title>
-    <link rel="stylesheet" href="./styles.css?v=19.0">
+    <link rel="stylesheet" href="./styles.css?v=21.0">
     <meta name="description" content="Play RogueLetters - a daily word puzzle game. Build words on a letter-tile board to maximize your score!">
 
 
@@ -358,14 +358,20 @@
 						<div class="tile shop-tile" id="shop-tile-letter-0">E</div>
 						<div class="shop-tile-score" id="shop-tile-score-0">1 pt</div>
 					</div>
-					<button class="shop-buy-btn" id="shop-buy-0">Buy $1</button>
+					<div class="shop-buy-buttons">
+						<button class="shop-buy-btn shop-buy-add" id="shop-add-0">Add $1</button>
+						<button class="shop-buy-btn shop-buy-replace" id="shop-replace-0">Replace $2</button>
+					</div>
 				</div>
 				<div class="shop-tile-option" id="shop-tile-1">
 					<div class="shop-tile-display">
 						<div class="tile shop-tile" id="shop-tile-letter-1">S</div>
 						<div class="shop-tile-score" id="shop-tile-score-1">1 pt</div>
 					</div>
-					<button class="shop-buy-btn" id="shop-buy-1">Buy $1</button>
+					<div class="shop-buy-buttons">
+						<button class="shop-buy-btn shop-buy-add" id="shop-add-1">Add $1</button>
+						<button class="shop-buy-btn shop-buy-replace" id="shop-replace-1">Replace $2</button>
+					</div>
 				</div>
 			</div>
 
@@ -417,6 +423,6 @@
     <!-- LZ-String compression library for shareable URLs -->
     <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 
-    <script src="./script.js?v=23.0"></script>
+    <script src="./script.js?v=25.0"></script>
 </body>
 </html>

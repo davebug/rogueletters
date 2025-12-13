@@ -2227,25 +2227,49 @@ main {
     font-size: 0.85rem;
 }
 
+.shop-buy-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    width: 100%;
+}
+
 .shop-buy-btn {
     background: var(--accent);
     color: white;
     border: none;
-    padding: 0.6rem 1.25rem;
+    padding: 0.5rem 0.75rem;
     border-radius: 6px;
-    font-size: 1rem;
+    font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
+    transition: background 0.2s, transform 0.1s, opacity 0.2s;
+    width: 100%;
 }
 
-.shop-buy-btn:hover:not(:disabled) {
+.shop-buy-btn.shop-buy-replace {
+    background: var(--board-border);
+}
+
+.shop-buy-btn:hover:not(.cannot-afford):not(:disabled) {
+    transform: scale(1.02);
+}
+
+.shop-buy-btn.shop-buy-add:hover:not(.cannot-afford):not(:disabled) {
     background: var(--accent-hover);
-    transform: scale(1.05);
 }
 
-.shop-buy-btn:active:not(:disabled) {
+.shop-buy-btn.shop-buy-replace:hover:not(.cannot-afford):not(:disabled) {
+    background: #5a5a70;
+}
+
+.shop-buy-btn:active:not(.cannot-afford):not(:disabled) {
     transform: scale(0.98);
+}
+
+.shop-buy-btn.cannot-afford {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 .shop-pool-info {
@@ -2376,37 +2400,59 @@ main {
 
 .bag-tiles-grid {
     display: grid;
-    grid-template-columns: repeat(9, 1fr);
-    gap: 4px;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 3px;
 }
 
-.bag-tile-entry {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 6px 2px;
-    border-radius: 6px;
+/* Mini tiles that look like actual game tiles */
+.bag-mini-tile {
+    width: 28px;
+    height: 28px;
     background: var(--tile-bg);
-    transition: opacity 0.2s;
+    border: 1px solid var(--tile-border);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-.bag-tile-entry.empty {
-    opacity: 0.3;
-}
-
-.bag-tile-letter {
-    font-size: 1rem;
+.bag-mini-tile-letter {
+    font-size: 14px;
     font-weight: bold;
     color: var(--tile-text);
-    line-height: 1.2;
+    line-height: 1;
 }
 
-.bag-tile-count {
-    font-size: 0.7rem;
-    color: #666;  /* Dark gray for contrast on cream tile */
-    line-height: 1.2;
+.bag-mini-tile-score {
+    position: absolute;
+    bottom: 1px;
+    right: 2px;
+    font-size: 8px;
+    font-weight: bold;
+    color: var(--tile-text);
+    opacity: 0.8;
 }
 
-.bag-tile-entry.empty .bag-tile-count {
-    color: var(--danger);
+/* Selectable tiles in replacement mode */
+.bag-mini-tile.selectable {
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.bag-mini-tile.selectable:hover {
+    transform: scale(1.15);
+    box-shadow: 0 0 8px rgba(220, 38, 38, 0.6);
+    z-index: 1;
+}
+
+.bag-tiles-grid.replacement-mode {
+    /* Slight red tint to indicate removal mode */
+    background: rgba(220, 38, 38, 0.05);
+    padding: 8px;
+    border-radius: 8px;
+    margin: -8px;
 }
