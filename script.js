@@ -4759,7 +4759,7 @@ function startOver() {
 
         // Clear all saved state
         localStorage.removeItem('letters_game_state');
-        localStorage.removeItem('rogueletters_run_state');
+        localStorage.removeItem('rogueletters_run');
 
         // Reload without seed parameter to get a fresh game
         window.location.href = window.location.pathname;
