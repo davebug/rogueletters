@@ -695,20 +695,19 @@ function showBagViewer() {
 
 function updateBagViewerGrid() {
     // Calculate both views
-    const poolTiles = calculatePoolTiles();      // Total available (before drawing)
-    const remaining = calculateRemainingTiles(); // What's left in bag
+    const poolTiles = calculatePoolTiles();      // Pool after starting word removed
+    const remaining = calculateRemainingTiles(); // What's not yet on board
 
     // Calculate totals
     let totalRemaining = 0;
-    let totalPool = 0;
+    let totalBag = 100 + (runState.purchasedTiles?.length || 0); // Original bag size
     for (const letter of Object.keys(TILE_DISTRIBUTION)) {
         totalRemaining += remaining[letter];
-        totalPool += poolTiles[letter];
     }
 
-    // Update summary
+    // Update summary: "X / Y tiles remaining" where Y is original bag
     document.getElementById('bag-remaining').textContent = totalRemaining;
-    document.getElementById('bag-total').textContent = totalPool;
+    document.getElementById('bag-total').textContent = totalBag;
 
     // Update toggle button states
     document.getElementById('bag-toggle-remaining')?.classList.toggle('active', bagViewMode === 'remaining');
