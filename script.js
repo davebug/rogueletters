@@ -773,12 +773,18 @@ function calculatePoolTiles() {
 }
 
 function calculateRemainingTiles() {
-    // Start with pool tiles
+    // Remaining = tiles not yet permanently placed on board
+    // = pool - drawn + rack (rack tiles are drawn but not yet played)
     const remaining = calculatePoolTiles();
 
-    // Subtract tiles drawn from bag
+    // Subtract all tiles drawn from bag
     for (const tile of (gameState.tilesDrawnFromBag || [])) {
         if (remaining[tile] > 0) remaining[tile]--;
+    }
+
+    // Add back rack tiles (they're drawn but not yet committed to board)
+    for (const tile of (gameState.rackTiles || [])) {
+        remaining[tile] = (remaining[tile] || 0) + 1;
     }
 
     return remaining;
