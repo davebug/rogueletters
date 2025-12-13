@@ -78,17 +78,22 @@ function getTargetScore(set, round) {
 }
 
 // Calculate earnings for a completed round
-// Base: $3 (R1), $4 (R2), $5 (R3) + $1 per 10 extra points
+// Base: $3 (R1), $4 (R2), $5 (R3) + $1 per 25% above target
 function calculateEarnings(score, target, roundInSet) {
     const basePayout = [3, 4, 5][roundInSet - 1] || 3;
     const extra = Math.max(0, score - target);
-    const extraBonus = Math.floor(extra / 10);
+
+    // $1 bonus for every 25% of target scored above target
+    // e.g., 40 target = $1 per 10 extra, 60 target = $1 per 15 extra
+    const bonusThreshold = Math.floor(target * 0.25);
+    const extraBonus = bonusThreshold > 0 ? Math.floor(extra / bonusThreshold) : 0;
 
     return {
         base: basePayout,
         extraBonus: extraBonus,
         total: basePayout + extraBonus,
-        extraPoints: extra
+        extraPoints: extra,
+        bonusThreshold: bonusThreshold
     };
 }
 
@@ -387,6 +392,7 @@ const runManager = {
         // Populate earnings breakdown
         document.getElementById('earnings-base').textContent = earnings.base;
         document.getElementById('earnings-extra-bonus').textContent = earnings.extraBonus;
+        document.getElementById('earnings-bonus-threshold').textContent = earnings.bonusThreshold;
         document.getElementById('earnings-total').textContent = earnings.total;
         document.getElementById('bank-before').textContent = previousCoins;
         document.getElementById('bank-after').textContent = runState.coins;

@@ -2058,6 +2058,11 @@ main {
     border-bottom: none;
 }
 
+.bonus-rate {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
 .earnings-row.earnings-total {
     padding-top: 12px;
     margin-top: 8px;
