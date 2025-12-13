@@ -103,6 +103,7 @@ const runManager = {
         runState.roundScores = [];
         runState.coins = 0;
         runState.lastEarnings = null;
+        runState.purchasedTiles = [];  // Reset shop purchases
         runState.runStartTime = Date.now();
         runState.runSeed = Date.now(); // Use timestamp as run seed
 
@@ -4759,46 +4760,16 @@ function displayHighScores(scores) {
 
 function startOver() {
     // Confirm with the user
-    if (confirm('Start over? This will reset your current game.')) {
+    if (confirm('Start a new game? This will reset everything including any tiles you bought.')) {
         // Track start over
         Analytics.navigation.startOver(gameState.currentTurn, gameState.score);
 
-        // Preserve completion status for today before clearing
-        if (gameState.isGameOver && gameState.seed === getTodaysSeed()) {
-            localStorage.setItem('letters_completed_today', gameState.seed);
-        }
-
-        // Clear the saved game state
+        // Clear all saved state
         localStorage.removeItem('letters_game_state');
+        localStorage.removeItem('rogueletters_run_state');
 
-        // Reset game state but keep the seed and starting word
-        const seed = gameState.seed;
-        const dateStr = gameState.dateStr;
-        const startingWord = gameState.startingWord;
-
-        // Reset all game variables
-        gameState = {
-            board: [],
-            tiles: [],
-            turnScores: [],
-            currentTurn: 1,
-            maxTurns: 5,
-            score: 0,
-            seed: seed,
-            dateStr: dateStr,
-            startingWord: startingWord,
-            placedTiles: [],
-            isSubmitting: false,  // Reset submission lock
-            turnHistory: [],
-            isGameOver: false,
-            hasSubmittedScore: false,
-            debugMode: gameState.debugMode, // Preserve debug mode if active
-            rackTiles: [],
-            totalTilesDrawn: 7
-        };
-
-        // Reload the page to start fresh
-        window.location.reload();
+        // Reload without seed parameter to get a fresh game
+        window.location.href = window.location.pathname;
     }
 }
 
