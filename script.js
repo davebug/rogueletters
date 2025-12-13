@@ -683,28 +683,39 @@ const TILE_DISTRIBUTION = {
 // BAG VIEWER
 // ============================================================================
 
+let bagViewMode = 'remaining'; // 'remaining' or 'total'
+
 function showBagViewer() {
     const popup = document.getElementById('bag-viewer-popup');
     if (!popup) return;
 
-    // Calculate remaining tiles per letter
-    const remaining = calculateRemainingTiles();
+    updateBagViewerGrid();
+    popup.classList.remove('hidden');
+}
+
+function updateBagViewerGrid() {
+    // Calculate both views
+    const poolTiles = calculatePoolTiles();      // Total available (before drawing)
+    const remaining = calculateRemainingTiles(); // What's left in bag
 
     // Calculate totals
     let totalRemaining = 0;
     let totalPool = 0;
     for (const letter of Object.keys(TILE_DISTRIBUTION)) {
         totalRemaining += remaining[letter];
-        totalPool += TILE_DISTRIBUTION[letter];
+        totalPool += poolTiles[letter];
     }
-    // Add purchased tiles to pool total
-    totalPool += (runState.purchasedTiles?.length || 0);
-    // Subtract starting word from pool (those tiles were never drawable)
-    totalPool -= (gameState.startingWord?.length || 0);
 
     // Update summary
     document.getElementById('bag-remaining').textContent = totalRemaining;
     document.getElementById('bag-total').textContent = totalPool;
+
+    // Update toggle button states
+    document.getElementById('bag-toggle-remaining')?.classList.toggle('active', bagViewMode === 'remaining');
+    document.getElementById('bag-toggle-total')?.classList.toggle('active', bagViewMode === 'total');
+
+    // Choose which counts to display
+    const displayCounts = bagViewMode === 'remaining' ? remaining : poolTiles;
 
     // Build grid (A-Z + blank = 27 tiles, display in 3 rows of 9)
     const grid = document.getElementById('bag-tiles-grid');
@@ -712,7 +723,7 @@ function showBagViewer() {
 
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_'.split('');
     for (const letter of letters) {
-        const count = remaining[letter];
+        const count = displayCounts[letter];
         const entry = document.createElement('div');
         entry.className = 'bag-tile-entry' + (count === 0 ? ' empty' : '');
 
@@ -728,8 +739,11 @@ function showBagViewer() {
         entry.appendChild(countSpan);
         grid.appendChild(entry);
     }
+}
 
-    popup.classList.remove('hidden');
+function setBagViewMode(mode) {
+    bagViewMode = mode;
+    updateBagViewerGrid();
 }
 
 function hideBagViewer() {
@@ -737,22 +751,30 @@ function hideBagViewer() {
     if (popup) popup.classList.add('hidden');
 }
 
-function calculateRemainingTiles() {
-    // Start with base distribution
-    const remaining = {};
+function calculatePoolTiles() {
+    // Total tiles available to draw (before any drawing)
+    // = base distribution + purchased - starting word
+    const pool = {};
     for (const [letter, count] of Object.entries(TILE_DISTRIBUTION)) {
-        remaining[letter] = count;
+        pool[letter] = count;
     }
 
     // Add purchased tiles
     for (const tile of (runState.purchasedTiles || [])) {
-        remaining[tile] = (remaining[tile] || 0) + 1;
+        pool[tile] = (pool[tile] || 0) + 1;
     }
 
     // Subtract starting word
     for (const letter of (gameState.startingWord || '')) {
-        if (remaining[letter] > 0) remaining[letter]--;
+        if (pool[letter] > 0) pool[letter]--;
     }
+
+    return pool;
+}
+
+function calculateRemainingTiles() {
+    // Start with pool tiles
+    const remaining = calculatePoolTiles();
 
     // Subtract tiles drawn from bag
     for (const tile of (gameState.tilesDrawnFromBag || [])) {
@@ -2201,6 +2223,8 @@ function setupEventListeners() {
         // Close when clicking outside the content
         if (e.target.id === 'bag-viewer-popup') hideBagViewer();
     });
+    document.getElementById('bag-toggle-remaining')?.addEventListener('click', () => setBagViewMode('remaining'));
+    document.getElementById('bag-toggle-total')?.addEventListener('click', () => setBagViewMode('total'));
 
     // Close buttons for run popups
     document.querySelectorAll('#round-complete-popup .popup-close-btn, #run-failed-popup .popup-close-btn, #run-victory-popup .popup-close-btn, #start-run-popup .popup-close-btn').forEach(btn => {

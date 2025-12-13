@@ -2342,6 +2342,35 @@ main {
     font-weight: bold;
 }
 
+.bag-toggle {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-bottom: 1rem;
+}
+
+.bag-toggle-btn {
+    background: var(--tile-bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 6px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.bag-toggle-btn:hover {
+    background: var(--surface);
+    color: var(--text);
+}
+
+.bag-toggle-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
 .bag-tiles-grid {
     display: grid;
     grid-template-columns: repeat(9, 1fr);

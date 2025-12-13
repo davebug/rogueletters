@@ -13,7 +13,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui, viewport-fit=cover">
     <title>RogueLetters - A Daily Word Game</title>
-    <link rel="stylesheet" href="./styles.css?v=15.0">
+    <link rel="stylesheet" href="./styles.css?v=16.0">
     <meta name="description" content="Play RogueLetters - a daily word puzzle game. Build words on a letter-tile board to maximize your score!">
 
 
@@ -384,6 +384,10 @@
 			<div class="bag-summary">
 				<span id="bag-remaining">85</span> / <span id="bag-total">100</span> tiles remaining
 			</div>
+			<div class="bag-toggle">
+				<button id="bag-toggle-remaining" class="bag-toggle-btn active">Remaining</button>
+				<button id="bag-toggle-total" class="bag-toggle-btn">Total</button>
+			</div>
 			<div id="bag-tiles-grid" class="bag-tiles-grid">
 				<!-- Populated by JS: 27 tile entries (A-Z + blank) -->
 			</div>
@@ -413,6 +417,6 @@
     <!-- LZ-String compression library for shareable URLs -->
     <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 
-    <script src="./script.js?v=16.0"></script>
+    <script src="./script.js?v=17.0"></script>
 </body>
 </html>
