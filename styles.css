@@ -118,6 +118,8 @@ a, .accent {
     font-size: 18px;
     font-weight: bold;
     letter-spacing: 0.5px;
+    line-height: 1;
+    height: 22px;  /* Fixed height to match dateDisplay in WikiLetters */
 }
 
 #game-progress .progress-sep {
@@ -2286,11 +2288,14 @@ main {
     background: transparent;
     border: none;
     cursor: pointer;
-    padding: 4px;
-    margin-left: 8px;
+    padding: 0;
+    margin-left: 4px;
     color: var(--text-muted);
     transition: color 0.2s, transform 0.2s;
     vertical-align: middle;
+    display: flex;
+    align-items: center;
+    height: 18px;
 }
 
 .bag-icon-btn:hover {
