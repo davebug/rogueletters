@@ -772,18 +772,43 @@ function calculatePoolTiles() {
 }
 
 function calculateRemainingTiles() {
-    // Remaining = tiles not yet permanently placed on board
-    // = pool - drawn + rack (rack tiles are drawn but not yet played)
-    const remaining = calculatePoolTiles();
+    // Remaining = tiles NOT on the board
+    // = base distribution + purchased - starting word - tiles placed on board
 
-    // Subtract all tiles drawn from bag
-    for (const tile of (gameState.tilesDrawnFromBag || [])) {
-        if (remaining[tile] > 0) remaining[tile]--;
+    // Start with full distribution
+    const remaining = {};
+    for (const [letter, count] of Object.entries(TILE_DISTRIBUTION)) {
+        remaining[letter] = count;
     }
 
-    // Add back rack tiles (they're drawn but not yet committed to board)
-    for (const tile of (gameState.rackTiles || [])) {
+    // Add purchased tiles
+    for (const tile of (runState.purchasedTiles || [])) {
         remaining[tile] = (remaining[tile] || 0) + 1;
+    }
+
+    // Subtract starting word (on board from start)
+    for (const letter of (gameState.startingWord || '')) {
+        if (remaining[letter] > 0) remaining[letter]--;
+    }
+
+    // Subtract tiles placed on board during play
+    // = tiles drawn - tiles still on rack
+    const tilesDrawn = gameState.tilesDrawnFromBag || [];
+    const tilesOnRack = gameState.rackTiles || [];
+
+    // Count tiles placed = drawn minus what's still on rack
+    const drawnCounts = {};
+    for (const tile of tilesDrawn) {
+        drawnCounts[tile] = (drawnCounts[tile] || 0) + 1;
+    }
+    for (const tile of tilesOnRack) {
+        if (drawnCounts[tile] > 0) drawnCounts[tile]--;
+    }
+
+    // Subtract placed tiles from remaining
+    for (const [tile, count] of Object.entries(drawnCounts)) {
+        remaining[tile] = (remaining[tile] || 0) - count;
+        if (remaining[tile] < 0) remaining[tile] = 0;
     }
 
     return remaining;
