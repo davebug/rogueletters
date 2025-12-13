@@ -2909,7 +2909,6 @@ function returnTileToRack(cell, addToRack = true) {
             newTile.dataset.isBlank = 'true';
         }
         newTile.dataset.letter = rackLetter;
-        newTile.draggable = true;
 
         const letterSpan = document.createElement('span');
         letterSpan.className = 'tile-letter';
@@ -2924,8 +2923,6 @@ function returnTileToRack(cell, addToRack = true) {
 
         // Add event listeners
         newTile.addEventListener('click', handleTileClick);
-        newTile.addEventListener('dragstart', handleDragStart);
-        newTile.addEventListener('dragend', handleDragEnd);
 
         // Add to rack
         const rackBoard = document.getElementById('tile-rack-board');
