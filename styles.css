@@ -838,7 +838,7 @@ main {
     padding: 4px 8px;
     border-radius: 12px;
     background: var(--board-square);
-    border: 1px solid var(--tile-border);
+    border: 1px solid var(--board-border);
     display: inline-flex;
     gap: 4px;
     align-items: center;
@@ -852,7 +852,7 @@ main {
 
 #potential-words .word-text {
     font-weight: 600;
-    color: var(--tile-text);
+    color: var(--text-color);
     text-transform: uppercase;
 }
 
@@ -861,13 +861,13 @@ main {
 }
 
 #potential-words .word-score {
-    color: var(--tile-text);
+    color: var(--text-muted);
     font-size: 11px;
 }
 
 #potential-words .total-score {
     font-weight: bold;
-    color: var(--tile-text);
+    color: #ffffff;
     padding: 4px 8px;
     background: rgba(39, 174, 96, 0.3);
     border-radius: 12px;
