@@ -13,10 +13,11 @@
     --board-square: #252538;      /* Dark square */
     --board-border: #3d3d5c;      /* Board edge */
 
-    /* Tile colors - stone/dungeon feel */
-    --tile-bg: #4a4a6a;           /* Stone gray-purple */
-    --tile-border: #6a6a8a;       /* Lighter stone edge */
-    --tile-text: #f0e6d3;         /* Warm off-white */
+    /* Tile colors - classic Scrabble plastic */
+    --tile-bg: #F3E5C3;           /* Cream/ivory plastic */
+    --tile-border: #D4C4A8;       /* Slightly darker tan edge */
+    --tile-text: #1a1a1a;         /* Black letters */
+    --tile-shadow: #C4B498;       /* Shadow for 3D effect */
 
     /* Multiplier colors - more vibrant for dark mode */
     --multiplier-2w: #9333ea;     /* Purple for 2x word */
@@ -455,7 +456,7 @@ main {
     opacity: 0.9;
 }
 
-/* Tiles - Stone/dungeon feel */
+/* Tiles - Classic Scrabble plastic */
 .tile {
     width: 30px;
     height: 30px;
@@ -463,13 +464,13 @@ main {
     user-select: none;
     background-image:
         linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.1) 0%,
-            transparent 50%,
-            rgba(0, 0, 0, 0.2) 100%
+            180deg,
+            rgba(255, 255, 255, 0.4) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(0, 0, 0, 0.05) 100%
         );
-    border: 2px solid var(--tile-border);
-    border-radius: 4px;
+    border: 1px solid var(--tile-border);
+    border-radius: 3px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -480,31 +481,33 @@ main {
     transition: all 0.2s;
     color: var(--tile-text);
     box-shadow:
-        inset 0 1px 2px rgba(255, 255, 255, 0.15),
-        0 2px 4px rgba(0, 0, 0, 0.4);
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        0 2px 3px rgba(0, 0, 0, 0.3),
+        0 1px 0 var(--tile-shadow);
 }
 
 .tile:hover {
     transform: translateY(-2px);
     box-shadow:
-        inset 0 1px 2px rgba(255, 255, 255, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
         0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .tile.selected {
-    background: var(--primary-color);
+    background: #FFE4A0;
     background-image:
         linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0.2) 0%,
-            transparent 50%,
-            rgba(0, 0, 0, 0.1) 100%
+            180deg,
+            rgba(255, 255, 255, 0.5) 0%,
+            rgba(255, 255, 255, 0.2) 50%,
+            rgba(0, 0, 0, 0.05) 100%
         );
-    border-color: #ef4444;
-    color: #1a1a2e;
+    border-color: #DAA520;
+    color: var(--tile-text);
     box-shadow:
-        inset 0 1px 2px rgba(255, 255, 255, 0.3),
-        0 2px 8px rgba(220, 38, 38, 0.5);
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 0 0 2px #DAA520,
+        0 2px 8px rgba(218, 165, 32, 0.4);
 }
 
 .tile .tile-letter {
