@@ -13,7 +13,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui, viewport-fit=cover">
     <title>RogueLetters - A Daily Word Game</title>
-    <link rel="stylesheet" href="./styles.css?v=22.1">
+    <link rel="stylesheet" href="./styles.css?v=22.2">
     <meta name="description" content="Play RogueLetters - a daily word puzzle game. Build words on a letter-tile board to maximize your score!">
 
 
@@ -346,28 +346,27 @@
 	<div id="shop-screen" class="full-screen hidden">
 		<div class="full-screen-content">
 			<h2>Tile Shop</h2>
-			<p class="shop-subtitle">Add tiles to your bag for the rest of this run</p>
 			<p class="shop-bank">Bank: $<span id="shop-coins">0</span></p>
 
 			<div class="shop-tiles">
 				<div class="shop-tile-option" id="shop-tile-0">
-					<div class="shop-tile-display">
-						<div class="tile shop-tile" id="shop-tile-letter-0">E</div>
-						<div class="shop-tile-score" id="shop-tile-score-0">1 pt</div>
+					<div class="tile shop-tile" id="shop-tile-display-0">
+						<span class="tile-letter" id="shop-tile-letter-0">E</span>
+						<span class="tile-score" id="shop-tile-score-0">1</span>
 					</div>
 					<div class="shop-buy-buttons">
-						<button class="shop-buy-btn shop-buy-add" id="shop-add-0">Add $1</button>
-						<button class="shop-buy-btn shop-buy-replace" id="shop-replace-0">Replace $2</button>
+						<button class="shop-buy-btn" id="shop-add-0">Add $1</button>
+						<button class="shop-buy-btn" id="shop-replace-0">Replace $2</button>
 					</div>
 				</div>
 				<div class="shop-tile-option" id="shop-tile-1">
-					<div class="shop-tile-display">
-						<div class="tile shop-tile" id="shop-tile-letter-1">S</div>
-						<div class="shop-tile-score" id="shop-tile-score-1">1 pt</div>
+					<div class="tile shop-tile" id="shop-tile-display-1">
+						<span class="tile-letter" id="shop-tile-letter-1">S</span>
+						<span class="tile-score" id="shop-tile-score-1">1</span>
 					</div>
 					<div class="shop-buy-buttons">
-						<button class="shop-buy-btn shop-buy-add" id="shop-add-1">Add $1</button>
-						<button class="shop-buy-btn shop-buy-replace" id="shop-replace-1">Replace $2</button>
+						<button class="shop-buy-btn" id="shop-add-1">Add $1</button>
+						<button class="shop-buy-btn" id="shop-replace-1">Replace $2</button>
 					</div>
 				</div>
 			</div>
@@ -420,6 +419,6 @@
     <!-- LZ-String compression library for shareable URLs -->
     <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 
-    <script src="./script.js?v=27.2"></script>
+    <script src="./script.js?v=27.3"></script>
 </body>
 </html>

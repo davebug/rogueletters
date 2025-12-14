@@ -468,7 +468,7 @@ const runManager = {
             const option = document.getElementById(`shop-tile-${i}`);
 
             document.getElementById(`shop-tile-letter-${i}`).textContent = tile === '_' ? '' : tile;
-            document.getElementById(`shop-tile-score-${i}`).textContent = `${score} pt${score !== 1 ? 's' : ''}`;
+            document.getElementById(`shop-tile-score-${i}`).textContent = score;
 
             // Reset classes
             option.classList.remove('purchased', 'cannot-afford', 'cannot-afford-add', 'cannot-afford-replace');
@@ -556,7 +556,7 @@ const runManager = {
 
     // Animate tile flying to the bag icon
     animateTileToBag(index) {
-        const tileEl = document.getElementById(`shop-tile-letter-${index}`);
+        const tileEl = document.getElementById(`shop-tile-display-${index}`);
         const bagIcon = document.getElementById('bag-viewer-btn');
         if (!tileEl || !bagIcon) return Promise.resolve();
 
