@@ -504,8 +504,10 @@ const runManager = {
         this.shopPurchased[index] = true;
         this.saveRunState();
 
-        // Update UI
-        this.updateShopAfterPurchase(index);
+        // Animate tile to bag, then update UI
+        this.animateTileToBag(index).then(() => {
+            this.updateShopAfterPurchase(index);
+        });
     },
 
     // Purchase a tile via "Replace" - costs $2, then pick a tile to remove
@@ -537,15 +539,131 @@ const runManager = {
         this.pendingReplacementTileIndex = null;
         this.saveRunState();
 
-        // Hide bag viewer and update shop UI
+        // Hide bag viewer, animate removed tile flying out, then new tile flying in
         hideBagViewer();
-        this.updateShopAfterPurchase(index);
+        this.animateTileFromBag(letterToRemove).then(() => {
+            return this.animateTileToBag(index);
+        }).then(() => {
+            this.updateShopAfterPurchase(index);
+        });
     },
 
     // Cancel replacement mode
     cancelReplacement() {
         this.pendingReplacementTileIndex = null;
         hideBagViewer();
+    },
+
+    // Animate tile flying to the bag icon
+    animateTileToBag(index) {
+        const tileEl = document.getElementById(`shop-tile-letter-${index}`);
+        const bagIcon = document.getElementById('bag-viewer-btn');
+        if (!tileEl || !bagIcon) return Promise.resolve();
+
+        // Get positions
+        const tileRect = tileEl.getBoundingClientRect();
+        const bagRect = bagIcon.getBoundingClientRect();
+
+        // Create a clone for animation
+        const clone = tileEl.cloneNode(true);
+        clone.id = '';
+        clone.style.position = 'fixed';
+        clone.style.left = tileRect.left + 'px';
+        clone.style.top = tileRect.top + 'px';
+        clone.style.width = tileRect.width + 'px';
+        clone.style.height = tileRect.height + 'px';
+        clone.style.margin = '0';
+        clone.style.zIndex = '10000';
+        clone.style.pointerEvents = 'none';
+        clone.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+        document.body.appendChild(clone);
+
+        // Hide original tile immediately
+        tileEl.style.opacity = '0';
+
+        // Trigger animation after a frame
+        return new Promise(resolve => {
+            requestAnimationFrame(() => {
+                // Calculate target position (center of bag icon)
+                const targetX = bagRect.left + bagRect.width / 2 - tileRect.width / 2;
+                const targetY = bagRect.top + bagRect.height / 2 - tileRect.height / 2;
+
+                clone.style.left = targetX + 'px';
+                clone.style.top = targetY + 'px';
+                clone.style.transform = 'scale(0.2)';
+                clone.style.opacity = '0.5';
+
+                // Clean up after animation
+                setTimeout(() => {
+                    clone.remove();
+                    // Brief flash on bag icon
+                    bagIcon.style.transform = 'scale(1.3)';
+                    setTimeout(() => {
+                        bagIcon.style.transform = '';
+                    }, 150);
+                    resolve();
+                }, 500);
+            });
+        });
+    },
+
+    // Animate tile flying OUT of the bag icon (for replacement removal)
+    animateTileFromBag(letter) {
+        const bagIcon = document.getElementById('bag-viewer-btn');
+        if (!bagIcon) return Promise.resolve();
+
+        const bagRect = bagIcon.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        // Create a tile for the animation
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        tile.style.position = 'fixed';
+        tile.style.width = '40px';
+        tile.style.height = '40px';
+        tile.style.left = (bagRect.left + bagRect.width / 2 - 20) + 'px';
+        tile.style.top = (bagRect.top + bagRect.height / 2 - 20) + 'px';
+        tile.style.zIndex = '10000';
+        tile.style.pointerEvents = 'none';
+        tile.style.transform = 'scale(0.2)';
+        tile.style.opacity = '0';
+        tile.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        tile.style.display = 'flex';
+        tile.style.alignItems = 'center';
+        tile.style.justifyContent = 'center';
+        tile.innerHTML = `<span class="tile-letter" style="font-size: 24px; font-weight: bold;">${letter === '_' ? '' : letter}</span>`;
+        document.body.appendChild(tile);
+
+        // Brief shrink on bag icon to show tile is leaving
+        bagIcon.style.transform = 'scale(0.8)';
+        setTimeout(() => {
+            bagIcon.style.transform = '';
+        }, 150);
+
+        return new Promise(resolve => {
+            // Phase 1: Grow large and move toward center (so user can see the letter)
+            requestAnimationFrame(() => {
+                tile.style.transform = 'scale(2.5)';
+                tile.style.opacity = '1';
+                tile.style.left = (viewportWidth / 2 - 50) + 'px';
+                tile.style.top = (viewportHeight / 3) + 'px';
+
+                // Phase 2: After a brief pause, fly off screen
+                setTimeout(() => {
+                    tile.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 1, 1)';
+                    tile.style.transform = 'scale(1.5) rotate(-20deg)';
+                    tile.style.opacity = '0';
+                    tile.style.left = '-150px';
+                    tile.style.top = (viewportHeight / 2) + 'px';
+
+                    setTimeout(() => {
+                        tile.remove();
+                        resolve();
+                    }, 400);
+                }, 350);
+            });
+        });
     },
 
     // Update shop UI after a purchase
@@ -887,8 +1005,8 @@ function hideBagViewer() {
 }
 
 function calculateRemainingTiles() {
-    // Remaining = tiles NOT on the board
-    // = base distribution + purchased - removed - starting word - tiles placed on board
+    // Remaining = tiles still in the bag (not yet drawn)
+    // = base distribution + purchased - removed - starting word - ALL tiles drawn from bag
 
     // Start with full distribution
     const remaining = {};
@@ -911,24 +1029,10 @@ function calculateRemainingTiles() {
         if (remaining[letter] > 0) remaining[letter]--;
     }
 
-    // Subtract tiles placed on board during play
-    // = tiles drawn - tiles still on rack
+    // Subtract ALL tiles drawn from bag (includes rack tiles and tiles placed this turn)
     const tilesDrawn = gameState.tilesDrawnFromBag || [];
-    const tilesOnRack = gameState.rackTiles || [];
-
-    // Count tiles placed = drawn minus what's still on rack
-    const drawnCounts = {};
     for (const tile of tilesDrawn) {
-        drawnCounts[tile] = (drawnCounts[tile] || 0) + 1;
-    }
-    for (const tile of tilesOnRack) {
-        if (drawnCounts[tile] > 0) drawnCounts[tile]--;
-    }
-
-    // Subtract placed tiles from remaining
-    for (const [tile, count] of Object.entries(drawnCounts)) {
-        remaining[tile] = (remaining[tile] || 0) - count;
-        if (remaining[tile] < 0) remaining[tile] = 0;
+        if (remaining[tile] > 0) remaining[tile]--;
     }
 
     return remaining;
@@ -1999,11 +2103,14 @@ function createBoard() {
 function fetchGameData(seed) {
     showLoading(true);
 
-    // Include purchased tiles if any (for pool expansion)
+    // Include purchased and removed tiles for pool modifications
     const purchasedParam = runState.purchasedTiles?.length
         ? `&purchased_tiles=${encodeURIComponent(JSON.stringify(runState.purchasedTiles))}`
         : '';
-    fetch(`${API_BASE}/letters.py?seed=${seed}${purchasedParam}`)
+    const removedParam = runState.removedTiles?.length
+        ? `&removed_tiles=${encodeURIComponent(JSON.stringify(runState.removedTiles))}`
+        : '';
+    fetch(`${API_BASE}/letters.py?seed=${seed}${purchasedParam}${removedParam}`)
         .then(response => {
             // Check HTTP status before parsing JSON
             if (!response.ok) {
@@ -4292,7 +4399,8 @@ function nextTurn() {
         turn: gameState.currentTurn,
         rack_tiles: JSON.stringify(gameState.rackTiles),
         tiles_drawn: gameState.totalTilesDrawn,
-        purchased_tiles: JSON.stringify(runState.purchasedTiles || [])
+        purchased_tiles: JSON.stringify(runState.purchasedTiles || []),
+        removed_tiles: JSON.stringify(runState.removedTiles || [])
     });
 
     fetch(`${API_BASE}/letters.py?${params.toString()}`)

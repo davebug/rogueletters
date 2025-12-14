@@ -15,6 +15,7 @@
 
     /* Tile colors - classic Scrabble plastic */
     --tile-bg: #F3E5C3;           /* Cream/ivory plastic */
+    --tile-bg-selected: #FFE4A0;  /* Golden/warm when selected */
     --tile-border: #D4C4A8;       /* Slightly darker tan edge */
     --tile-text: #1a1a1a;         /* Black letters */
     --tile-shadow: #C4B498;       /* Shadow for 3D effect */
@@ -496,7 +497,7 @@ main {
 }
 
 .tile.selected {
-    background: #FFE4A0;
+    background: var(--tile-bg-selected);
     background-image:
         linear-gradient(
             180deg,
@@ -1396,8 +1397,8 @@ main {
 }
 
 .feedback-square.score-good {
-    background-color: #dc2626; /* 20-29 points - red */
-    color: white;
+    background-color: #fbb021; /* 20-29 points - yellow/gold */
+    color: #333;
 }
 
 .feedback-square.score-great {
@@ -2295,7 +2296,7 @@ main {
     cursor: pointer;
     padding: 0;
     margin-left: 4px;
-    color: var(--text-muted);
+    color: var(--tile-bg);
     transition: color 0.2s, transform 0.2s;
     vertical-align: middle;
     display: flex;
@@ -2304,7 +2305,7 @@ main {
 }
 
 .bag-icon-btn:hover {
-    color: var(--accent);
+    color: var(--tile-bg-selected);
     transform: scale(1.1);
 }
 

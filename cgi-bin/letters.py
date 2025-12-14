@@ -172,17 +172,19 @@ def get_starting_word(seed):
     # Fallback if something goes wrong
     return "SAILING"
 
-def get_all_tiles_for_day(seed, starting_word, purchased_tiles=None):
+def get_all_tiles_for_day(seed, starting_word, purchased_tiles=None, removed_tiles=None):
     """Pre-generate all tiles for the entire day in order
 
     Returns a list of 35 tiles that will be drawn in order throughout the game.
     The starting word tiles are already removed from the bag.
     Purchased tiles are added to expand the pool.
+    Removed tiles are removed from the pool.
 
     Args:
         seed: Daily seed
         starting_word: The starting word (tiles removed from bag)
         purchased_tiles: List of purchased tile letters to add to the pool
+        removed_tiles: List of tile letters to remove from the pool
     """
     # Create deterministic random based on seed only
     random.seed(get_seed_hash(seed))
@@ -193,6 +195,12 @@ def get_all_tiles_for_day(seed, starting_word, purchased_tiles=None):
     # Add purchased tiles to the bag (pool expansion)
     if purchased_tiles:
         bag.extend(purchased_tiles)
+
+    # Remove tiles that were replaced via shop (pool shrinking)
+    if removed_tiles:
+        for letter in removed_tiles:
+            if letter in bag:
+                bag.remove(letter)
 
     # Remove starting word tiles from bag
     for letter in starting_word:
@@ -208,7 +216,7 @@ def get_all_tiles_for_day(seed, starting_word, purchased_tiles=None):
     # Total: 35 tiles maximum
     return bag[:35]
 
-def get_tiles_for_turn(seed, turn, starting_word=None, rack_tiles=None, tiles_drawn_so_far=0, purchased_tiles=None):
+def get_tiles_for_turn(seed, turn, starting_word=None, rack_tiles=None, tiles_drawn_so_far=0, purchased_tiles=None, removed_tiles=None):
     """Get tiles for a given turn
 
     Args:
@@ -218,13 +226,14 @@ def get_tiles_for_turn(seed, turn, starting_word=None, rack_tiles=None, tiles_dr
         rack_tiles: Current tiles on the rack (persist between turns)
         tiles_drawn_so_far: Total number of tiles drawn from bag so far (not including rack)
         purchased_tiles: List of purchased tile letters to add to the pool
+        removed_tiles: List of tile letters to remove from the pool
 
     Returns:
         List of tiles for the rack (7 tiles total)
     """
     if turn == 1:
         # First turn: get first 7 tiles from pre-generated list
-        all_tiles = get_all_tiles_for_day(seed, starting_word or "", purchased_tiles)
+        all_tiles = get_all_tiles_for_day(seed, starting_word or "", purchased_tiles, removed_tiles)
         return all_tiles[:7]
     else:
         # Subsequent turns: keep rack tiles and add new ones to replace placed tiles
@@ -232,7 +241,7 @@ def get_tiles_for_turn(seed, turn, starting_word=None, rack_tiles=None, tiles_dr
             rack_tiles = []
 
         # Get all tiles for the day
-        all_tiles = get_all_tiles_for_day(seed, starting_word or "", purchased_tiles)
+        all_tiles = get_all_tiles_for_day(seed, starting_word or "", purchased_tiles, removed_tiles)
 
         # Calculate how many new tiles we need
         tiles_needed = 7 - len(rack_tiles)
@@ -281,10 +290,16 @@ def main():
     purchased_tiles_str = form.getvalue('purchased_tiles', '')
     purchased_tiles = json.loads(purchased_tiles_str) if purchased_tiles_str else []
 
+    # Parse removed tiles (shop replacements that shrink the tile pool)
+    removed_tiles_str = form.getvalue('removed_tiles', '')
+    removed_tiles = json.loads(removed_tiles_str) if removed_tiles_str else []
+
     # Validate purchased tiles are valid letters or blanks
+    valid_tiles = set('ABCDEFGHIJKLMNOPQRSTUVWXYZ_')
     if purchased_tiles:
-        valid_tiles = set('ABCDEFGHIJKLMNOPQRSTUVWXYZ_')
         purchased_tiles = [t for t in purchased_tiles if isinstance(t, str) and t in valid_tiles]
+    if removed_tiles:
+        removed_tiles = [t for t in removed_tiles if isinstance(t, str) and t in valid_tiles]
 
     # VALIDATION: Check if all rack tiles are valid letters or blanks
     # This prevents null tiles from corrupted localStorage
@@ -302,7 +317,7 @@ def main():
         tiles_drawn = 7 * (turn - 1)
 
     # Get tiles for the turn
-    tiles = get_tiles_for_turn(seed, turn, starting_word, rack_tiles, tiles_drawn, purchased_tiles)
+    tiles = get_tiles_for_turn(seed, turn, starting_word, rack_tiles, tiles_drawn, purchased_tiles, removed_tiles)
 
     # Prepare response
     response = {
