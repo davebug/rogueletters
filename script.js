@@ -887,11 +887,11 @@ function showBagViewer() {
     if (!popup) return;
 
     // Reset header text
-    const header = popup.querySelector('.bag-popup-header h3');
+    const header = popup.querySelector('h2');
     if (header) header.textContent = 'Tile Bag';
 
     updateBagViewerGrid();
-    popup.classList.remove('hidden');
+    popup.style.display = 'flex';
 }
 
 function showBagViewerForReplacement() {
@@ -902,11 +902,11 @@ function showBagViewerForReplacement() {
     if (!popup) return;
 
     // Update header to indicate selection mode
-    const header = popup.querySelector('.bag-popup-header h3');
+    const header = popup.querySelector('h2');
     if (header) header.textContent = 'Select tile to remove';
 
     updateBagViewerGrid();
-    popup.classList.remove('hidden');
+    popup.style.display = 'flex';
 }
 
 function updateBagViewerGrid() {
@@ -1001,7 +1001,7 @@ function hideBagViewer() {
         bagReplacementMode = false;
     }
     const popup = document.getElementById('bag-viewer-popup');
-    if (popup) popup.classList.add('hidden');
+    if (popup) popup.style.display = 'none';
 }
 
 function calculateRemainingTiles() {
