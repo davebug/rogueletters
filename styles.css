@@ -2268,17 +2268,10 @@ main {
     border-radius: 0 4px 4px 0;
 }
 
-/* Hover: Add goes green, Replace goes blue */
-.shop-buy-btn.shop-add-btn:hover:not(.cannot-afford):not(:disabled) {
-    background: var(--success-color);
-}
-
-.shop-buy-btn.shop-replace-btn:hover:not(.cannot-afford):not(:disabled) {
-    background: var(--multiplier-3l);
-}
-
+/* Hover: both go gold with black text */
 .shop-buy-btn:hover:not(.cannot-afford):not(:disabled) {
-    filter: brightness(1.1);
+    background: #ffd700;
+    color: #000;
 }
 
 .shop-buy-btn:active:not(.cannot-afford):not(:disabled) {
