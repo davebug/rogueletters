@@ -2175,8 +2175,9 @@ main {
 
 .shop-tile-option {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.25rem;
+    gap: 2px;
     transition: opacity 0.2s ease-out, width 0.2s ease-out;
 }
 
@@ -2204,24 +2205,30 @@ main {
 
 .shop-buy-buttons {
     display: flex;
-    gap: 2px;
+    flex-direction: column;
+    gap: 1px;
 }
 
 .shop-buy-btn {
-    background: var(--accent);
     color: white;
     border: none;
-    padding: 2px 4px;
+    padding: 1px 3px;
     border-radius: 2px;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s, opacity 0.2s;
+    transition: filter 0.2s, opacity 0.2s;
     white-space: nowrap;
 }
 
-.shop-buy-btn:last-child {
-    background: var(--board-border);
+/* Add button - green */
+.shop-buy-btn.shop-add-btn {
+    background: var(--success-color);
+}
+
+/* Replace button - blue */
+.shop-buy-btn.shop-replace-btn {
+    background: var(--multiplier-3l);
 }
 
 .shop-buy-btn:hover:not(.cannot-afford):not(:disabled) {
