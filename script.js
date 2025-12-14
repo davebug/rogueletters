@@ -58,7 +58,7 @@ let runState = {
     coins: 0,                       // Current bank balance
     lastEarnings: null,             // Most recent round earnings (for display)
     // Shop
-    purchasedTiles: [],             // Tiles bought from shop this run (e.g. ['E', 'S'])
+    purchasedTiles: [],             // Tiles bought from shop (e.g. [{letter: 'E', bonus: 1}])
     removedTiles: [],               // Tiles removed via "Replace" option (e.g. ['Q', 'Z'])
     // Meta
     runStartTime: null,
@@ -464,26 +464,27 @@ const runManager = {
         // Update tile displays
         for (let i = 0; i < 2; i++) {
             const tile = this.shopTiles[i];
-            const score = TILE_SCORES[tile] || 0;
+            const baseScore = TILE_SCORES[tile] || 0;
+            const buffedScore = baseScore + 1;  // Shop tiles always have +1 bonus
             const option = document.getElementById(`shop-tile-${i}`);
 
             document.getElementById(`shop-tile-letter-${i}`).textContent = tile === '_' ? '' : tile;
-            document.getElementById(`shop-tile-score-${i}`).textContent = score;
+            document.getElementById(`shop-tile-score-${i}`).textContent = buffedScore;
 
             // Reset classes
             option.classList.remove('purchased', 'cannot-afford', 'cannot-afford-add', 'cannot-afford-replace');
 
-            // Check affordability for each button type
+            // Check affordability for each button type (Add $2, Replace $3)
             const addBtn = document.getElementById(`shop-add-${i}`);
             const replaceBtn = document.getElementById(`shop-replace-${i}`);
 
-            if (runState.coins < 1) {
+            if (runState.coins < 2) {
                 addBtn?.classList.add('cannot-afford');
             } else {
                 addBtn?.classList.remove('cannot-afford');
             }
 
-            if (runState.coins < 2) {
+            if (runState.coins < 3) {
                 replaceBtn?.classList.add('cannot-afford');
             } else {
                 replaceBtn?.classList.remove('cannot-afford');
@@ -493,14 +494,17 @@ const runManager = {
         shopScreen.classList.remove('hidden');
     },
 
-    // Purchase a tile via "Add" - adds to bag, costs $1
+    // Purchase a tile via "Add" - adds to bag, costs $2
     purchaseTileAdd(index) {
-        if (runState.coins < 1 || this.shopPurchased[index]) return;
+        if (runState.coins < 2 || this.shopPurchased[index]) return;
 
-        // Deduct coin and add tile
-        runState.coins -= 1;
+        // Deduct coins and add tile with bonus
+        runState.coins -= 2;
         runState.purchasedTiles = runState.purchasedTiles || [];
-        runState.purchasedTiles.push(this.shopTiles[index]);
+        runState.purchasedTiles.push({
+            letter: this.shopTiles[index],
+            bonus: 1  // +1 point value
+        });
         this.shopPurchased[index] = true;
         this.saveRunState();
 
@@ -510,9 +514,9 @@ const runManager = {
         });
     },
 
-    // Purchase a tile via "Replace" - costs $2, then pick a tile to remove
+    // Purchase a tile via "Replace" - costs $3, then pick a tile to remove
     purchaseTileReplace(index) {
-        if (runState.coins < 2 || this.shopPurchased[index]) return;
+        if (runState.coins < 3 || this.shopPurchased[index]) return;
 
         // Store pending replacement and show bag viewer for selection
         this.pendingReplacementTileIndex = index;
@@ -526,10 +530,13 @@ const runManager = {
         const index = this.pendingReplacementTileIndex;
         if (index === null) return;
 
-        // Deduct $2 and add the new tile
-        runState.coins -= 2;
+        // Deduct $3 and add the new tile with bonus
+        runState.coins -= 3;
         runState.purchasedTiles = runState.purchasedTiles || [];
-        runState.purchasedTiles.push(this.shopTiles[index]);
+        runState.purchasedTiles.push({
+            letter: this.shopTiles[index],
+            bonus: 1  // +1 point value
+        });
 
         // Track the removed tile
         runState.removedTiles = runState.removedTiles || [];
@@ -919,7 +926,8 @@ function updateBagViewerGrid() {
         totalTiles[letter] = count;
     }
     for (const tile of (runState.purchasedTiles || [])) {
-        totalTiles[tile] = (totalTiles[tile] || 0) + 1;
+        const letter = typeof tile === 'object' ? tile.letter : tile;
+        totalTiles[letter] = (totalTiles[letter] || 0) + 1;
     }
     for (const tile of (runState.removedTiles || [])) {
         totalTiles[tile] = Math.max(0, (totalTiles[tile] || 0) - 1);
@@ -1016,7 +1024,8 @@ function calculateRemainingTiles() {
 
     // Add purchased tiles
     for (const tile of (runState.purchasedTiles || [])) {
-        remaining[tile] = (remaining[tile] || 0) + 1;
+        const letter = typeof tile === 'object' ? tile.letter : tile;
+        remaining[letter] = (remaining[letter] || 0) + 1;
     }
 
     // Subtract removed tiles (from shop "Replace" option)
