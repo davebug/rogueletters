@@ -2221,21 +2221,32 @@ main {
     white-space: nowrap;
 }
 
-/* Add button - green, left side */
-.shop-buy-btn.shop-add-btn {
-    background: var(--success-color);
-    border-radius: 4px 0 0 4px;
-    border-right: 1px solid rgba(0,0,0,0.2);
+/* Both buttons start neutral */
+.shop-buy-btn.shop-add-btn,
+.shop-buy-btn.shop-replace-btn {
+    background: var(--board-border);
+    transition: background 0.15s, filter 0.15s;
 }
 
-/* Replace button - blue, right side */
+.shop-buy-btn.shop-add-btn {
+    border-radius: 4px 0 0 4px;
+    border-right: 1px solid rgba(0,0,0,0.3);
+}
+
 .shop-buy-btn.shop-replace-btn {
-    background: var(--multiplier-3l);
     border-radius: 0 4px 4px 0;
 }
 
+/* Hover: Add goes green, Replace goes blue */
+.shop-buy-btn.shop-add-btn:hover:not(.cannot-afford):not(:disabled) {
+    background: var(--success-color);
+}
+
+.shop-buy-btn.shop-replace-btn:hover:not(.cannot-afford):not(:disabled) {
+    background: var(--multiplier-3l);
+}
+
 .shop-buy-btn:hover:not(.cannot-afford):not(:disabled) {
-    transform: scale(1.05);
     filter: brightness(1.1);
 }
 
