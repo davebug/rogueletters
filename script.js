@@ -2489,6 +2489,16 @@ function setupEventListeners() {
     document.getElementById('bag-toggle-remaining')?.addEventListener('click', () => setBagViewMode('remaining'));
     document.getElementById('bag-toggle-total')?.addEventListener('click', () => setBagViewMode('total'));
 
+    // Escape key closes bag viewer
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const bagPopup = document.getElementById('bag-viewer-popup');
+            if (bagPopup && bagPopup.style.display !== 'none') {
+                hideBagViewer();
+            }
+        }
+    });
+
     // Close buttons for run popups
     document.querySelectorAll('#round-complete-popup .popup-close-btn, #run-failed-popup .popup-close-btn, #run-victory-popup .popup-close-btn, #start-run-popup .popup-close-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
