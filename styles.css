@@ -2160,24 +2160,24 @@ main {
 }
 
 .shop-bank {
-    font-size: 0.9rem;
+    font-size: 1rem;
     color: #4caf50;
     font-weight: 600;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.5rem;
 }
 
 .shop-tiles {
     display: flex;
     justify-content: center;
-    gap: 0.5rem;
-    margin-bottom: 0.25rem;
+    gap: 1.5rem;
+    margin-bottom: 0.5rem;
 }
 
 .shop-tile-option {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
+    gap: 6px;
     transition: opacity 0.2s ease-out, width 0.2s ease-out;
 }
 
@@ -2188,33 +2188,33 @@ main {
     pointer-events: none;
 }
 
-/* Shop tile - compact */
+/* Shop tile */
 .shop-tile {
-    width: 28px;
-    height: 28px;
+    width: 36px;
+    height: 36px;
     position: relative;
 }
 
 .shop-tile .tile-letter {
-    font-size: 16px;
+    font-size: 20px;
 }
 
 .shop-tile .tile-score {
-    font-size: 7px;
+    font-size: 9px;
 }
 
 .shop-buy-buttons {
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 3px;
 }
 
 .shop-buy-btn {
     color: white;
     border: none;
-    padding: 1px 3px;
-    border-radius: 2px;
-    font-size: 9px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 11px;
     font-weight: 600;
     cursor: pointer;
     transition: filter 0.2s, opacity 0.2s;
@@ -2247,8 +2247,8 @@ main {
 
 .shop-pool-info {
     color: var(--text-muted);
-    font-size: 0.7rem;
-    margin: 0.15rem 0;
+    font-size: 0.8rem;
+    margin: 0.25rem 0;
 }
 
 /* ============================================
