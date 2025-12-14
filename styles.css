@@ -2205,15 +2205,15 @@ main {
 
 .shop-buy-buttons {
     display: flex;
-    flex-direction: column;
-    gap: 3px;
+    flex-direction: row;
+    border-radius: 4px;
+    overflow: hidden;
 }
 
 .shop-buy-btn {
     color: white;
     border: none;
-    padding: 4px 8px;
-    border-radius: 3px;
+    padding: 5px 8px;
     font-size: 11px;
     font-weight: 600;
     cursor: pointer;
@@ -2221,14 +2221,17 @@ main {
     white-space: nowrap;
 }
 
-/* Add button - green */
+/* Add button - green, left side */
 .shop-buy-btn.shop-add-btn {
     background: var(--success-color);
+    border-radius: 4px 0 0 4px;
+    border-right: 1px solid rgba(0,0,0,0.2);
 }
 
-/* Replace button - blue */
+/* Replace button - blue, right side */
 .shop-buy-btn.shop-replace-btn {
     background: var(--multiplier-3l);
+    border-radius: 0 4px 4px 0;
 }
 
 .shop-buy-btn:hover:not(.cannot-afford):not(:disabled) {
