@@ -3772,26 +3772,24 @@ function validateTilePlacement() {
         return { valid: true, message: '', invalidTiles: [] };
     }
 
-    if (gameState.placedTiles.length === 1) {
-        return { valid: true, message: '', invalidTiles: [] };
-    }
+    // For multiple tiles, check that they're in a valid line
+    if (gameState.placedTiles.length > 1) {
+        // Use placement order - first two tiles determine the row/column
+        const firstTile = gameState.placedTiles[0];
+        const secondTile = gameState.placedTiles[1];
 
-    // Use placement order - first two tiles determine the row/column
-    const firstTile = gameState.placedTiles[0];
-    const secondTile = gameState.placedTiles[1];
+        // Determine if we're going horizontal (same row) or vertical (same column)
+        const isHorizontal = firstTile.row === secondTile.row;
+        const isVertical = firstTile.col === secondTile.col;
 
-    // Determine if we're going horizontal (same row) or vertical (same column)
-    const isHorizontal = firstTile.row === secondTile.row;
-    const isVertical = firstTile.col === secondTile.col;
+        // If second tile is diagonal from first, both the direction is invalid
+        if (!isHorizontal && !isVertical) {
+            // Mark all tiles except the first as invalid (first establishes the base)
+            const invalidTiles = gameState.placedTiles.slice(1).map(t => ({ row: t.row, col: t.col }));
+            return { valid: false, message: 'Tiles placed each turn must be in one row/column', invalidTiles };
+        }
 
-    // If second tile is diagonal from first, both the direction is invalid
-    if (!isHorizontal && !isVertical) {
-        // Mark all tiles except the first as invalid (first establishes the base)
-        const invalidTiles = gameState.placedTiles.slice(1).map(t => ({ row: t.row, col: t.col }));
-        return { valid: false, message: 'Tiles placed each turn must be in one row/column', invalidTiles };
-    }
-
-    const invalidTiles = [];
+        const invalidTiles = [];
 
     if (isHorizontal) {
         // All tiles must be in the same row as the first tile
@@ -3864,47 +3862,46 @@ function validateTilePlacement() {
             }
         }
     }
+    } // End of multi-tile line/gap checks
 
-    // Check if tiles connect to existing board (skip on first turn)
-    if (gameState.currentTurn > 1) {
-        let hasConnection = false;
+    // Check if tiles connect to existing board (required in RogueLetters since there's always a starting word)
+    let hasConnection = false;
 
-        for (const tile of gameState.placedTiles) {
-            // Check all four adjacent cells
-            const adjacentPositions = [
-                { row: tile.row - 1, col: tile.col }, // above
-                { row: tile.row + 1, col: tile.col }, // below
-                { row: tile.row, col: tile.col - 1 }, // left
-                { row: tile.row, col: tile.col + 1 }  // right
-            ];
+    for (const tile of gameState.placedTiles) {
+        // Check all four adjacent cells
+        const adjacentPositions = [
+            { row: tile.row - 1, col: tile.col }, // above
+            { row: tile.row + 1, col: tile.col }, // below
+            { row: tile.row, col: tile.col - 1 }, // left
+            { row: tile.row, col: tile.col + 1 }  // right
+        ];
 
-            for (const pos of adjacentPositions) {
-                // Check bounds
-                if (pos.row >= 0 && pos.row < gameState.board.length &&
-                    pos.col >= 0 && pos.col < gameState.board[0].length) {
-                    // Check if there's an existing tile (not placed this turn)
-                    const hasExistingTile = gameState.board[pos.row][pos.col] !== null;
-                    const isPlacedThisTurn = gameState.placedTiles.some(
-                        t => t.row === pos.row && t.col === pos.col
-                    );
+        for (const pos of adjacentPositions) {
+            // Check bounds
+            if (pos.row >= 0 && pos.row < gameState.board.length &&
+                pos.col >= 0 && pos.col < gameState.board[0].length) {
+                // Check if there's an existing tile (not placed this turn)
+                const hasExistingTile = gameState.board[pos.row][pos.col] !== null;
+                const isPlacedThisTurn = gameState.placedTiles.some(
+                    t => t.row === pos.row && t.col === pos.col
+                );
 
-                    if (hasExistingTile && !isPlacedThisTurn) {
-                        hasConnection = true;
-                        break;
-                    }
+                if (hasExistingTile && !isPlacedThisTurn) {
+                    hasConnection = true;
+                    break;
                 }
             }
-
-            if (hasConnection) break;
         }
 
-        if (!hasConnection) {
-            return {
-                valid: false,
-                message: 'Word must connect to existing tiles',
-                invalidTiles: gameState.placedTiles.map(t => ({ row: t.row, col: t.col }))
-            };
-        }
+        if (hasConnection) break;
+    }
+
+    if (!hasConnection) {
+        return {
+            valid: false,
+            message: 'Word must connect to existing tiles',
+            invalidTiles: gameState.placedTiles.map(t => ({ row: t.row, col: t.col }))
+        };
     }
 
     return { valid: true, message: '', invalidTiles: [] };
