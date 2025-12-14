@@ -1937,6 +1937,14 @@ async function initializeGame() {
     const urlParams = new URLSearchParams(window.location.search);
     const hasSeedParam = urlParams.has('seed') || urlParams.has('g') || urlParams.has('w'); // 'g' is legacy share, 'w' is sorted share
 
+    // Debug: ?shop=1 opens shop directly with $5 for testing
+    if (urlParams.get('shop') === '1') {
+        runState.coins = 5;
+        runState.isRunMode = true;
+        runManager.showShopScreen();
+        return;
+    }
+
     if (runState.isRunMode) {
         // Resume existing run - calculate seed from runSeed + round
         gameState.seed = String(runState.runSeed + runState.round);
