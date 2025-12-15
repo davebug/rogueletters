@@ -1118,6 +1118,10 @@ async function confirmExchange() {
     console.log('[Exchange] Exchanging', tilesToExchange.length, 'tiles for $' + cost);
 
     try {
+        // Get purchased and removed tiles for correct bag generation
+        const purchasedLetters = (runState.purchasedTiles || []).map(t => typeof t === 'object' ? t.letter : t);
+        const removedLetters = runState.removedTiles || [];
+
         // Call backend to exchange tiles
         const params = new URLSearchParams({
             seed: gameState.seed,
@@ -1126,7 +1130,9 @@ async function confirmExchange() {
             tiles_to_exchange: JSON.stringify(tilesToExchange),
             rack_tiles: JSON.stringify(gameState.rackTiles.map(t => typeof t === 'object' ? t.letter : t)),
             tiles_drawn: gameState.totalTilesDrawn,
-            exchange_count: gameState.exchangeCount
+            exchange_count: gameState.exchangeCount,
+            purchased_tiles: JSON.stringify(purchasedLetters),
+            removed_tiles: JSON.stringify(removedLetters)
         });
 
         const response = await fetch(`${API_BASE}/letters.py?${params.toString()}`);
