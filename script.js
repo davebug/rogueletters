@@ -759,10 +759,10 @@ const runManager = {
             const otherAddBtn = document.getElementById(`shop-add-${otherIndex}`);
             const otherReplaceBtn = document.getElementById(`shop-replace-${otherIndex}`);
 
-            if (runState.coins < 1) {
+            if (runState.coins < 2) {
                 otherAddBtn?.classList.add('cannot-afford');
             }
-            if (runState.coins < 2) {
+            if (runState.coins < 3) {
                 otherReplaceBtn?.classList.add('cannot-afford');
             }
         }
