@@ -491,11 +491,28 @@ const runManager = {
                 weightedTiles.push(letter);
             }
         }
+
+        // Sanity check - if no tiles available, use fallback
+        if (weightedTiles.length === 0) {
+            console.error('[Shop] TILE_DISTRIBUTION is empty, using fallback');
+            weightedTiles.push('E', 'A', 'I', 'O', 'N', 'R', 'T', 'L', 'S');
+        }
+
         // Pick 2 random tiles
         this.shopTiles = [
             weightedTiles[Math.floor(Math.random() * weightedTiles.length)],
             weightedTiles[Math.floor(Math.random() * weightedTiles.length)]
         ];
+
+        // Validate tiles - if undefined or empty, use fallback
+        for (let i = 0; i < this.shopTiles.length; i++) {
+            if (!this.shopTiles[i]) {
+                console.error(`[Shop] Tile ${i} is invalid: "${this.shopTiles[i]}", using 'E'`);
+                this.shopTiles[i] = 'E';
+            }
+        }
+
+        console.log('[Shop] Generated tiles:', this.shopTiles);
         this.shopPurchased = [false, false];
     },
 
@@ -525,8 +542,16 @@ const runManager = {
             const option = document.getElementById(`shop-tile-${i}`);
             const tileDisplay = document.getElementById(`shop-tile-display-${i}`);
 
-            document.getElementById(`shop-tile-letter-${i}`).textContent = isBlank ? '' : tile;
-            document.getElementById(`shop-tile-score-${i}`).textContent = isBlank ? '' : displayScore;
+            const letterEl = document.getElementById(`shop-tile-letter-${i}`);
+            const scoreEl = document.getElementById(`shop-tile-score-${i}`);
+
+            // Log for debugging
+            console.log(`[Shop] Setting tile ${i}: letter="${tile}", score=${displayScore}, isBlank=${isBlank}`);
+            if (!letterEl) console.error(`[Shop] shop-tile-letter-${i} element not found!`);
+            if (!scoreEl) console.error(`[Shop] shop-tile-score-${i} element not found!`);
+
+            if (letterEl) letterEl.textContent = isBlank ? '' : tile;
+            if (scoreEl) scoreEl.textContent = isBlank ? '' : displayScore;
 
             // Toggle buffed styling - blanks don't get the gold treatment
             if (tileDisplay) {
