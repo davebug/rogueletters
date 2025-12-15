@@ -68,7 +68,11 @@ let runState = {
     buffedTilesDrawn: {},           // Count of buffed tiles per letter already drawn (e.g. {E: 1})
     // Meta
     runStartTime: null,
-    runSeed: null
+    runSeed: null,
+    // Flow state - tracks which screen to show on refresh
+    // Values: null, 'earnings', 'shop', 'setComplete'
+    pendingScreen: null,
+    pendingScore: null  // Score to display on earnings screen
 };
 
 // Helper to mark tiles as buffed when drawn from bag
@@ -405,15 +409,19 @@ const runManager = {
     },
 
     // Show the earnings screen (full page, replaces game board)
-    showEarningsScreen(score) {
+    showEarningsScreen(score, isRestore = false) {
         // Calculate earnings
         const earnings = calculateEarnings(score, runState.targetScore, runState.round);
-        const previousCoins = runState.coins;
+        const previousCoins = isRestore ? (runState.coins - earnings.total) : runState.coins;
 
-        // Update state
-        runState.coins += earnings.total;
-        runState.lastEarnings = earnings;
-        this.saveRunState();
+        // Update state (skip coin adding on restore - already saved)
+        if (!isRestore) {
+            runState.coins += earnings.total;
+            runState.lastEarnings = earnings;
+            runState.pendingScreen = 'earnings';
+            runState.pendingScore = score;
+            this.saveRunState();
+        }
 
         // Update header to show "Round Complete"
         const progressRound = document.getElementById('progress-round');
@@ -519,6 +527,10 @@ const runManager = {
     // Show the shop screen
     showShopScreen() {
         this.generateShopTiles();
+
+        // Track that we're showing the shop (survives refresh)
+        runState.pendingScreen = 'shop';
+        this.saveRunState();
 
         // Hide game container, show shop screen
         document.getElementById('game-container')?.classList.add('hidden');
@@ -820,6 +832,10 @@ const runManager = {
             // Completed all rounds in this set - show set complete screen
             this.showSetCompleteScreen();
         } else {
+            // Clear pending state before advancing to next round
+            runState.pendingScreen = null;
+            runState.pendingScore = null;
+            this.saveRunState();
             // Advance to next round
             this.nextRound();
         }
@@ -827,6 +843,10 @@ const runManager = {
 
     // Show set complete screen (full page)
     showSetCompleteScreen() {
+        // Track that we're showing set complete (survives refresh)
+        runState.pendingScreen = 'setComplete';
+        this.saveRunState();
+
         // Hide game container, show set complete screen
         document.getElementById('game-container')?.classList.add('hidden');
         const setCompleteScreen = document.getElementById('set-complete-screen');
@@ -859,6 +879,10 @@ const runManager = {
     // Handle Continue button from set complete screen
     continueFromSetComplete() {
         this.hideAllRunPopups();
+        // Clear pending state before advancing to next set
+        runState.pendingScreen = null;
+        runState.pendingScore = null;
+        this.saveRunState();
         this.nextSet();
     },
 
@@ -926,6 +950,8 @@ const runManager = {
         runState.removedTiles = [];
         runState.runStartTime = null;
         runState.runSeed = null;
+        runState.pendingScreen = null;
+        runState.pendingScore = null;
     },
 
     // Clear run state from localStorage
@@ -2389,6 +2415,30 @@ async function initializeGame() {
         // Save and update UI
         runManager.saveRunState();
         runManager.updateRunUI();
+    }
+
+    // Check for pending screen (from refresh during earnings/shop/setComplete)
+    if (runState.pendingScreen) {
+        console.log('[Init] Restoring pending screen:', runState.pendingScreen);
+        runManager.updateRunUI();
+
+        switch (runState.pendingScreen) {
+            case 'earnings':
+                // Re-show earnings screen with saved score (isRestore=true skips coin adding)
+                if (runState.pendingScore !== null) {
+                    runManager.showEarningsScreen(runState.pendingScore, true);
+                } else {
+                    // Fallback: skip to shop if no score saved
+                    runManager.showShopScreen();
+                }
+                return;
+            case 'shop':
+                runManager.showShopScreen();
+                return;
+            case 'setComplete':
+                runManager.showSetCompleteScreen();
+                return;
+        }
     }
 
     if (runState.isRunMode) {
