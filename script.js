@@ -508,12 +508,30 @@ const runManager = {
         // Update tile displays
         for (let i = 0; i < 2; i++) {
             const tile = this.shopTiles[i];
+            const isBlank = tile === '_';
             const baseScore = TILE_SCORES[tile] || 0;
-            const buffedScore = baseScore + 1;  // Shop tiles always have +1 bonus
+            // Blanks don't get +1 bonus (they're already powerful)
+            const displayScore = isBlank ? 0 : baseScore + 1;
             const option = document.getElementById(`shop-tile-${i}`);
+            const tileDisplay = document.getElementById(`shop-tile-display-${i}`);
 
-            document.getElementById(`shop-tile-letter-${i}`).textContent = tile === '_' ? '' : tile;
-            document.getElementById(`shop-tile-score-${i}`).textContent = buffedScore;
+            document.getElementById(`shop-tile-letter-${i}`).textContent = isBlank ? '' : tile;
+            document.getElementById(`shop-tile-score-${i}`).textContent = displayScore;
+
+            // Toggle buffed styling - blanks don't get the gold treatment
+            if (tileDisplay) {
+                if (isBlank) {
+                    tileDisplay.classList.remove('buffed-tile');
+                } else {
+                    tileDisplay.classList.add('buffed-tile');
+                }
+            }
+
+            // Show/hide the "+1 value" label (blanks don't get the bonus)
+            const buffLabel = document.getElementById(`shop-buff-label-${i}`);
+            if (buffLabel) {
+                buffLabel.style.visibility = isBlank ? 'hidden' : 'visible';
+            }
 
             // Reset classes
             option.classList.remove('purchased', 'cannot-afford', 'cannot-afford-add', 'cannot-afford-replace');
@@ -542,12 +560,14 @@ const runManager = {
     purchaseTileAdd(index) {
         if (runState.coins < 2 || this.shopPurchased[index]) return;
 
-        // Deduct coins and add tile with bonus
+        // Deduct coins and add tile (blanks don't get bonus - they're already powerful)
+        const tile = this.shopTiles[index];
+        const isBlank = tile === '_';
         runState.coins -= 2;
         runState.purchasedTiles = runState.purchasedTiles || [];
         runState.purchasedTiles.push({
-            letter: this.shopTiles[index],
-            bonus: 1  // +1 point value
+            letter: tile,
+            bonus: isBlank ? 0 : 1  // +1 point value, except blanks
         });
         this.shopPurchased[index] = true;
         this.saveRunState();
@@ -574,12 +594,14 @@ const runManager = {
         const index = this.pendingReplacementTileIndex;
         if (index === null) return;
 
-        // Deduct $3 and add the new tile with bonus
+        // Deduct $3 and add the new tile (blanks don't get bonus)
+        const tile = this.shopTiles[index];
+        const isBlank = tile === '_';
         runState.coins -= 3;
         runState.purchasedTiles = runState.purchasedTiles || [];
         runState.purchasedTiles.push({
-            letter: this.shopTiles[index],
-            bonus: 1  // +1 point value
+            letter: tile,
+            bonus: isBlank ? 0 : 1  // +1 point value, except blanks
         });
 
         // Track the removed tile
