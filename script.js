@@ -542,14 +542,18 @@ const runManager = {
 
             if (runState.coins < 2) {
                 addBtn?.classList.add('cannot-afford');
+                if (addBtn) addBtn.title = 'Not enough coins';
             } else {
                 addBtn?.classList.remove('cannot-afford');
+                if (addBtn) addBtn.title = '';
             }
 
             if (runState.coins < 3) {
                 replaceBtn?.classList.add('cannot-afford');
+                if (replaceBtn) replaceBtn.title = 'Not enough coins';
             } else {
                 replaceBtn?.classList.remove('cannot-afford');
+                if (replaceBtn) replaceBtn.title = '';
             }
         }
 
@@ -761,9 +765,11 @@ const runManager = {
 
             if (runState.coins < 2) {
                 otherAddBtn?.classList.add('cannot-afford');
+                if (otherAddBtn) otherAddBtn.title = 'Not enough coins';
             }
             if (runState.coins < 3) {
                 otherReplaceBtn?.classList.add('cannot-afford');
+                if (otherReplaceBtn) otherReplaceBtn.title = 'Not enough coins';
             }
         }
 

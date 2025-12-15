@@ -2288,31 +2288,6 @@ main {
 .shop-buy-btn.cannot-afford {
     opacity: 0.4;
     cursor: not-allowed;
-    position: relative;
-}
-
-/* Tooltip for cannot-afford buttons */
-.shop-buy-btn.cannot-afford::after {
-    content: "Not enough coins";
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.9);
-    color: #ff6b6b;
-    padding: 6px 10px;
-    border-radius: 4px;
-    font-size: 11px;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s;
-    margin-bottom: 4px;
-    z-index: 100;
-}
-
-.shop-buy-btn.cannot-afford:hover::after {
-    opacity: 1;
 }
 
 .shop-pool-info {
