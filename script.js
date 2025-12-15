@@ -2336,6 +2336,36 @@ async function initializeGame() {
         return;
     }
 
+    // Debug URL params: ?set=2&round=1&coins=5&turn=3
+    // These override run state for testing specific scenarios
+    const debugSet = urlParams.get('set');
+    const debugRound = urlParams.get('round');
+    const debugCoins = urlParams.get('coins');
+    const debugTurn = urlParams.get('turn');
+
+    if (debugSet || debugRound || debugCoins || debugTurn) {
+        console.log('[Debug] Applying debug params:', { set: debugSet, round: debugRound, coins: debugCoins, turn: debugTurn });
+
+        // Ensure run mode is active
+        if (!runState.isRunMode) {
+            runState.isRunMode = true;
+            runState.runSeed = Date.now();
+        }
+
+        // Apply debug overrides
+        if (debugSet) runState.set = parseInt(debugSet, 10);
+        if (debugRound) runState.round = parseInt(debugRound, 10);
+        if (debugCoins !== null && debugCoins !== undefined) runState.coins = parseInt(debugCoins, 10);
+        if (debugTurn) gameState.currentTurn = parseInt(debugTurn, 10);
+
+        // Recalculate target for the set/round
+        runState.targetScore = getTargetScore(runState.set, runState.round);
+
+        // Save and update UI
+        runManager.saveRunState();
+        runManager.updateRunUI();
+    }
+
     if (runState.isRunMode) {
         // Resume existing run - calculate seed from runSeed + round
         gameState.seed = String(runState.runSeed + runState.round);
