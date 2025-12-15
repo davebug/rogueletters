@@ -2223,13 +2223,13 @@ main {
 }
 
 .buffed-tile .tile-score {
-    color: #ffd700;  /* Bright gold */
+    color: #000;  /* Black text as normal */
     font-weight: 700;
     text-shadow:
-        -1px -1px 0 #000,
-        1px -1px 0 #000,
-        -1px 1px 0 #000,
-        1px 1px 0 #000;
+        -1px -1px 0 #ffd700,
+        1px -1px 0 #ffd700,
+        -1px 1px 0 #ffd700,
+        1px 1px 0 #ffd700;
 }
 
 .shop-tile-buff-label {
@@ -2445,13 +2445,13 @@ main {
 }
 
 .bag-mini-tile.buffed-tile .bag-mini-tile-score {
-    color: #ffd700;
+    color: #000;
     font-weight: 700;
     text-shadow:
-        -0.5px -0.5px 0 #000,
-        0.5px -0.5px 0 #000,
-        -0.5px 0.5px 0 #000,
-        0.5px 0.5px 0 #000;
+        -0.5px -0.5px 0 #ffd700,
+        0.5px -0.5px 0 #ffd700,
+        -0.5px 0.5px 0 #ffd700,
+        0.5px 0.5px 0 #ffd700;
 }
 
 .bag-tiles-grid.replacement-mode {
