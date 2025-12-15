@@ -74,9 +74,9 @@ test.describe('Core Gameplay Validator', () => {
 
         console.log(`\n  Turn ${turnIndex + 1}: Placing ${turn.tiles.length} tiles`);
 
-        // Debug: Check what tiles are available
+        // Debug: Check what tiles are available (handles both string and object formats)
         const availableTiles = await page.evaluate(() => {
-          return window.gameState.rackTiles.join(', ');
+          return window.gameState.rackTiles.map(t => typeof t === 'object' ? t.letter : t).join(', ');
         });
         console.log(`  Available tiles in rack: ${availableTiles}`);
 
@@ -114,8 +114,10 @@ test.describe('Core Gameplay Validator', () => {
           }
 
           if (!placed) {
-            // Get current rack state for debugging
-            const currentRack = await page.evaluate(() => window.gameState.rackTiles);
+            // Get current rack state for debugging (handles both string and object formats)
+            const currentRack = await page.evaluate(() =>
+              window.gameState.rackTiles.map(t => typeof t === 'object' ? t.letter : t)
+            );
             throw new Error(`Could not find tile with letter: ${tileToPlace.letter}. Current rack: ${currentRack.join(', ')}`);
           }
         }

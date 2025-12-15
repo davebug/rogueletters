@@ -60,10 +60,54 @@ let runState = {
     // Shop
     purchasedTiles: [],             // Tiles bought from shop (e.g. [{letter: 'E', bonus: 1}])
     removedTiles: [],               // Tiles removed via "Replace" option (e.g. ['Q', 'Z'])
+    buffedTilesDrawn: {},           // Count of buffed tiles per letter already drawn (e.g. {E: 1})
     // Meta
     runStartTime: null,
     runSeed: null
 };
+
+// Helper to mark tiles as buffed when drawn from bag
+// Takes array of letters (strings) or tile objects, returns array of {letter, buffed, bonus} objects
+function markBuffedTiles(tiles) {
+    // If tiles are already objects with buffed info (restored from localStorage), preserve it
+    if (tiles.length > 0 && typeof tiles[0] === 'object' && tiles[0].letter) {
+        return tiles.map(t => ({
+            letter: t.letter,
+            buffed: t.buffed || false,
+            bonus: t.bonus || 0
+        }));
+    }
+
+    // Otherwise, tiles are strings (fresh draw from server), calculate buffed status
+    if (!runState.purchasedTiles?.length) {
+        // No purchased tiles, all tiles are normal
+        return tiles.map(letter => ({ letter, buffed: false, bonus: 0 }));
+    }
+
+    // Count how many buffed tiles of each letter we purchased
+    const purchasedCounts = {};
+    for (const tile of runState.purchasedTiles) {
+        const ltr = typeof tile === 'object' ? tile.letter : tile;
+        purchasedCounts[ltr] = (purchasedCounts[ltr] || 0) + 1;
+    }
+
+    // Initialize drawn counts if needed
+    runState.buffedTilesDrawn = runState.buffedTilesDrawn || {};
+
+    // Mark tiles - buffed tiles are drawn first
+    return tiles.map(letter => {
+        const purchased = purchasedCounts[letter] || 0;
+        const alreadyDrawn = runState.buffedTilesDrawn[letter] || 0;
+        const buffedRemaining = purchased - alreadyDrawn;
+
+        if (buffedRemaining > 0) {
+            // This is a buffed tile
+            runState.buffedTilesDrawn[letter] = alreadyDrawn + 1;
+            return { letter, buffed: true, bonus: 1 };
+        }
+        return { letter, buffed: false, bonus: 0 };
+    });
+}
 
 // ============================================================================
 // RUN MANAGER
@@ -963,16 +1007,35 @@ function updateBagViewerGrid() {
     // Add replacement mode class to grid
     grid.classList.toggle('replacement-mode', bagReplacementMode);
 
+    // Calculate how many buffed tiles of each letter remain in the bag
+    // Purchased tiles are buffed, minus the ones already drawn
+    const buffedRemaining = {};
+    for (const tile of (runState.purchasedTiles || [])) {
+        const letter = typeof tile === 'object' ? tile.letter : tile;
+        buffedRemaining[letter] = (buffedRemaining[letter] || 0) + 1;
+    }
+    // Subtract buffed tiles already drawn
+    for (const [letter, count] of Object.entries(runState.buffedTilesDrawn || {})) {
+        buffedRemaining[letter] = Math.max(0, (buffedRemaining[letter] || 0) - count);
+    }
+
     // Create individual tiles for each letter, sorted alphabetically
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_'.split('');
     for (const letter of letters) {
         const count = displayCounts[letter] || 0;
         const score = TILE_SCORES[letter] || 0;
+        const buffedCount = bagViewMode === 'remaining' ? (buffedRemaining[letter] || 0) : 0;
 
         // Create one mini-tile for each instance of this letter
         for (let i = 0; i < count; i++) {
             const tile = document.createElement('div');
             tile.className = 'bag-mini-tile';
+
+            // Mark buffed tiles (show buffed ones first)
+            const isBuffed = i < buffedCount;
+            if (isBuffed) {
+                tile.classList.add('buffed-tile');
+            }
 
             // In replacement mode, make tiles clickable
             if (bagReplacementMode) {
@@ -988,7 +1051,8 @@ function updateBagViewerGrid() {
 
             const scoreSpan = document.createElement('span');
             scoreSpan.className = 'bag-mini-tile-score';
-            scoreSpan.textContent = score;
+            // Show buffed score (+1) for buffed tiles
+            scoreSpan.textContent = isBuffed ? (score + 1) : score;
 
             tile.appendChild(letterSpan);
             tile.appendChild(scoreSpan);
@@ -2322,20 +2386,23 @@ function displayTiles(tiles) {
     // Clear all cells
     cells.forEach(cell => cell.innerHTML = '');
 
-    // Update rackTiles in game state
-    gameState.rackTiles = [...tiles];
+    // Mark which tiles are buffed (from shop purchases)
+    const markedTiles = markBuffedTiles(tiles);
+
+    // Update rackTiles in game state (now stores full tile objects)
+    gameState.rackTiles = [...markedTiles];
 
     // Place tiles in all 7 rack cells (row 0, columns 0-6)
-    tiles.forEach((letter, index) => {
+    markedTiles.forEach((tileData, index) => {
         const cell = document.getElementById(`rack-0-${index}`); // Row 0, columns 0-6
         if (cell) {
-            const tile = createTileElement(letter, index);
+            const tile = createTileElement(tileData.letter, index, false, tileData.buffed, tileData.bonus);
             cell.appendChild(tile);
         }
     });
 }
 
-function createTileElement(letter, index, isBlank = false) {
+function createTileElement(letter, index, isBlank = false, buffed = false, bonus = 0) {
     const tile = document.createElement('div');
     tile.className = 'tile';
     tile.dataset.letter = letter;
@@ -2346,6 +2413,13 @@ function createTileElement(letter, index, isBlank = false) {
     if (tileIsBlank) {
         tile.classList.add('blank-tile');
         tile.dataset.isBlank = 'true';
+    }
+
+    // Set buffed status (always set for consistency)
+    tile.dataset.buffed = buffed ? 'true' : 'false';
+    tile.dataset.bonus = bonus;
+    if (buffed) {
+        tile.classList.add('buffed-tile');
     }
 
     const letterSpan = document.createElement('span');
@@ -2366,7 +2440,9 @@ function createTileElement(letter, index, isBlank = false) {
     if (tileIsBlank) {
         scoreSpan.textContent = '';
     } else {
-        scoreSpan.textContent = TILE_SCORES[letter];
+        // Buffed tiles show their boosted score
+        const baseScore = TILE_SCORES[letter] || 0;
+        scoreSpan.textContent = baseScore + bonus;
     }
 
     tile.appendChild(letterSpan);
@@ -2636,14 +2712,18 @@ function handleBlankLetterSelection(letter) {
             gameState.placedTiles[placedTileIndex].isBlank = true;
         }
 
-        // 5. Rebuild rackTiles array from DOM
+        // 5. Rebuild rackTiles array from DOM (preserving buffed info)
         const rackBoard = document.getElementById('tile-rack-board');
         const cells = rackBoard.querySelectorAll('.rack-cell');
         gameState.rackTiles = [];
         cells.forEach(rackCell => {
             const rackTileInCell = rackCell.querySelector('.tile');
             if (rackTileInCell && rackTileInCell.dataset.letter) {
-                gameState.rackTiles.push(rackTileInCell.dataset.letter);
+                gameState.rackTiles.push({
+                    letter: rackTileInCell.dataset.letter,
+                    buffed: rackTileInCell.dataset.buffed === 'true',
+                    bonus: parseInt(rackTileInCell.dataset.bonus) || 0
+                });
             }
         });
 
@@ -2734,8 +2814,10 @@ function placeBlankTile(cell, tile, assignedLetter) {
         tile.style.opacity = '';
         tile.remove();
 
-        // Remove from rackTiles array
-        const index = gameState.rackTiles.indexOf(removedLetter);
+        // Remove from rackTiles array (find by letter since rackTiles stores objects)
+        const index = gameState.rackTiles.findIndex(t =>
+            (typeof t === 'object' ? t.letter : t) === removedLetter
+        );
         if (index > -1) {
             gameState.rackTiles.splice(index, 1);
         }
@@ -2744,11 +2826,20 @@ function placeBlankTile(cell, tile, assignedLetter) {
     // Place on board with assigned letter
     gameState.board[row][col] = assignedLetter;
 
+    // Get buffed status from source tile (blanks can be buffed too)
+    const isBuffed = tile.dataset.buffed === 'true';
+    const bonus = parseInt(tile.dataset.bonus) || 0;
+
     // Create tile element for the board
     const tileDiv = document.createElement('div');
     tileDiv.className = 'tile placed placed-this-turn blank-tile';
+    if (isBuffed) {
+        tileDiv.classList.add('buffed-tile');
+    }
     tileDiv.dataset.letter = assignedLetter;
     tileDiv.dataset.isBlank = 'true';
+    tileDiv.dataset.buffed = isBuffed;
+    tileDiv.dataset.bonus = bonus;
 
     const letterSpan = document.createElement('span');
     letterSpan.className = 'tile-letter blank-letter';
@@ -2756,7 +2847,8 @@ function placeBlankTile(cell, tile, assignedLetter) {
 
     const scoreSpan = document.createElement('span');
     scoreSpan.className = 'tile-value';
-    scoreSpan.textContent = '';  // Blanks show empty score
+    // Blanks normally show empty score, but buffed blanks show the bonus
+    scoreSpan.textContent = bonus > 0 ? bonus : '';
 
     tileDiv.appendChild(letterSpan);
     tileDiv.appendChild(scoreSpan);
@@ -2768,8 +2860,8 @@ function placeBlankTile(cell, tile, assignedLetter) {
     cell.appendChild(tileDiv);
     cell.classList.add('occupied', 'placed-this-turn');
 
-    // Track placed tile with isBlank flag
-    gameState.placedTiles.push({ row, col, letter: assignedLetter, isBlank: true });
+    // Track placed tile with isBlank and buffed flags
+    gameState.placedTiles.push({ row, col, letter: assignedLetter, isBlank: true, buffed: isBuffed, bonus });
 
     // Save game state
     saveGameState();
@@ -2839,7 +2931,7 @@ function swapTilesInRack(tile1, tile2) {
     cell1.appendChild(tile2);
     tempDiv.remove();
 
-    // Rebuild rackTiles array from the current visual rack state
+    // Rebuild rackTiles array from the current visual rack state (preserving buffed info)
     // This prevents bugs when tiles have been placed on board (leaving gaps)
     const rackBoard = document.getElementById('tile-rack-board');
     const cells = rackBoard.querySelectorAll('.rack-cell');
@@ -2848,7 +2940,11 @@ function swapTilesInRack(tile1, tile2) {
     cells.forEach(cell => {
         const tile = cell.querySelector('.tile');
         if (tile && tile.dataset.letter) {
-            gameState.rackTiles.push(tile.dataset.letter);
+            gameState.rackTiles.push({
+                letter: tile.dataset.letter,
+                buffed: tile.dataset.buffed === 'true',
+                bonus: parseInt(tile.dataset.bonus) || 0
+            });
         }
     });
 
@@ -2945,14 +3041,18 @@ function swapRackAndBoardTile(rackTile, boardPosition) {
         rackTile.querySelector('.tile-score').textContent = TILE_SCORES[boardLetter] || 0;
     }
 
-    // Rebuild rackTiles array from DOM
+    // Rebuild rackTiles array from DOM (preserving buffed info)
     const rackBoard = document.getElementById('tile-rack-board');
     const cells = rackBoard.querySelectorAll('.rack-cell');
     gameState.rackTiles = [];
     cells.forEach(cell => {
         const tile = cell.querySelector('.tile');
         if (tile && tile.dataset.letter) {
-            gameState.rackTiles.push(tile.dataset.letter);
+            gameState.rackTiles.push({
+                letter: tile.dataset.letter,
+                buffed: tile.dataset.buffed === 'true',
+                bonus: parseInt(tile.dataset.bonus) || 0
+            });
         }
     });
 
@@ -3065,14 +3165,18 @@ function moveRackTileToEmptyCell(rackTile, emptyCell) {
     // Move tile in DOM
     emptyCell.appendChild(rackTile);
 
-    // Rebuild rackTiles array from DOM
+    // Rebuild rackTiles array from DOM (preserving buffed info)
     const rackBoard = document.getElementById('tile-rack-board');
     const cells = rackBoard.querySelectorAll('.rack-cell');
     gameState.rackTiles = [];
     cells.forEach(cell => {
         const tile = cell.querySelector('.tile');
         if (tile && tile.dataset.letter) {
-            gameState.rackTiles.push(tile.dataset.letter);
+            gameState.rackTiles.push({
+                letter: tile.dataset.letter,
+                buffed: tile.dataset.buffed === 'true',
+                bonus: parseInt(tile.dataset.bonus) || 0
+            });
         }
     });
 
@@ -3122,17 +3226,21 @@ function returnBoardTileToSpecificRackCell(fromPos, targetRackCell) {
     // Create new tile element for the specific rack cell
     // Blanks revert to '_' when returned to rack
     const rackLetter = tileData.isBlank ? '_' : tileData.letter;
-    const newTile = createTileElement(rackLetter, 0, tileData.isBlank);
+    const newTile = createTileElement(rackLetter, 0, tileData.isBlank, tileData.buffed || false, tileData.bonus || 0);
     targetRackCell.appendChild(newTile);
 
-    // Rebuild rackTiles array from DOM
+    // Rebuild rackTiles array from DOM (preserving buffed info)
     const rackBoard = document.getElementById('tile-rack-board');
     const cells = rackBoard.querySelectorAll('.rack-cell');
     gameState.rackTiles = [];
     cells.forEach(cell => {
         const tile = cell.querySelector('.tile');
         if (tile && tile.dataset.letter) {
-            gameState.rackTiles.push(tile.dataset.letter);
+            gameState.rackTiles.push({
+                letter: tile.dataset.letter,
+                buffed: tile.dataset.buffed === 'true',
+                bonus: parseInt(tile.dataset.bonus) || 0
+            });
         }
     });
 
@@ -3388,10 +3496,14 @@ function returnBoardTileToRack(fromPos) {
 
     // Add back to rackTiles array - blanks revert to '_'
     const rackLetter = tileData.isBlank ? '_' : tileData.letter;
-    gameState.rackTiles.push(rackLetter);
+    gameState.rackTiles.push({
+        letter: rackLetter,
+        buffed: tileData.buffed || false,
+        bonus: tileData.bonus || 0
+    });
 
-    // Create new tile element for rack - blanks show as empty tiles
-    const newTile = createTileElement(rackLetter, gameState.rackTiles.length - 1, tileData.isBlank);
+    // Create new tile element for rack - blanks show as empty tiles, preserve buffed status
+    const newTile = createTileElement(rackLetter, gameState.rackTiles.length - 1, tileData.isBlank, tileData.buffed || false, tileData.bonus || 0);
     const rackBoard = document.getElementById('tile-rack-board');
     const firstEmptyCell = Array.from(rackBoard.querySelectorAll('.rack-cell'))
         .find(cell => !cell.querySelector('.tile'));
@@ -3552,8 +3664,10 @@ function placeTile(cell, tile) {
         tile.style.opacity = '';
         tile.remove();
 
-        // Remove from rackTiles array
-        const index = gameState.rackTiles.indexOf(removedLetter);
+        // Remove from rackTiles array (find by letter since rackTiles stores objects)
+        const index = gameState.rackTiles.findIndex(t =>
+            (typeof t === 'object' ? t.letter : t) === removedLetter
+        );
         if (index > -1) {
             gameState.rackTiles.splice(index, 1);
         }
@@ -3562,17 +3676,26 @@ function placeTile(cell, tile) {
     // Place on board
     gameState.board[row][col] = letter;
 
+    // Get buffed status from source tile
+    const isBuffed = tile.dataset.buffed === 'true';
+    const bonus = parseInt(tile.dataset.bonus) || 0;
+
     // Create tile element for the board
     const tileDiv = document.createElement('div');
     tileDiv.className = 'tile placed placed-this-turn';
+    if (isBuffed) {
+        tileDiv.classList.add('buffed-tile');
+    }
     tileDiv.dataset.letter = letter;
+    tileDiv.dataset.buffed = isBuffed;
+    tileDiv.dataset.bonus = bonus;
     const letterSpan = document.createElement('span');
     letterSpan.className = 'tile-letter';
     letterSpan.textContent = letter;
 
     const scoreSpan = document.createElement('span');
     scoreSpan.className = 'tile-value';
-    scoreSpan.textContent = TILE_SCORES[letter] || 0;
+    scoreSpan.textContent = (TILE_SCORES[letter] || 0) + bonus;
 
     tileDiv.appendChild(letterSpan);
     tileDiv.appendChild(scoreSpan);
@@ -3584,8 +3707,8 @@ function placeTile(cell, tile) {
     cell.appendChild(tileDiv);
     cell.classList.add('occupied', 'placed-this-turn');
 
-    // Track placed tile (don't save tile DOM element)
-    gameState.placedTiles.push({ row, col, letter, isBlank: false });
+    // Track placed tile with buffed info
+    gameState.placedTiles.push({ row, col, letter, isBlank: false, buffed: isBuffed, bonus });
 
     // Save game state
     saveGameState();
@@ -4142,8 +4265,12 @@ function shuffleRack() {
         }
     });
 
-    // Update gameState to match new shuffled order
-    const newRackOrder = tiles.map(tile => tile.dataset.letter);
+    // Update gameState to match new shuffled order (preserving buffed info)
+    const newRackOrder = tiles.map(tile => ({
+        letter: tile.dataset.letter,
+        buffed: tile.dataset.buffed === 'true',
+        bonus: parseInt(tile.dataset.bonus) || 0
+    }));
     gameState.rackTiles = newRackOrder;
 
     // Save updated state to localStorage
@@ -4165,7 +4292,7 @@ function recallTiles() {
     // Track tiles recalled
     Analytics.ui.tilesRecalled(gameState.currentTurn, gameState.placedTiles.length);
 
-    gameState.placedTiles.forEach(({ row, col, letter, isBlank }) => {
+    gameState.placedTiles.forEach(({ row, col, letter, isBlank, buffed, bonus }) => {
         // Clear from board
         gameState.board[row][col] = null;
         const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
@@ -4178,13 +4305,22 @@ function recallTiles() {
         // For blank tiles, restore as '_' (unassigned blank)
         const rackLetter = isBlank ? '_' : letter;
 
-        // Add back to rackTiles array
-        gameState.rackTiles.push(rackLetter);
+        // Add back to rackTiles array (preserving buffed info)
+        gameState.rackTiles.push({
+            letter: rackLetter,
+            buffed: buffed || false,
+            bonus: bonus || 0
+        });
 
         // Create new tile for rack
         const newTile = document.createElement('div');
         newTile.className = 'tile';
+        if (buffed) {
+            newTile.classList.add('buffed-tile');
+        }
         newTile.dataset.letter = rackLetter;
+        newTile.dataset.buffed = buffed || false;
+        newTile.dataset.bonus = bonus || 0;
 
         // Handle blank tile display in rack
         if (isBlank) {
@@ -4198,7 +4334,8 @@ function recallTiles() {
 
         const scoreSpan = document.createElement('span');
         scoreSpan.className = 'tile-value';
-        scoreSpan.textContent = isBlank ? '' : (TILE_SCORES[rackLetter] || 0);
+        const baseScore = isBlank ? 0 : (TILE_SCORES[rackLetter] || 0);
+        scoreSpan.textContent = isBlank ? '' : (baseScore + (bonus || 0));
 
         newTile.appendChild(letterSpan);
         newTile.appendChild(scoreSpan);
@@ -4418,10 +4555,12 @@ function nextTurn() {
     updateTurnCounter();
 
     // Get new tiles for next turn, passing current rack tiles and total tiles drawn
+    // Extract just letters for server (rackTiles stores objects with buffed info)
+    const rackLetters = gameState.rackTiles.map(t => typeof t === 'object' ? t.letter : t);
     const params = new URLSearchParams({
         seed: gameState.seed,
         turn: gameState.currentTurn,
-        rack_tiles: JSON.stringify(gameState.rackTiles),
+        rack_tiles: JSON.stringify(rackLetters),
         tiles_drawn: gameState.totalTilesDrawn,
         purchased_tiles: JSON.stringify(runState.purchasedTiles || []),
         removed_tiles: JSON.stringify(runState.removedTiles || [])
@@ -5829,11 +5968,13 @@ function loadGameState() {
                 // VALIDATION: Check if saved tiles are valid before restoring
                 const validTiles = /^[A-Z_]$/;  // A-Z or blank tile (_)
 
-                // Validate rackTiles array
+                // Validate rackTiles array (can be strings or objects with letter property)
                 if (parsedState.rackTiles && Array.isArray(parsedState.rackTiles)) {
-                    const hasInvalidTiles = parsedState.rackTiles.some(t =>
-                        typeof t !== 'string' || !validTiles.test(t)
-                    );
+                    const hasInvalidTiles = parsedState.rackTiles.some(t => {
+                        // Support both string format (old) and object format (new)
+                        const letter = typeof t === 'object' ? t.letter : t;
+                        return typeof letter !== 'string' || !validTiles.test(letter);
+                    });
                     if (hasInvalidTiles) {
                         console.warn('Corrupted rackTiles in localStorage, discarding saved state');
                         return false;
