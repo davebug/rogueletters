@@ -72,7 +72,10 @@ let runState = {
     // Flow state - tracks which screen to show on refresh
     // Values: null, 'earnings', 'shop', 'setComplete'
     pendingScreen: null,
-    pendingScore: null  // Score to display on earnings screen
+    pendingScore: null,  // Score to display on earnings screen
+    // Shop tiles for current visit (persists across refresh)
+    shopTiles: null,        // The 2 tiles offered this visit, e.g. ['E', 'N']
+    shopPurchased: null     // Which tiles have been purchased, e.g. [false, true]
 };
 
 // Helper to mark tiles as buffed when drawn from bag
@@ -522,11 +525,23 @@ const runManager = {
 
         console.log('[Shop] Generated tiles:', this.shopTiles);
         this.shopPurchased = [false, false];
+
+        // Persist to runState for refresh survival
+        runState.shopTiles = this.shopTiles.slice();
+        runState.shopPurchased = this.shopPurchased.slice();
     },
 
     // Show the shop screen
     showShopScreen() {
-        this.generateShopTiles();
+        // Check if we have persisted shop tiles (from refresh)
+        if (runState.shopTiles && runState.shopTiles.length === 2) {
+            console.log('[Shop] Restoring persisted tiles:', runState.shopTiles);
+            this.shopTiles = runState.shopTiles.slice();
+            this.shopPurchased = runState.shopPurchased ? runState.shopPurchased.slice() : [false, false];
+        } else {
+            // Generate fresh tiles for this shop visit
+            this.generateShopTiles();
+        }
 
         // Track that we're showing the shop (survives refresh)
         runState.pendingScreen = 'shop';
@@ -636,6 +651,7 @@ const runManager = {
             bonus: isBlank ? 0 : 1  // +1 point value, except blanks
         });
         this.shopPurchased[index] = true;
+        runState.shopPurchased = this.shopPurchased.slice();  // Persist for refresh
         this.saveRunState();
 
         // Animate tile to bag, then update UI
@@ -675,6 +691,7 @@ const runManager = {
         runState.removedTiles.push(letterToRemove);
 
         this.shopPurchased[index] = true;
+        runState.shopPurchased = this.shopPurchased.slice();  // Persist for refresh
         this.pendingReplacementTileIndex = null;
         this.saveRunState();
 
@@ -843,6 +860,10 @@ const runManager = {
     continueFromShop() {
         this.hideAllRunPopups();
 
+        // Clear shop tiles - they're only valid for this shop visit
+        runState.shopTiles = null;
+        runState.shopPurchased = null;
+
         if (runState.round >= runState.maxRounds) {
             // Completed all rounds in this set - show set complete screen
             this.showSetCompleteScreen();
@@ -897,6 +918,8 @@ const runManager = {
         // Clear pending state before advancing to next set
         runState.pendingScreen = null;
         runState.pendingScore = null;
+        runState.shopTiles = null;
+        runState.shopPurchased = null;
         this.saveRunState();
         this.nextSet();
     },
@@ -967,6 +990,8 @@ const runManager = {
         runState.runSeed = null;
         runState.pendingScreen = null;
         runState.pendingScore = null;
+        runState.shopTiles = null;
+        runState.shopPurchased = null;
     },
 
     // Clear run state from localStorage
