@@ -3866,7 +3866,21 @@ function calculateWordScore(positions) {
         const isBlank = placedTile?.isBlank ||
             gameState.blankPositions?.some(b => b.row === row && b.col === col) || false;
 
-        let letterScore = isBlank ? 0 : (TILE_SCORES[letter] || 0);
+        // Get bonus from buffed tiles (purchased from shop)
+        // Check placedTiles first (this turn), then DOM element (previous turns)
+        let tileBonus = 0;
+        if (placedTile?.bonus) {
+            tileBonus = placedTile.bonus;
+        } else {
+            // Check DOM for tiles from previous turns
+            const cell = document.querySelector(`.board-cell[data-row="${row}"][data-col="${col}"]`);
+            const tileEl = cell?.querySelector('.tile');
+            if (tileEl?.dataset.bonus) {
+                tileBonus = parseInt(tileEl.dataset.bonus) || 0;
+            }
+        }
+
+        let letterScore = isBlank ? 0 : (TILE_SCORES[letter] || 0) + tileBonus;
 
         // Check if this is a newly placed tile for multipliers
         const isNew = gameState.placedTiles.some(t => t.row === row && t.col === col);
