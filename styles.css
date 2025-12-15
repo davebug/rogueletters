@@ -2241,17 +2241,19 @@ main {
 
 .shop-buy-buttons {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     border-radius: 4px;
     overflow: hidden;
+    width: 100%;
 }
 
 .shop-buy-btn {
     color: white;
     border: none;
-    padding: 5px 8px;
+    padding: 6px 10px;
     font-size: 11px;
     font-weight: 600;
+    width: 100%;
     cursor: pointer;
     transition: filter 0.2s, opacity 0.2s;
     white-space: nowrap;
@@ -2265,12 +2267,12 @@ main {
 }
 
 .shop-buy-btn.shop-add-btn {
-    border-radius: 4px 0 0 4px;
-    border-right: 1px solid rgba(0,0,0,0.3);
+    border-radius: 4px 4px 0 0;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
 }
 
 .shop-buy-btn.shop-replace-btn {
-    border-radius: 0 4px 4px 0;
+    border-radius: 0 0 4px 4px;
 }
 
 /* Hover: both go gold with black text */
