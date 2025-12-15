@@ -516,7 +516,7 @@ const runManager = {
             const tileDisplay = document.getElementById(`shop-tile-display-${i}`);
 
             document.getElementById(`shop-tile-letter-${i}`).textContent = isBlank ? '' : tile;
-            document.getElementById(`shop-tile-score-${i}`).textContent = displayScore;
+            document.getElementById(`shop-tile-score-${i}`).textContent = isBlank ? '' : displayScore;
 
             // Toggle buffed styling - blanks don't get the gold treatment
             if (tileDisplay) {
