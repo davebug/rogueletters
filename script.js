@@ -28,7 +28,12 @@ let gameState = {
     isNewHighScore: false,  // Track if player got a new high score
     pendingBlankPlacement: null,  // Stores {cell, tile} when blank awaiting letter selection
     blankPositions: [],  // Track positions of blank tiles on the board [{row, col, letter}]
-    tilesDrawnFromBag: []  // All tile letters drawn from bag this round (for bag viewer)
+    tilesDrawnFromBag: [],  // All tile letters drawn from bag this round (for bag viewer)
+    // Exchange state
+    isExchangeMode: false,           // Currently in exchange modal?
+    selectedForExchange: [],         // Tiles selected for exchange [{letter, isBlank, element}]
+    exchangeCount: 0,                // Number of exchanges this round (resets each round)
+    exchangeHistory: []              // Full history for deterministic reconstruction
 };
 
 // Run state for roguelike mode
@@ -245,6 +250,11 @@ const runManager = {
         gameState.pendingBlankPlacement = null;
         gameState.blankPositions = [];
         gameState.tilesDrawnFromBag = [];
+        // Reset exchange state for new round
+        gameState.isExchangeMode = false;
+        gameState.selectedForExchange = [];
+        gameState.exchangeCount = 0;
+        gameState.exchangeHistory = [];
 
         // Generate new seed for this round (as string for consistency)
         gameState.seed = String(runState.runSeed + runState.round);
@@ -900,6 +910,280 @@ const runManager = {
         localStorage.removeItem('rogueletters_run');
     }
 };
+
+// ============================================================================
+// TILE EXCHANGE SYSTEM
+// Allows players to exchange tiles for coins (no turn cost, unlike WikiLetters)
+// Cost scales with set: $1 (set 1), $2 (set 2), ... $5 (set 5+)
+// ============================================================================
+
+/**
+ * Get exchange cost based on current set
+ */
+function getExchangeCost() {
+    if (!runState.isRunMode) return 1;
+    return Math.min(runState.set, 5);
+}
+
+/**
+ * Check if player can afford to exchange
+ */
+function canAffordExchange() {
+    return runState.coins >= getExchangeCost();
+}
+
+/**
+ * Update exchange button visibility based on coins and tiles on board
+ */
+function updateExchangeButtonVisibility() {
+    const exchangeBtn = document.getElementById('exchange-tiles');
+    const recallBtn = document.getElementById('recall-tiles');
+    if (!exchangeBtn) return;
+
+    // Hide if game over, not in run mode, or tiles placed on board
+    if (gameState.isGameOver || !runState.isRunMode || gameState.placedTiles.length > 0) {
+        exchangeBtn.style.display = 'none';
+        return;
+    }
+
+    // Hide if can't afford exchange
+    if (!canAffordExchange()) {
+        exchangeBtn.style.display = 'none';
+        return;
+    }
+
+    // Show exchange button (hide recall since no tiles on board)
+    exchangeBtn.style.display = 'flex';
+    if (recallBtn) recallBtn.style.display = 'none';
+
+    // Update cost badge
+    const costBadge = exchangeBtn.querySelector('.exchange-cost');
+    if (costBadge) {
+        costBadge.textContent = `$${getExchangeCost()}`;
+    }
+}
+
+/**
+ * Enter exchange mode - open the modal
+ */
+function enterExchangeMode() {
+    if (gameState.isGameOver) return;
+    if (gameState.placedTiles.length > 0) return;
+    if (!canAffordExchange()) return;
+
+    console.log('[Exchange] Entering exchange mode');
+
+    // Clear any existing tile selection
+    if (window.selectedTile) {
+        window.selectedTile.classList.remove('selected');
+        window.selectedTile = null;
+    }
+
+    gameState.isExchangeMode = true;
+    gameState.selectedForExchange = [];
+
+    // Render tiles in modal
+    renderExchangeRack();
+
+    // Update cost info
+    const costInfo = document.getElementById('exchange-cost-info');
+    if (costInfo) {
+        costInfo.textContent = `Cost: $${getExchangeCost()} per exchange`;
+    }
+
+    // Show modal
+    document.getElementById('exchange-modal').style.display = 'flex';
+
+    // Update instruction and button state
+    updateExchangeInstruction();
+    updateExchangeConfirmButton();
+}
+
+/**
+ * Render current rack tiles in the exchange modal
+ */
+function renderExchangeRack() {
+    const exchangeRack = document.getElementById('exchange-rack');
+    exchangeRack.innerHTML = '';
+
+    const rackTiles = gameState.rackTiles || [];
+
+    rackTiles.forEach((tileData, index) => {
+        // Handle both string and object formats
+        const letter = typeof tileData === 'object' ? tileData.letter : tileData;
+        const isBlank = letter === '_';
+        const isBuffed = typeof tileData === 'object' && tileData.buffed;
+        const bonus = typeof tileData === 'object' ? (tileData.bonus || 0) : 0;
+
+        const tileEl = document.createElement('div');
+        tileEl.className = 'tile';
+        if (isBlank) tileEl.classList.add('blank-tile');
+        if (isBuffed) tileEl.classList.add('buffed-tile');
+        tileEl.dataset.letter = letter;
+        tileEl.dataset.isBlank = isBlank;
+        tileEl.dataset.index = index;
+
+        const letterSpan = document.createElement('span');
+        letterSpan.className = 'tile-letter';
+        letterSpan.textContent = isBlank ? '' : letter;
+
+        const scoreSpan = document.createElement('span');
+        scoreSpan.className = 'tile-score';
+        const baseScore = TILE_SCORES[letter] || 0;
+        scoreSpan.textContent = isBlank ? '' : (baseScore + bonus);
+
+        tileEl.appendChild(letterSpan);
+        tileEl.appendChild(scoreSpan);
+
+        tileEl.addEventListener('click', () => toggleTileForExchange(tileEl));
+
+        exchangeRack.appendChild(tileEl);
+    });
+}
+
+/**
+ * Toggle tile selection for exchange
+ */
+function toggleTileForExchange(tileElement) {
+    if (!gameState.isExchangeMode) return;
+
+    const letter = tileElement.dataset.letter;
+    const isBlank = tileElement.dataset.isBlank === 'true';
+
+    // Check if already selected
+    const existingIndex = gameState.selectedForExchange.findIndex(t => t.element === tileElement);
+
+    if (existingIndex >= 0) {
+        // Deselect
+        gameState.selectedForExchange.splice(existingIndex, 1);
+        tileElement.classList.remove('selected-for-exchange');
+    } else {
+        // Select
+        gameState.selectedForExchange.push({ letter, isBlank, element: tileElement });
+        tileElement.classList.add('selected-for-exchange');
+    }
+
+    updateExchangeInstruction();
+    updateExchangeConfirmButton();
+}
+
+/**
+ * Update exchange instruction text
+ */
+function updateExchangeInstruction() {
+    const instruction = document.getElementById('exchange-instruction');
+    const count = gameState.selectedForExchange.length;
+
+    if (count === 0) {
+        instruction.textContent = 'Tap tiles to exchange';
+    } else if (count === 1) {
+        instruction.textContent = '1 tile selected';
+    } else {
+        instruction.textContent = `${count} tiles selected`;
+    }
+}
+
+/**
+ * Update confirm button state
+ */
+function updateExchangeConfirmButton() {
+    const confirmBtn = document.getElementById('confirm-exchange');
+    confirmBtn.disabled = gameState.selectedForExchange.length === 0;
+}
+
+/**
+ * Cancel exchange and close modal
+ */
+function cancelExchange() {
+    console.log('[Exchange] Cancelling exchange');
+
+    gameState.selectedForExchange = [];
+    gameState.isExchangeMode = false;
+
+    document.getElementById('exchange-modal').style.display = 'none';
+
+    updateExchangeButtonVisibility();
+}
+
+/**
+ * Confirm exchange - call backend and deduct coins
+ */
+async function confirmExchange() {
+    if (gameState.selectedForExchange.length === 0) return;
+    if (!canAffordExchange()) return;
+
+    const cost = getExchangeCost();
+    const tilesToExchange = gameState.selectedForExchange.map(t => t.letter);
+
+    console.log('[Exchange] Exchanging', tilesToExchange.length, 'tiles for $' + cost);
+
+    try {
+        // Call backend to exchange tiles
+        const params = new URLSearchParams({
+            seed: gameState.seed,
+            action: 'exchange',
+            turn: gameState.currentTurn,
+            tiles_to_exchange: JSON.stringify(tilesToExchange),
+            rack_tiles: JSON.stringify(gameState.rackTiles.map(t => typeof t === 'object' ? t.letter : t)),
+            tiles_drawn: gameState.totalTilesDrawn,
+            exchange_count: gameState.exchangeCount
+        });
+
+        const response = await fetch(`${API_BASE}/letters.py?${params.toString()}`);
+
+        if (!response.ok) {
+            throw new Error(`Exchange failed: HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('[Exchange] Server response:', data);
+
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
+        // Deduct coins
+        runState.coins -= cost;
+        runManager.updateCoinDisplay();
+        runManager.saveRunState();
+
+        // Update game state with new tiles from the server
+        gameState.tiles = data.tiles;
+        gameState.totalTilesDrawn = data.tiles_drawn;
+
+        // Update tilesDrawnFromBag with the new tiles
+        if (data.new_tiles) {
+            gameState.tilesDrawnFromBag = [...(gameState.tilesDrawnFromBag || []), ...data.new_tiles];
+        }
+
+        // Record exchange in history
+        gameState.exchangeHistory.push({
+            tiles: tilesToExchange,
+            at_drawn: gameState.totalTilesDrawn,
+            exchange_count: gameState.exchangeCount
+        });
+
+        gameState.exchangeCount++;
+
+        // Close modal
+        gameState.selectedForExchange = [];
+        gameState.isExchangeMode = false;
+        document.getElementById('exchange-modal').style.display = 'none';
+
+        // Re-render the rack with new tiles (pass strings, let displayTiles handle buffing)
+        displayTiles(data.tiles);
+
+        // Update exchange button visibility (may need to hide if can't afford another)
+        updateExchangeButtonVisibility();
+
+        // Save game state
+        saveGameState();
+
+    } catch (error) {
+        console.error('[Exchange] Error:', error);
+        showError('Exchange failed: ' + error.message);
+    }
+}
 
 // Update target progress bar during run mode
 function updateTargetProgress() {
@@ -2499,6 +2783,11 @@ function setupEventListeners() {
     document.getElementById('close-error').addEventListener('click', () => {
         document.getElementById('error-modal').style.display = 'none';
     });
+
+    // Exchange tiles button and modal handlers
+    document.getElementById('exchange-tiles')?.addEventListener('click', enterExchangeMode);
+    document.getElementById('cancel-exchange')?.addEventListener('click', cancelExchange);
+    document.getElementById('confirm-exchange')?.addEventListener('click', confirmExchange);
 
     // Popup close handlers
     const popupCloseX = document.getElementById('popup-close-x');
@@ -4251,17 +4540,28 @@ function checkWordValidity() {
         }
     }
 
-    // Show recall button when tiles are placed
+    // Show recall button when tiles are placed, exchange button when no tiles and has coins
     const recallButton = document.getElementById('recall-tiles');
-    if (recallButton) {
-        if (hasTiles) {
+    const exchangeButton = document.getElementById('exchange-tiles');
+
+    if (hasTiles) {
+        // Tiles on board - show recall, hide exchange
+        if (recallButton) {
             recallButton.style.display = 'flex';
             recallButton.style.opacity = '0';
             setTimeout(() => { recallButton.style.opacity = '1'; }, 10);
-        } else {
+        }
+        if (exchangeButton) {
+            exchangeButton.style.display = 'none';
+        }
+    } else {
+        // No tiles on board - hide recall, maybe show exchange
+        if (recallButton) {
             recallButton.style.opacity = '0';
             setTimeout(() => { recallButton.style.display = 'none'; }, 300);
         }
+        // Update exchange button visibility (handles coin check)
+        updateExchangeButtonVisibility();
     }
 
     // Always show Start Over button (it resets to a completely new game)

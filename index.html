@@ -13,7 +13,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui, viewport-fit=cover">
     <title>RogueLetters - A Daily Word Game</title>
-    <link rel="stylesheet" href="./styles.css?v=23.8">
+    <link rel="stylesheet" href="./styles.css?v=23.9">
     <meta name="description" content="Play RogueLetters - a daily word puzzle game. Build words on a letter-tile board to maximize your score!">
 
 
@@ -70,6 +70,13 @@
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                                 <path d="M12 3v15m0 0l-7-7m7 7l7-7"/>
                             </svg>
+                        </button>
+                        <!-- Exchange tiles button - shown when no tiles on board and player has coins -->
+                        <button id="exchange-tiles" class="exchange-btn" title="Exchange tiles" style="display: none;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+                            </svg>
+                            <span class="exchange-cost">$1</span>
                         </button>
                         <div id="tile-rack-board" class="board">
                             <!-- Second board for tile rack -->
@@ -174,6 +181,24 @@
                     <!-- A-Z buttons generated dynamically -->
                 </div>
                 <button id="cancel-blank-selection" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Exchange Tiles Modal -->
+        <div id="exchange-modal" class="modal" style="display: none;">
+            <div class="modal-content exchange-modal-content">
+                <div class="popup-content">
+                    <button id="cancel-exchange" class="popup-close-btn" aria-label="Cancel">×</button>
+                    <h2>Exchange Tiles</h2>
+                    <p id="exchange-instruction">Tap tiles to exchange</p>
+                    <p id="exchange-cost-info" class="exchange-cost-info">Cost: $1 per exchange</p>
+                    <div id="exchange-rack" class="exchange-rack">
+                        <!-- Tiles rendered dynamically -->
+                    </div>
+                    <div class="popup-buttons">
+                        <button id="confirm-exchange" class="popup-btn-primary" disabled>Exchange selected tiles</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -421,6 +446,6 @@
     <!-- LZ-String compression library for shareable URLs -->
     <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 
-    <script src="./script.js?v=28.0"></script>
+    <script src="./script.js?v=28.2"></script>
 </body>
 </html>

@@ -264,10 +264,78 @@ def get_tiles_for_turn(seed, turn, starting_word=None, rack_tiles=None, tiles_dr
         # Combine rack tiles with new tiles
         return rack_tiles + new_tiles
 
+def exchange_tiles(seed, starting_word, tiles_to_exchange, rack_tiles, tiles_drawn_so_far, exchange_count, purchased_tiles=None, removed_tiles=None):
+    """Exchange tiles following official Scrabble rules:
+    1. Draw new tiles from the bag FIRST
+    2. Then put the exchanged tiles back into the bag
+
+    This uses a deterministic re-shuffle based on seed + exchange_count for reproducibility.
+
+    Args:
+        seed: Daily seed
+        starting_word: The starting word (needed to generate initial bag)
+        tiles_to_exchange: List of tiles to exchange (e.g., ['Q', 'X', 'Z'])
+        rack_tiles: Current tiles on the rack
+        tiles_drawn_so_far: Total tiles drawn from bag before this exchange
+        exchange_count: Number of exchanges that have occurred so far (for deterministic shuffle)
+        purchased_tiles: List of tiles purchased from shop (optional)
+        removed_tiles: List of tiles removed via shop (optional)
+
+    Returns:
+        dict with:
+            new_tiles: The new tiles drawn (replacement for exchanged tiles)
+            tiles_drawn: Updated tiles_drawn counter
+            updated_rack: Full rack after exchange
+    """
+    # Get the base bag (same as regular tile generation, including shop modifications)
+    all_tiles = get_all_tiles_for_day(seed, starting_word or "", purchased_tiles, removed_tiles)
+
+    # Calculate remaining bag: tiles not yet drawn
+    remaining_bag = list(all_tiles[tiles_drawn_so_far:])
+
+    num_to_exchange = len(tiles_to_exchange)
+
+    # SCRABBLE RULE: Draw new tiles FIRST
+    if len(remaining_bag) >= num_to_exchange:
+        new_tiles = remaining_bag[:num_to_exchange]
+        remaining_bag = remaining_bag[num_to_exchange:]
+    else:
+        # Not enough tiles in bag - draw what's available
+        new_tiles = remaining_bag[:]
+        remaining_bag = []
+
+    # SCRABBLE RULE: Put exchanged tiles back into bag
+    remaining_bag.extend(tiles_to_exchange)
+
+    # Re-shuffle the bag deterministically
+    # Use seed + exchange_count to ensure reproducibility
+    exchange_seed = get_seed_hash(seed) + exchange_count + 1  # +1 to differentiate from base shuffle
+    random.seed(exchange_seed)
+    random.shuffle(remaining_bag)
+
+    # Build updated rack: remove exchanged tiles, add new tiles
+    updated_rack = list(rack_tiles)
+    for tile in tiles_to_exchange:
+        if tile in updated_rack:
+            updated_rack.remove(tile)
+    updated_rack.extend(new_tiles)
+
+    # Calculate new tiles_drawn counter
+    new_tiles_drawn = tiles_drawn_so_far + len(new_tiles)
+
+    return {
+        "new_tiles": new_tiles,
+        "tiles_drawn": new_tiles_drawn,
+        "updated_rack": updated_rack,
+        "tiles": updated_rack,  # Alias for frontend compatibility
+        "remaining_bag": remaining_bag  # For potential future use
+    }
+
 def main():
     # Parse request parameters
     form = cgi.FieldStorage()
     seed = form.getvalue('seed', '')
+    action = form.getvalue('action', 'draw')  # 'draw' (default) or 'exchange'
     turn = int(form.getvalue('turn', 1))
     is_retry = form.getvalue('retry', 'false').lower() == 'true'
 
@@ -308,6 +376,63 @@ def main():
         # Corrupted data detected - recalculate from scratch
         rack_tiles = []
         tiles_drawn = 7 * (turn - 1)  # Approximate tiles drawn based on turn
+
+    # Handle exchange action
+    if action == 'exchange':
+        # Parse exchange-specific parameters
+        tiles_to_exchange_str = form.getvalue('tiles_to_exchange', '[]')
+        tiles_to_exchange = json.loads(tiles_to_exchange_str)
+        exchange_count = int(form.getvalue('exchange_count', 0))
+
+        # Validate tiles to exchange
+        if not tiles_to_exchange or len(tiles_to_exchange) == 0:
+            print("Content-Type: application/json")
+            print("Access-Control-Allow-Origin: *")
+            print()
+            print(json.dumps({"error": "No tiles specified for exchange"}))
+            return
+
+        if len(tiles_to_exchange) > 7:
+            print("Content-Type: application/json")
+            print("Access-Control-Allow-Origin: *")
+            print()
+            print(json.dumps({"error": "Cannot exchange more than 7 tiles"}))
+            return
+
+        # Validate all tiles to exchange are valid
+        if not all(isinstance(t, str) and t in valid_tiles for t in tiles_to_exchange):
+            print("Content-Type: application/json")
+            print("Access-Control-Allow-Origin: *")
+            print()
+            print(json.dumps({"error": "Invalid tiles in exchange request"}))
+            return
+
+        # Perform the exchange
+        result = exchange_tiles(
+            seed=seed,
+            starting_word=starting_word,
+            tiles_to_exchange=tiles_to_exchange,
+            rack_tiles=rack_tiles,
+            tiles_drawn_so_far=tiles_drawn,
+            exchange_count=exchange_count,
+            purchased_tiles=purchased_tiles,
+            removed_tiles=removed_tiles
+        )
+
+        response = {
+            "seed": seed,
+            "action": "exchange",
+            "tiles": result["tiles"],
+            "new_tiles": result["new_tiles"],
+            "tiles_drawn": result["tiles_drawn"],
+            "exchanged": tiles_to_exchange
+        }
+
+        print("Content-Type: application/json")
+        print("Access-Control-Allow-Origin: *")
+        print()
+        print(json.dumps(response))
+        return
 
     # Validate tiles_drawn is in reasonable range for this turn
     # Maximum possible: 7 tiles per turn (turn 1: 7, turn 2: 14, etc.)
