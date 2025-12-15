@@ -554,16 +554,28 @@ const runManager = {
             const option = document.getElementById(`shop-tile-${i}`);
             const tileDisplay = document.getElementById(`shop-tile-display-${i}`);
 
-            const letterEl = document.getElementById(`shop-tile-letter-${i}`);
-            const scoreEl = document.getElementById(`shop-tile-score-${i}`);
+            // IMPORTANT: Reset classes FIRST before setting text content
+            // The 'purchased' class sets width:0 and overflow:hidden which can prevent text rendering
+            // We also disable transitions temporarily to avoid rendering issues
+            if (option) {
+                option.classList.add('no-transition');
+                option.classList.remove('purchased', 'cannot-afford', 'cannot-afford-add', 'cannot-afford-replace');
+                // Force reflow to apply changes immediately
+                void option.offsetHeight;
+            }
+
+            // Reset inline styles that may have been set by purchase animation
+            // The animation sets style.opacity = '0' which persists
+            if (tileDisplay) {
+                tileDisplay.style.opacity = '1';  // Force visible
+                tileDisplay.style.transform = '';  // Clear any transform
+                const letterContent = isBlank ? '' : tile;
+                const scoreContent = isBlank ? '' : displayScore;
+                tileDisplay.innerHTML = `<span class="tile-letter" id="shop-tile-letter-${i}">${letterContent}</span><span class="tile-score" id="shop-tile-score-${i}">${scoreContent}</span>`;
+            }
 
             // Log for debugging
             console.log(`[Shop] Setting tile ${i}: letter="${tile}", score=${displayScore}, isBlank=${isBlank}`);
-            if (!letterEl) console.error(`[Shop] shop-tile-letter-${i} element not found!`);
-            if (!scoreEl) console.error(`[Shop] shop-tile-score-${i} element not found!`);
-
-            if (letterEl) letterEl.textContent = isBlank ? '' : tile;
-            if (scoreEl) scoreEl.textContent = isBlank ? '' : displayScore;
 
             // Toggle buffed styling - blanks don't get the gold treatment
             if (tileDisplay) {
@@ -579,9 +591,6 @@ const runManager = {
             if (buffLabel) {
                 buffLabel.style.visibility = isBlank ? 'hidden' : 'visible';
             }
-
-            // Reset classes
-            option.classList.remove('purchased', 'cannot-afford', 'cannot-afford-add', 'cannot-afford-replace');
 
             // Check affordability for each button type (Add $2, Replace $3)
             const addBtn = document.getElementById(`shop-add-${i}`);
@@ -605,6 +614,12 @@ const runManager = {
         }
 
         shopScreen.classList.remove('hidden');
+
+        // Re-enable transitions after a frame (allows instant reset to complete)
+        requestAnimationFrame(() => {
+            document.getElementById('shop-tile-0')?.classList.remove('no-transition');
+            document.getElementById('shop-tile-1')?.classList.remove('no-transition');
+        });
     },
 
     // Purchase a tile via "Add" - adds to bag, costs $2

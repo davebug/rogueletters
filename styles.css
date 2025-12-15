@@ -2333,11 +2333,22 @@ main {
     transition: opacity 0.2s ease-out, width 0.2s ease-out;
 }
 
+/* Disable transitions when resetting shop */
+.shop-tile-option.no-transition {
+    transition: none !important;
+}
+
 .shop-tile-option.purchased {
-    opacity: 0;
-    width: 0;
-    overflow: hidden;
+    opacity: 0.3;
     pointer-events: none;
+}
+
+.shop-tile-option.purchased .shop-tile {
+    filter: grayscale(100%);
+}
+
+.shop-tile-option.purchased .shop-button {
+    visibility: hidden;
 }
 
 /* Shop tile - display only, not interactive */
