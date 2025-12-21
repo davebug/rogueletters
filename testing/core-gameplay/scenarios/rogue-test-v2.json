@@ -1,0 +1,77 @@
+{
+  "name": "test-v2",
+  "description": "Set 1 Round 1 - 9 points",
+  "type": "rogueletters",
+  "metadata": {
+    "seed": "12345",
+    "startingWord": "SEIZING",
+    "set": 1,
+    "round": 1,
+    "targetScore": 40,
+    "extractedAt": "2025-12-21T16:47:36.304Z",
+    "generatedAutomatically": true
+  },
+  "expectedOutcomes": {
+    "turnScores": [
+      2,
+      2,
+      5
+    ],
+    "finalScore": 9,
+    "turnsCompleted": 3,
+    "roundComplete": false,
+    "targetMet": false
+  },
+  "moves": [
+    {
+      "turn": 1,
+      "tiles": [
+        {
+          "row": 3,
+          "col": 1,
+          "letter": "I",
+          "isBlank": false
+        }
+      ],
+      "expectedScore": 2
+    },
+    {
+      "turn": 2,
+      "tiles": [
+        {
+          "row": 3,
+          "col": 0,
+          "letter": "O",
+          "isBlank": false
+        }
+      ],
+      "expectedScore": 2
+    },
+    {
+      "turn": 3,
+      "tiles": [
+        {
+          "row": 2,
+          "col": 0,
+          "letter": "W",
+          "isBlank": false
+        }
+      ],
+      "expectedScore": 5
+    }
+  ],
+  "testValidations": {
+    "wordValidation": {
+      "description": "All words formed should be valid"
+    },
+    "scoringValidation": {
+      "description": "Scoring must match expected values"
+    },
+    "roundCompletionValidation": {
+      "description": "Round completes after 5 turns"
+    },
+    "targetValidation": {
+      "description": "Score should be below target of 40"
+    }
+  }
+}

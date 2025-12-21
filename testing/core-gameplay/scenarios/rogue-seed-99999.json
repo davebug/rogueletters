@@ -1,0 +1,103 @@
+{
+  "name": "seed-99999",
+  "description": "Set 1 Round 1 - 22 points",
+  "type": "rogueletters",
+  "metadata": {
+    "seed": "99999",
+    "startingWord": "STORAGE",
+    "set": 1,
+    "round": 1,
+    "targetScore": 40,
+    "extractedAt": "2025-12-21T16:49:42.007Z",
+    "generatedAutomatically": true
+  },
+  "expectedOutcomes": {
+    "turnScores": [
+      2,
+      2,
+      2,
+      5,
+      11
+    ],
+    "finalScore": 22,
+    "turnsCompleted": 5,
+    "roundComplete": true,
+    "targetMet": false
+  },
+  "moves": [
+    {
+      "turn": 1,
+      "tiles": [
+        {
+          "row": 3,
+          "col": 1,
+          "letter": "E",
+          "isBlank": false
+        }
+      ],
+      "expectedScore": 2
+    },
+    {
+      "turn": 2,
+      "tiles": [
+        {
+          "row": 3,
+          "col": 0,
+          "letter": "O",
+          "isBlank": false
+        }
+      ],
+      "expectedScore": 2
+    },
+    {
+      "turn": 3,
+      "tiles": [
+        {
+          "row": 2,
+          "col": 0,
+          "letter": "L",
+          "isBlank": false
+        }
+      ],
+      "expectedScore": 2
+    },
+    {
+      "turn": 4,
+      "tiles": [
+        {
+          "row": 2,
+          "col": 1,
+          "letter": "O",
+          "isBlank": false
+        }
+      ],
+      "expectedScore": 5
+    },
+    {
+      "turn": 5,
+      "tiles": [
+        {
+          "row": 2,
+          "col": 2,
+          "letter": "P",
+          "isBlank": false
+        }
+      ],
+      "expectedScore": 11
+    }
+  ],
+  "testValidations": {
+    "wordValidation": {
+      "description": "All words formed should be valid"
+    },
+    "scoringValidation": {
+      "description": "Scoring must match expected values"
+    },
+    "roundCompletionValidation": {
+      "description": "Round completes after 5 turns"
+    },
+    "targetValidation": {
+      "description": "Score should be below target of 40"
+    }
+  }
+}

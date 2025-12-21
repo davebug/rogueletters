@@ -48,9 +48,9 @@ test.describe('Core Gameplay Validator', () => {
 
       console.log(`Expected moves extracted: ${expectedMoves.length} turns`);
 
-      // 2. Start fresh game with same seed
+      // 2. Start fresh game with same seed (skip animations for faster/reliable tests)
       console.log('\n[2/5] Starting fresh game...');
-      await page.goto(`http://localhost:8086/?seed=${scenario.metadata.seed}`);
+      await page.goto(`http://localhost:8086/?seed=${scenario.metadata.seed}&animate=0`);
       await page.waitForSelector('#game-board', { timeout: 15000 });
 
       // Wait for loading overlay to disappear
@@ -86,6 +86,10 @@ test.describe('Core Gameplay Validator', () => {
 
         // Place each tile from this turn
         for (const tileToPlace of turn.tiles) {
+          // Determine if we need to find a blank tile or a regular tile
+          const lookingForBlank = tileToPlace.isBlank === true;
+          const targetLetter = lookingForBlank ? '_' : tileToPlace.letter;
+
           // Find tile in rack with matching letter
           const rackTiles = await page.locator('.tile:not(.placed)').all();
           let placed = false;
@@ -96,7 +100,11 @@ test.describe('Core Gameplay Validator', () => {
 
             const letter = await letterEl.textContent();
 
-            if (letter === tileToPlace.letter) {
+            // Check if this is a blank tile - blanks display as "" but we track them as "_"
+            const isBlankTile = await rackTile.evaluate(el => el.dataset.isBlank === 'true');
+            const effectiveLetter = isBlankTile ? '_' : letter;
+
+            if (effectiveLetter === targetLetter) {
               // Click tile to select
               await rackTile.click();
               await page.waitForTimeout(200);
@@ -107,8 +115,23 @@ test.describe('Core Gameplay Validator', () => {
               ).click();
               await page.waitForTimeout(200);
 
+              // If this was a blank tile, handle the letter selection modal
+              if (lookingForBlank) {
+                // Wait for the blank letter modal to appear
+                const modal = page.locator('#blank-letter-modal');
+                await modal.waitFor({ state: 'visible', timeout: 5000 });
+
+                // Click the letter button for the assigned letter
+                const letterButton = modal.locator('#letter-grid button').filter({ hasText: new RegExp(`^${tileToPlace.letter}$`) });
+                await letterButton.click();
+                await page.waitForTimeout(200);
+
+                console.log(`    Placed blank as ${tileToPlace.letter} at (${tileToPlace.row}, ${tileToPlace.col})`);
+              } else {
+                console.log(`    Placed ${effectiveLetter} at (${tileToPlace.row}, ${tileToPlace.col})`);
+              }
+
               placed = true;
-              console.log(`    Placed ${letter} at (${tileToPlace.row}, ${tileToPlace.col})`);
               break;
             }
           }
@@ -118,18 +141,29 @@ test.describe('Core Gameplay Validator', () => {
             const currentRack = await page.evaluate(() =>
               window.gameState.rackTiles.map(t => typeof t === 'object' ? t.letter : t)
             );
-            throw new Error(`Could not find tile with letter: ${tileToPlace.letter}. Current rack: ${currentRack.join(', ')}`);
+            throw new Error(`Could not find tile with letter: ${targetLetter}. Current rack: ${currentRack.join(', ')}`);
           }
         }
 
-        // Submit the word - try multiple possible selectors
+        // Submit the word - wait for the submit button to appear
         console.log(`  Submitting word...`);
 
-        // Wait a bit for UI to update
-        await page.waitForTimeout(500);
+        // Wait for word validation to complete and submit button to appear
+        // The button shows "X pts →" when valid, "X pts ✗" when invalid, "X pts ⏳" when loading
+        const submitButton = page.locator('button.total-score').filter({ hasText: 'pts' });
 
-        // Find submit button (it shows "X pts →")
-        const submitButton = page.locator('button').filter({ hasText: 'pts →' });
+        // Wait for the button to be visible (word validation can take time)
+        await submitButton.waitFor({ state: 'visible', timeout: 10000 });
+
+        // Get button text to check if word is valid
+        const buttonText = await submitButton.textContent();
+        console.log(`  Submit button text: ${buttonText}`);
+
+        // Only click if it's the valid submit button (has →)
+        if (!buttonText.includes('→')) {
+          throw new Error(`Word validation failed. Button shows: ${buttonText}`);
+        }
+
         await submitButton.click();
         console.log(`  Clicked submit button`);
 

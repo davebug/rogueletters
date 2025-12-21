@@ -1,0 +1,103 @@
+{
+  "name": "seed-67890",
+  "description": "Set 1 Round 1 - 24 points",
+  "type": "rogueletters",
+  "metadata": {
+    "seed": "67890",
+    "startingWord": "EAGLES",
+    "set": 1,
+    "round": 1,
+    "targetScore": 40,
+    "extractedAt": "2025-12-21T16:49:20.857Z",
+    "generatedAutomatically": true
+  },
+  "expectedOutcomes": {
+    "turnScores": [
+      5,
+      7,
+      5,
+      2,
+      5
+    ],
+    "finalScore": 24,
+    "turnsCompleted": 5,
+    "roundComplete": true,
+    "targetMet": false
+  },
+  "moves": [
+    {
+      "turn": 1,
+      "tiles": [
+        {
+          "row": 3,
+          "col": 1,
+          "letter": "W",
+          "isBlank": false
+        }
+      ],
+      "expectedScore": 5
+    },
+    {
+      "turn": 2,
+      "tiles": [
+        {
+          "row": 5,
+          "col": 1,
+          "letter": "D",
+          "isBlank": false
+        }
+      ],
+      "expectedScore": 7
+    },
+    {
+      "turn": 3,
+      "tiles": [
+        {
+          "row": 3,
+          "col": 0,
+          "letter": "A",
+          "isBlank": false
+        }
+      ],
+      "expectedScore": 5
+    },
+    {
+      "turn": 4,
+      "tiles": [
+        {
+          "row": 2,
+          "col": 0,
+          "letter": "N",
+          "isBlank": false
+        }
+      ],
+      "expectedScore": 2
+    },
+    {
+      "turn": 5,
+      "tiles": [
+        {
+          "row": 5,
+          "col": 2,
+          "letter": "E",
+          "isBlank": false
+        }
+      ],
+      "expectedScore": 5
+    }
+  ],
+  "testValidations": {
+    "wordValidation": {
+      "description": "All words formed should be valid"
+    },
+    "scoringValidation": {
+      "description": "Scoring must match expected values"
+    },
+    "roundCompletionValidation": {
+      "description": "Round completes after 5 turns"
+    },
+    "targetValidation": {
+      "description": "Score should be below target of 40"
+    }
+  }
+}

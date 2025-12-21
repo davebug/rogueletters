@@ -1087,7 +1087,7 @@ function enterExchangeMode() {
 
     // Update instruction and button state
     updateExchangeInstruction();
-    updateExchangeConfirmButton();
+    updateConfirmButtonState();
 }
 
 /**
@@ -1155,7 +1155,7 @@ function toggleTileForExchange(tileElement) {
     }
 
     updateExchangeInstruction();
-    updateExchangeConfirmButton();
+    updateConfirmButtonState();
 }
 
 /**
@@ -1177,7 +1177,7 @@ function updateExchangeInstruction() {
 /**
  * Update confirm button state
  */
-function updateExchangeConfirmButton() {
+function updateConfirmButtonState() {
     const confirmBtn = document.getElementById('confirm-exchange');
     confirmBtn.disabled = gameState.selectedForExchange.length === 0;
 }
@@ -1267,8 +1267,34 @@ async function confirmExchange() {
         gameState.isExchangeMode = false;
         document.getElementById('exchange-modal').style.display = 'none';
 
-        // Re-render the rack with new tiles (pass strings, let displayTiles handle buffing)
-        displayTiles(data.tiles);
+        // Small delay to let layout stabilize after modal closes
+        await new Promise(r => setTimeout(r, 50));
+
+        // Find the actual rack tiles to animate to bag
+        // Match by letter - find tiles in rack that match the exchanged letters
+        const rackBoard = document.getElementById('tile-rack-board');
+        const allRackTiles = Array.from(rackBoard.querySelectorAll('.tile'));
+
+        // Create a copy of letters to exchange (we'll remove matches as we find them)
+        const lettersToMatch = [...tilesToExchange];
+        const tilesToAnimateToBag = [];
+
+        for (const tile of allRackTiles) {
+            const tileLetter = tile.dataset.letter;
+            const matchIndex = lettersToMatch.indexOf(tileLetter);
+            if (matchIndex >= 0) {
+                tilesToAnimateToBag.push(tile);
+                lettersToMatch.splice(matchIndex, 1); // Remove matched letter
+            }
+        }
+
+        // Animate exchanged tiles flying to the bag (and remove them from DOM)
+        await animateTilesToBag(tilesToAnimateToBag);
+
+        // Re-render the rack with new tiles, animating them from the bag
+        // Calculate how many tiles were kept (not exchanged)
+        const keptTileCount = 7 - tilesToExchange.length;
+        await displayTilesAnimated(data.tiles, keptTileCount);
 
         // Update exchange button visibility (may need to hide if can't afford another)
         updateExchangeButtonVisibility();
@@ -1279,6 +1305,20 @@ async function confirmExchange() {
     } catch (error) {
         console.error('[Exchange] Error:', error);
         showError('Exchange failed: ' + error.message);
+    }
+}
+
+/**
+ * Handle tile click during exchange mode
+ * (Synced from WikiLetters for consistency)
+ */
+function handleExchangeTileClick(event) {
+    if (!gameState.isExchangeMode) return;
+
+    const tile = event.currentTarget;
+    if (tile.classList.contains('tile')) {
+        toggleTileForExchange(tile);
+        event.stopPropagation();
     }
 }
 
@@ -2403,6 +2443,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Expose for testing
     window.gameState = gameState;
+    window.runState = runState;
     window.endGame = endGame;
     window.testPopup = testPopup;
     window.getScoreTitle = getScoreTitle;
@@ -2633,6 +2674,9 @@ function createBoard() {
             } else if (MULTIPLIERS.doubleLetter.some(([r, c]) => r === row && c === col)) {
                 cell.classList.add('double-letter');
                 cell.innerHTML = '<span class="multiplier-text">DL</span>';
+            } else {
+                // Regular squares get explicit class too (consistent with special squares)
+                cell.classList.add('regular-square');
             }
 
             boardElement.appendChild(cell);
@@ -2691,8 +2735,8 @@ function fetchGameData(seed) {
             // Place starting word on board
             placeStartingWord(data.starting_word);
 
-            // Display initial tiles
-            displayTiles(data.tiles);
+            // Display initial tiles with animation from bag
+            displayTilesAnimated(data.tiles, 0);
 
             // Removed Wikipedia link functionality
             if (data.starting_word) {
@@ -2917,6 +2961,628 @@ function createTileElement(letter, index, isBlank = false, buffed = false, bonus
     return tile;
 }
 
+// ============================================================================
+// TILE ANIMATIONS
+// ============================================================================
+// Animation Standards (keep consistent across all tile animations):
+//
+// DURATIONS (by distance):
+// - 400ms: Bag ↔ Rack (long distance, with scale effect)
+// - 200ms: Rack ↔ Board (medium distance)
+// - 100ms: Board ↔ Board, Rack ↔ Rack (short repositioning)
+//
+// MULTI-TILE STAGGER:
+// - Stagger = duration / 7 (tiles overlap, card-dealing effect)
+// - 400ms flight → 57ms stagger
+// - 200ms flight → 29ms stagger
+// - 100ms flight → 14ms stagger
+//
+// OTHER STANDARDS:
+// - Easing: cubic-bezier(0.4, 0, 0.2, 1)
+// - Bag animations: scale(0.2) ↔ scale(1), opacity(0) ↔ opacity(1)
+// - Other animations: no scale, just position
+// - Sizing: Match actual target cell dimensions
+// - Initial paint delay: 16ms (one frame) for scale animations
+// ============================================================================
+
+// Universal tile animation function - use this for ALL tile animations
+// Captures positions upfront, hides originals completely, animates clones
+async function animateTileMovement(tiles, getTargetRect, options = {}) {
+    const {
+        duration = 200,
+        stagger = 0,
+        scale = 1,
+        fade = false,
+        cleanup = false,  // Remove tiles from DOM after animation
+        shadow = true
+    } = options;
+
+    // Skip animation if URL has ?animate=0 (for testing)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('animate') === '0') {
+        if (cleanup) tiles.forEach(tile => tile.remove());
+        return;
+    }
+
+    if (tiles.length === 0) return;
+
+    // STEP 1: Capture ALL source positions BEFORE anything else
+    const tileData = tiles.map((tile, index) => ({
+        tile,
+        sourceRect: tile.getBoundingClientRect(),
+        targetRect: getTargetRect(tile, index)
+    }));
+
+    // STEP 2: Clear selection state
+    tiles.forEach(tile => tile.classList.remove('selected', 'selected-for-exchange'));
+    if (typeof selectedTile !== 'undefined') selectedTile = null;
+
+    // STEP 3: Hide originals (no delay - was causing offset issues on mobile)
+    tileData.forEach(({ tile }) => {
+        tile.style.display = 'none';
+    });
+
+    // STEP 4: Create clones and animate (preserve font sizes since clones lose parent context)
+    const clones = tileData.map(({ tile, sourceRect, targetRect }) => {
+        // Capture computed font sizes from original tile's children
+        const letterEl = tile.querySelector('.tile-letter');
+        const valueEl = tile.querySelector('.tile-value') || tile.querySelector('.tile-score');
+        const letterFontSize = letterEl ? getComputedStyle(letterEl).fontSize : null;
+        const valueFontSize = valueEl ? getComputedStyle(valueEl).fontSize : null;
+
+        const clone = tile.cloneNode(true);
+
+        // Reset clone styles completely
+        clone.style.cssText = '';
+        clone.style.position = 'fixed';
+        clone.style.left = sourceRect.left + 'px';
+        clone.style.top = sourceRect.top + 'px';
+        clone.style.width = sourceRect.width + 'px';
+        clone.style.height = sourceRect.height + 'px';
+        clone.style.zIndex = '10000';
+        clone.style.pointerEvents = 'none';
+        clone.style.margin = '0';
+        clone.style.display = 'flex';
+        clone.style.visibility = 'visible';
+        clone.style.opacity = '1';
+        if (shadow) {
+            clone.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+        }
+        clone.classList.remove('selected', 'selected-for-exchange');
+
+        // Apply font sizes to clone's children
+        const cloneLetter = clone.querySelector('.tile-letter');
+        const cloneValue = clone.querySelector('.tile-value') || clone.querySelector('.tile-score');
+        if (cloneLetter && letterFontSize) cloneLetter.style.fontSize = letterFontSize;
+        if (cloneValue && valueFontSize) cloneValue.style.fontSize = valueFontSize;
+
+        document.body.appendChild(clone);
+        return { clone, targetRect, tile };
+    });
+
+    // STEP 5: Animate using Web Animations API (more reliable than CSS transitions)
+    const animations = clones.map(({ clone, targetRect }, index) => {
+        return new Promise(resolve => {
+            setTimeout(() => {
+                const animation = clone.animate([
+                    {
+                        left: clone.style.left,
+                        top: clone.style.top,
+                        width: clone.style.width,
+                        height: clone.style.height,
+                        opacity: 1,
+                        transform: 'scale(1)'
+                    },
+                    {
+                        left: targetRect.left + 'px',
+                        top: targetRect.top + 'px',
+                        width: targetRect.width + 'px',
+                        height: targetRect.height + 'px',
+                        opacity: fade ? 0 : 1,
+                        transform: `scale(${scale})`
+                    }
+                ], {
+                    duration,
+                    easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+                    fill: 'forwards'
+                });
+
+                animation.onfinish = () => resolve();
+            }, index * stagger);
+        });
+    });
+
+    await Promise.all(animations);
+
+    // STEP 6: Clean up
+    clones.forEach(({ clone, tile }) => {
+        clone.remove();
+        if (cleanup) {
+            tile.remove();
+        }
+    });
+}
+
+// Animate a tile flying from rack to a board cell (200ms per Rack ↔ Board standard)
+async function animateTileRackToBoard(sourceTile, targetCell) {
+    if (!sourceTile || !targetCell) return Promise.resolve();
+
+    const targetRect = targetCell.getBoundingClientRect();
+
+    await animateTileMovement([sourceTile], () => targetRect, {
+        duration: 200,
+        cleanup: false
+    });
+}
+
+// Animate a tile flying from board cell to rack cell (200ms per Rack ↔ Board standard)
+async function animateTileBoardToRack(boardCell, targetRackCell) {
+    const tile = boardCell.querySelector('.tile');
+    if (!tile || !targetRackCell) return Promise.resolve();
+
+    const targetRect = targetRackCell.getBoundingClientRect();
+
+    await animateTileMovement([tile], () => targetRect, {
+        duration: 150,
+        cleanup: false
+    });
+}
+
+// Animate existing rack tiles sliding left to consolidate (fill gaps)
+async function animateRackSlideLeft(existingTileCount) {
+    if (existingTileCount === 0) return;
+
+    const rackBoard = document.getElementById('tile-rack-board');
+    const cells = rackBoard.querySelectorAll('.rack-cell');
+
+    // Find all tiles currently in rack cells and their positions
+    const tilesWithPositions = [];
+    cells.forEach((cell, index) => {
+        const tile = cell.querySelector('.tile');
+        if (tile) {
+            tilesWithPositions.push({
+                tile: tile,
+                currentIndex: index,
+                rect: tile.getBoundingClientRect()
+            });
+        }
+    });
+
+    // If no tiles or tiles are already consolidated, nothing to animate
+    if (tilesWithPositions.length === 0) return;
+
+    // Check if tiles need to slide (are there gaps?)
+    const needsSlide = tilesWithPositions.some((t, i) => t.currentIndex !== i);
+    if (!needsSlide) return;
+
+    // Get target positions (consolidated left: 0, 1, 2, ...)
+    const targetRects = [];
+    for (let i = 0; i < tilesWithPositions.length; i++) {
+        const targetCell = document.getElementById(`rack-0-${i}`);
+        if (targetCell) {
+            targetRects.push(targetCell.getBoundingClientRect());
+        }
+    }
+
+    // Create clone tiles for animation, hide originals (preserve font sizes)
+    const clones = tilesWithPositions.map((t, newIndex) => {
+        // Capture computed font sizes from original tile's children
+        const letterEl = t.tile.querySelector('.tile-letter');
+        const valueEl = t.tile.querySelector('.tile-value') || t.tile.querySelector('.tile-score');
+        const letterFontSize = letterEl ? getComputedStyle(letterEl).fontSize : null;
+        const valueFontSize = valueEl ? getComputedStyle(valueEl).fontSize : null;
+
+        const clone = t.tile.cloneNode(true);
+        clone.style.position = 'fixed';
+        clone.style.left = t.rect.left + 'px';
+        clone.style.top = t.rect.top + 'px';
+        clone.style.width = t.rect.width + 'px';
+        clone.style.height = t.rect.height + 'px';
+        clone.style.zIndex = '9999';
+        clone.style.pointerEvents = 'none';
+        clone.style.margin = '0';
+        clone.style.transition = 'left 0.1s cubic-bezier(0.4, 0, 0.2, 1)';
+
+        // Apply font sizes to clone's children
+        const cloneLetter = clone.querySelector('.tile-letter');
+        const cloneValue = clone.querySelector('.tile-value') || clone.querySelector('.tile-score');
+        if (cloneLetter && letterFontSize) cloneLetter.style.fontSize = letterFontSize;
+        if (cloneValue && valueFontSize) cloneValue.style.fontSize = valueFontSize;
+
+        document.body.appendChild(clone);
+        t.tile.style.visibility = 'hidden';
+        return { clone, targetRect: targetRects[newIndex] };
+    });
+
+    // Trigger slide animation
+    await new Promise(resolve => {
+        requestAnimationFrame(() => {
+            clones.forEach(({ clone, targetRect }) => {
+                clone.style.left = targetRect.left + 'px';
+            });
+            // Wait for animation to complete (100ms per Rack ↔ Rack standard)
+            setTimeout(resolve, 100);
+        });
+    });
+
+    // Clean up clones
+    clones.forEach(({ clone }) => clone.remove());
+}
+
+// Animate a tile moving from one board cell to another (100ms for short repositioning)
+// Returns a promise that resolves when animation completes
+async function animateTileBoardToBoard(tile, fromCell, toCell) {
+    if (!tile || !fromCell || !toCell) return Promise.resolve();
+
+    const targetRect = toCell.getBoundingClientRect();
+
+    await animateTileMovement([tile], () => targetRect, {
+        duration: 100,
+        cleanup: false
+    });
+}
+
+// Animate two tiles swapping positions with bow-out paths (to avoid collision)
+// Tiles curve away from each other perpendicular to the swap direction
+// Returns a promise that resolves when animation completes
+async function animateSwapWithArcs(tile1, rect1, tile2, rect2, duration = 200) {
+    // Clear selection state FIRST (before capturing positions)
+    tile1.classList.remove('selected');
+    tile2.classList.remove('selected');
+    if (typeof selectedTile !== 'undefined') selectedTile = null;
+
+    // Capture positions AFTER selection cleared to avoid drift from .selected CSS
+    rect1 = tile1.getBoundingClientRect();
+    rect2 = tile2.getBoundingClientRect();
+
+    // Hide both original tiles
+    tile1.style.visibility = 'hidden';
+    tile1.style.opacity = '0';
+    tile2.style.visibility = 'hidden';
+    tile2.style.opacity = '0';
+
+    // Create clones
+    const clone1 = tile1.cloneNode(true);
+    const clone2 = tile2.cloneNode(true);
+
+    // Style clones (preserve font sizes since clones lose parent context)
+    [clone1, clone2].forEach((clone, i) => {
+        const tile = i === 0 ? tile1 : tile2;
+        const rect = i === 0 ? rect1 : rect2;
+
+        // Capture computed font sizes from original tile's children
+        const letterEl = tile.querySelector('.tile-letter');
+        const valueEl = tile.querySelector('.tile-value') || tile.querySelector('.tile-score');
+        const letterFontSize = letterEl ? getComputedStyle(letterEl).fontSize : null;
+        const valueFontSize = valueEl ? getComputedStyle(valueEl).fontSize : null;
+
+        clone.style.position = 'fixed';
+        clone.style.left = rect.left + 'px';
+        clone.style.top = rect.top + 'px';
+        clone.style.width = rect.width + 'px';
+        clone.style.height = rect.height + 'px';
+        clone.style.zIndex = '10000';
+        clone.style.pointerEvents = 'none';
+        clone.style.margin = '0';
+        clone.style.visibility = 'visible';
+        clone.style.opacity = '1';
+        clone.style.transition = 'none';
+
+        // Apply font sizes to clone's children
+        const cloneLetter = clone.querySelector('.tile-letter');
+        const cloneValue = clone.querySelector('.tile-value') || clone.querySelector('.tile-score');
+        if (cloneLetter && letterFontSize) cloneLetter.style.fontSize = letterFontSize;
+        if (cloneValue && valueFontSize) cloneValue.style.fontSize = valueFontSize;
+
+        document.body.appendChild(clone);
+    });
+
+    // Calculate perpendicular offset for bow-out effect
+    const deltaX = rect2.left - rect1.left;
+    const deltaY = rect2.top - rect1.top;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    const bowAmount = Math.max(20, distance * 0.25);
+
+    // Perpendicular direction (normalized)
+    const perpX = -deltaY / distance;
+    const perpY = deltaX / distance;
+
+    // Midpoint
+    const midX = (rect1.left + rect2.left) / 2;
+    const midY = (rect1.top + rect2.top) / 2;
+
+    // Animate using Web Animations API with keyframes
+    // tile1 bows out in +perpendicular direction
+    const animation1 = clone1.animate([
+        { left: rect1.left + 'px', top: rect1.top + 'px' },
+        { left: (midX + perpX * bowAmount) + 'px', top: (midY + perpY * bowAmount) + 'px' },
+        { left: rect2.left + 'px', top: rect2.top + 'px' }
+    ], { duration, easing: 'ease-in-out', fill: 'forwards' });
+
+    // tile2 bows out in -perpendicular direction
+    const animation2 = clone2.animate([
+        { left: rect2.left + 'px', top: rect2.top + 'px' },
+        { left: (midX - perpX * bowAmount) + 'px', top: (midY - perpY * bowAmount) + 'px' },
+        { left: rect1.left + 'px', top: rect1.top + 'px' }
+    ], { duration, easing: 'ease-in-out', fill: 'forwards' });
+
+    // Wait for both animations to complete
+    await Promise.all([animation1.finished, animation2.finished]);
+
+    // Restore visibility
+    tile1.style.visibility = '';
+    tile1.style.opacity = '';
+    tile2.style.visibility = '';
+    tile2.style.opacity = '';
+
+    // Brief pause before removing clones to ensure smooth transition
+    setTimeout(() => {
+        clone1.remove();
+        clone2.remove();
+    }, 100);
+}
+
+// Animate tiles flying from rack to bag (for exchange)
+// Returns a promise that resolves when all animations complete
+async function animateTilesToBag(tiles) {
+    const bagIcon = document.getElementById('bag-viewer-btn');
+    if (!bagIcon || tiles.length === 0) {
+        tiles.forEach(tile => tile.remove());
+        return;
+    }
+
+    const bagRect = bagIcon.getBoundingClientRect();
+
+    // Pulse bag icon
+    bagIcon.style.transform = 'scale(1.2)';
+    setTimeout(() => bagIcon.style.transform = '', 200);
+
+    await animateTileMovement(tiles, (tile, index) => ({
+        // Center on bag icon
+        left: bagRect.left + bagRect.width / 2 - 25,
+        top: bagRect.top + bagRect.height / 2 - 25,
+        width: 50,
+        height: 50
+    }), {
+        duration: 400,
+        stagger: 57,
+        scale: 0.2,
+        fade: true,
+        cleanup: true
+    });
+}
+
+// Animate a tile flying from bag icon to a rack cell
+function animateTileFromBagToRack(letter, rackIndex, isBlank = false, buffed = false, bonus = 0) {
+    const bagIcon = document.getElementById('bag-viewer-btn');
+    const targetCell = document.getElementById(`rack-0-${rackIndex}`);
+    if (!bagIcon || !targetCell) return Promise.resolve();
+
+    const bagRect = bagIcon.getBoundingClientRect();
+    const targetRect = targetCell.getBoundingClientRect();
+
+    // Use target cell's actual size for the animated tile
+    const tileWidth = targetRect.width;
+    const tileHeight = targetRect.height;
+
+    // Create tile for animation
+    const tile = document.createElement('div');
+    tile.className = 'tile';
+    if (isBlank) tile.classList.add('blank-tile');
+    if (buffed) tile.classList.add('buffed-tile');
+    tile.style.position = 'fixed';
+    tile.style.width = tileWidth + 'px';
+    tile.style.height = tileHeight + 'px';
+    tile.style.left = (bagRect.left + bagRect.width / 2 - tileWidth / 2) + 'px';
+    tile.style.top = (bagRect.top + bagRect.height / 2 - tileHeight / 2) + 'px';
+    tile.style.zIndex = '10000';
+    tile.style.pointerEvents = 'none';
+    tile.style.transform = 'scale(0.2)';
+    tile.style.opacity = '0';
+
+    // Add letter and score
+    const displayLetter = (letter === '_' || isBlank) ? '' : letter;
+    const baseScore = (letter === '_' || isBlank) ? 0 : (TILE_SCORES[letter] || 0);
+    const score = (letter === '_' || isBlank) ? '' : (baseScore + bonus);
+    tile.innerHTML = `
+        <span class="tile-letter">${displayLetter}</span>
+        <span class="tile-score">${score}</span>
+    `;
+    document.body.appendChild(tile);
+
+    // Pulse bag icon
+    bagIcon.style.transform = 'scale(0.8)';
+    setTimeout(() => bagIcon.style.transform = '', 100);
+
+    return new Promise(resolve => {
+        // Use setTimeout to ensure browser has painted the small state
+        setTimeout(() => {
+            // Grow AND fly at the same time
+            tile.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+            tile.style.left = targetRect.left + 'px';
+            tile.style.top = targetRect.top + 'px';
+            tile.style.transform = 'scale(1)';
+            tile.style.opacity = '1';
+
+            // Clean up and place real tile (wait for 400ms animation + buffer)
+            setTimeout(() => {
+                // Hide animated tile before removing to mask any position difference
+                tile.style.opacity = '0';
+                tile.remove();
+                resolve();
+            }, 420);
+        }, 16); // One frame delay (~16ms) to let browser paint small state
+    });
+}
+
+// Display tiles with animation from bag
+// existingTileCount: number of tiles already on rack that should stay (not animate)
+// - 0 = all tiles animate (game start)
+// - > 0 = first N tiles slide left, then new tiles animate from bag
+async function displayTilesAnimated(tiles, existingTileCount = 0) {
+    const rackBoard = document.getElementById('tile-rack-board');
+    const cells = rackBoard.querySelectorAll('.rack-cell');
+
+    // Skip animation if URL has ?animate=0 (for testing)
+    const urlParams = new URLSearchParams(window.location.search);
+    const skipAnimation = urlParams.get('animate') === '0';
+
+    // Mark which tiles are buffed (from shop purchases)
+    const markedTiles = markBuffedTiles(tiles);
+
+    if (skipAnimation) {
+        // No animation - clear and place all tiles immediately
+        cells.forEach(cell => cell.innerHTML = '');
+        gameState.rackTiles = [...markedTiles];
+        markedTiles.forEach((tileData, index) => {
+            const cell = document.getElementById(`rack-0-${index}`);
+            if (cell) {
+                const isBlank = tileData.letter === '_';
+                const tile = createTileElement(tileData.letter, index, isBlank, tileData.buffed, tileData.bonus);
+                cell.appendChild(tile);
+            }
+        });
+        checkWordValidity();
+        return;
+    }
+
+    // If there are existing tiles, animate them sliding left first
+    if (existingTileCount > 0) {
+        await animateRackSlideLeft(existingTileCount);
+    }
+
+    // Now clear all cells and place existing tiles at consolidated positions
+    cells.forEach(cell => cell.innerHTML = '');
+    gameState.rackTiles = [...markedTiles];
+
+    // Place existing tiles immediately at their new positions (0, 1, 2, ...)
+    for (let index = 0; index < existingTileCount && index < markedTiles.length; index++) {
+        const tileData = markedTiles[index];
+        const isBlank = tileData.letter === '_';
+        const cell = document.getElementById(`rack-0-${index}`);
+        if (cell) {
+            const tile = createTileElement(tileData.letter, index, isBlank, tileData.buffed, tileData.bonus);
+            cell.appendChild(tile);
+        }
+    }
+
+    // Animate only the NEW tiles from the bag
+    // Overlapping animation: each tile starts when previous is 1/7 through flight
+    const staggerDelay = 57; // ms between tile starts (1/7 of 400ms flight)
+
+    const animations = [];
+    for (let index = existingTileCount; index < markedTiles.length; index++) {
+        const tileData = markedTiles[index];
+        const isBlank = tileData.letter === '_';
+        const delay = (index - existingTileCount) * staggerDelay;
+
+        // Create a promise that handles the delayed animation and tile placement
+        const animationPromise = new Promise(async (resolve) => {
+            // Wait for staggered start
+            if (delay > 0) {
+                await new Promise(r => setTimeout(r, delay));
+            }
+
+            // Animate tile from bag to rack
+            await animateTileFromBagToRack(tileData.letter, index, isBlank, tileData.buffed, tileData.bonus);
+
+            // Place real tile in cell
+            const cell = document.getElementById(`rack-0-${index}`);
+            if (cell) {
+                const tile = createTileElement(tileData.letter, index, isBlank, tileData.buffed, tileData.bonus);
+                cell.appendChild(tile);
+            }
+            resolve();
+        });
+        animations.push(animationPromise);
+    }
+
+    // Wait for all animations to complete
+    await Promise.all(animations);
+
+    checkWordValidity();
+}
+
+// ============================================================================
+// END TILE ANIMATIONS
+// ============================================================================
+
+// ============================================================================
+// RACK VALIDATION (Defensive Checks)
+// ============================================================================
+
+/**
+ * Get the canonical letter for a tile element.
+ * Blanks are tracked as '_' not their assigned letter.
+ */
+function getCanonicalTileLetter(tile) {
+    if (tile.dataset.isBlank === 'true') {
+        return '_';
+    }
+    return tile.dataset.letter;
+}
+
+/**
+ * Rebuild rackTiles array from DOM using canonical letters.
+ * This ensures blanks are tracked as '_' not their assigned letter.
+ */
+function rebuildRackTilesFromDOM() {
+    const rackBoard = document.getElementById('tile-rack-board');
+    if (!rackBoard) return [];
+
+    const cells = rackBoard.querySelectorAll('.rack-cell');
+    const tiles = [];
+
+    cells.forEach(cell => {
+        const tile = cell.querySelector('.tile');
+        if (tile) {
+            tiles.push(getCanonicalTileLetter(tile));
+        }
+    });
+
+    return tiles;
+}
+
+/**
+ * Validate that current tiles (rack + board) match turn start.
+ * Logs errors if tiles have changed unexpectedly.
+ */
+function validateRackConsistency(operation) {
+    const canonical = gameState.turnStartRack;
+    if (!canonical || canonical.length === 0) return true;
+
+    // Get tiles currently on board (placed this turn)
+    const boardTiles = gameState.placedTiles.map(t => t.isBlank ? '_' : t.letter);
+
+    // Rebuild rack tiles from DOM to get canonical letters
+    const rackTiles = rebuildRackTilesFromDOM();
+
+    // Combine and sort for comparison
+    const current = [...boardTiles, ...rackTiles].sort();
+
+    // Handle canonical being array of objects or strings
+    const expectedLetters = canonical.map(t => typeof t === 'object' ? t.letter : t);
+    const expected = [...expectedLetters].sort();
+
+    if (current.join(',') !== expected.join(',')) {
+        console.error(`[RACK VALIDATION FAILED] ${operation}`);
+        console.error(`  Expected: ${expected.join(',')}`);
+        console.error(`  Got: ${current.join(',')}`);
+        console.error(`  Board tiles: ${boardTiles.join(',')}`);
+        console.error(`  Rack tiles: ${rackTiles.join(',')}`);
+        return false;
+    }
+
+    if (gameState.debugMode) {
+        console.log(`[RACK VALID] ${operation}: ${current.join(',')}`);
+    }
+    return true;
+}
+
+// ============================================================================
+// END RACK VALIDATION
+// ============================================================================
+
 function setupEventListeners() {
     // Board cell events
     document.getElementById('game-board').addEventListener('click', handleBoardClick);
@@ -3116,7 +3782,7 @@ function hideBlankLetterModal() {
     }
 }
 
-function handleBlankLetterSelection(letter) {
+async function handleBlankLetterSelection(letter) {
     if (!gameState.pendingBlankPlacement) {
         hideBlankLetterModal();
         return;
@@ -3240,7 +3906,7 @@ function handleBlankLetterSelection(letter) {
     } else {
         // New blank placement - clear pending state
         gameState.pendingBlankPlacement = null;
-        placeBlankTile(cell, tile, letter);
+        await placeBlankTile(cell, tile, letter);
     }
 }
 
@@ -3260,7 +3926,7 @@ function changeBlankLetter(cell, currentTile) {
     }
 }
 
-function placeBlankTile(cell, tile, assignedLetter) {
+async function placeBlankTile(cell, tile, assignedLetter) {
     const row = parseInt(cell.dataset.row);
     const col = parseInt(cell.dataset.col);
 
@@ -3275,8 +3941,14 @@ function placeBlankTile(cell, tile, assignedLetter) {
         return;
     }
 
+    // Animate tile flying from rack to board (before removing from DOM)
+    const isFromRack = tile.parentElement?.classList.contains('rack-cell');
+    if (isFromRack) {
+        await animateTileRackToBoard(tile, cell);
+    }
+
     // Remove tile from its current location
-    if (tile.parentElement?.classList.contains('rack-cell')) {
+    if (isFromRack) {
         // Get the original letter (underscore) before removing
         const removedLetter = tile.dataset.letter;
         tile.style.opacity = '';
@@ -3352,7 +4024,7 @@ let selectedTilePosition = null; // Track if selected tile is from board
 window.selectedTile = null;
 
 // New click-to-swap functionality for rack tiles
-function handleRackClick(e) {
+async function handleRackClick(e) {
     // Don't allow rack interactions after game ends
     if (gameState.isGameOver) return;
 
@@ -3369,7 +4041,7 @@ function handleRackClick(e) {
         }
         // If the selected tile is from the rack, swap positions
         else if (!selectedTilePosition) {
-            swapTilesInRack(selectedTile, tile);
+            await swapTilesInRack(selectedTile, tile);
             selectedTile.classList.remove('selected');
             selectedTile = null;
         }
@@ -3388,9 +4060,12 @@ function handleRackClick(e) {
     }
 }
 
-function swapTilesInRack(tile1, tile2) {
+async function swapTilesInRack(tile1, tile2) {
     const cell1 = tile1.parentElement;
     const cell2 = tile2.parentElement;
+
+    // Animate the swap with arcs (positions captured inside after selection cleared)
+    await animateSwapWithArcs(tile1, null, tile2, null, 200);
 
     // Swap tiles in DOM
     const tempDiv = document.createElement('div');
@@ -3421,7 +4096,7 @@ function swapTilesInRack(tile1, tile2) {
 }
 
 // Swap a rack tile with a board tile (placed-this-turn only)
-function swapRackAndBoardTile(rackTile, boardPosition) {
+async function swapRackAndBoardTile(rackTile, boardPosition) {
     const rackLetter = rackTile.dataset.letter;
     const rackIsBlank = rackTile.dataset.isBlank === 'true' || rackLetter === '_';
 
@@ -3475,6 +4150,9 @@ function swapRackAndBoardTile(rackTile, boardPosition) {
         }
         return;
     }
+
+    // Animate swap with arcs (positions captured inside after selection cleared)
+    await animateSwapWithArcs(rackTile, null, boardTile, null, 200);
 
     // Update gameState.board with the rack letter
     gameState.board[boardPosition.row][boardPosition.col] = rackLetter;
@@ -3539,7 +4217,7 @@ function swapRackAndBoardTile(rackTile, boardPosition) {
 }
 
 // Swap two board tiles (both placed-this-turn)
-function swapBoardTiles(position1, position2) {
+async function swapBoardTiles(position1, position2) {
     const cell1 = document.querySelector(
         `.board-cell[data-row="${position1.row}"][data-col="${position1.col}"]`
     );
@@ -3556,6 +4234,15 @@ function swapBoardTiles(position1, position2) {
 
     const letter1 = tile1.dataset.letter;
     const letter2 = tile2.dataset.letter;
+
+    // Validate both letters exist
+    if (!letter1 || !letter2) {
+        console.error('swapBoardTiles: invalid letters', letter1, letter2);
+        return;
+    }
+
+    // Animate swap (positions captured inside after selection cleared)
+    await animateSwapWithArcs(tile1, null, tile2, null, 200);
 
     // Update gameState.board
     gameState.board[position1.row][position1.col] = letter2;
@@ -3629,9 +4316,18 @@ function swapBoardTiles(position1, position2) {
 }
 
 // Move a rack tile to an empty rack cell
-function moveRackTileToEmptyCell(rackTile, emptyCell) {
-    // Move tile in DOM
+async function moveRackTileToEmptyCell(rackTile, emptyCell) {
+    // Capture target position before move
+    const targetRect = emptyCell.getBoundingClientRect();
+
+    // Animate tile to new position
+    await animateTileMovement([rackTile], () => targetRect, { duration: 150 });
+
+    // Move tile in DOM and restore visibility
     emptyCell.appendChild(rackTile);
+    rackTile.style.display = '';
+    rackTile.style.visibility = '';
+    rackTile.style.opacity = '';
 
     // Rebuild rackTiles array from DOM (preserving buffed info)
     const rackBoard = document.getElementById('tile-rack-board');
@@ -3658,7 +4354,7 @@ function moveRackTileToEmptyCell(rackTile, emptyCell) {
 }
 
 // Return a board tile to a specific rack cell (not just first empty)
-function returnBoardTileToSpecificRackCell(fromPos, targetRackCell) {
+async function returnBoardTileToSpecificRackCell(fromPos, targetRackCell) {
     const fromCell = document.querySelector(
         `.board-cell[data-row="${fromPos.row}"][data-col="${fromPos.col}"]`
     );
@@ -3676,6 +4372,9 @@ function returnBoardTileToSpecificRackCell(fromPos, targetRackCell) {
 
     // Get the tile data and remove from placedTiles
     const tileData = gameState.placedTiles.splice(tileIndex, 1)[0];
+
+    // Animate tile flying from board to specific rack cell (200ms)
+    await animateTileBoardToRack(fromCell, targetRackCell);
 
     // Clear board position
     gameState.board[fromPos.row][fromPos.col] = null;
@@ -3726,7 +4425,7 @@ function returnBoardTileToSpecificRackCell(fromPos, targetRackCell) {
     saveGameState();
 }
 
-function handleTileClick(e) {
+async function handleTileClick(e) {
     e.stopPropagation(); // Prevent event bubbling
 
     // Don't allow tile interactions after game ends
@@ -3759,14 +4458,14 @@ function handleTileClick(e) {
             // If the selected tile is from the rack, swap positions
             else if (!selectedTilePosition) {
                 console.log('Swapping tiles:', selectedTile, tile);
-                swapTilesInRack(selectedTile, tile);
+                await swapTilesInRack(selectedTile, tile);
                 selectedTile.classList.remove('selected');
                 selectedTile = null;
                 window.selectedTile = null;
             }
             // If selected tile is from board, swap board tile with this rack tile
             else {
-                swapRackAndBoardTile(tile, selectedTilePosition);
+                await swapRackAndBoardTile(tile, selectedTilePosition);
             }
         } else {
             // Select this tile
@@ -3801,14 +4500,14 @@ function handleTileClick(e) {
                 row: parseInt(parentCell.dataset.row),
                 col: parseInt(parentCell.dataset.col)
             };
-            swapRackAndBoardTile(selectedTile, boardPosition);
+            await swapRackAndBoardTile(selectedTile, boardPosition);
         } else if (selectedTile && selectedTilePosition) {
             // Another board tile is selected, swap the two board tiles
             const newPosition = {
                 row: parseInt(parentCell.dataset.row),
                 col: parseInt(parentCell.dataset.col)
             };
-            swapBoardTiles(selectedTilePosition, newPosition);
+            await swapBoardTiles(selectedTilePosition, newPosition);
         } else {
             // No tile selected, select this board tile
             selectedTile = tile;
@@ -3821,7 +4520,7 @@ function handleTileClick(e) {
     }
 }
 
-function handleBoardClick(e) {
+async function handleBoardClick(e) {
     // Don't allow board interactions after game ends
     if (gameState.isGameOver) return;
 
@@ -3837,15 +4536,15 @@ function handleBoardClick(e) {
     if (!cell.classList.contains('occupied') && selectedTile) {
         // If the selected tile is from the board, move it
         if (selectedTilePosition) {
-            moveTileBetweenBoardPositions(selectedTilePosition, cell);
+            await moveTileBetweenBoardPositions(selectedTilePosition, cell);
         } else {
             // Selected tile is from rack, place it on board
-            placeTile(cell, selectedTile);
+            await placeTile(cell, selectedTile);
         }
     }
 }
 
-function handleRackBoardClick(e) {
+async function handleRackBoardClick(e) {
     // Don't allow rack interactions after game ends
     if (gameState.isGameOver) return;
 
@@ -3861,15 +4560,15 @@ function handleRackBoardClick(e) {
     if (!cell.querySelector('.tile') && selectedTile) {
         if (selectedTilePosition) {
             // Board tile selected - move it to this specific rack cell
-            returnBoardTileToSpecificRackCell(selectedTilePosition, cell);
+            await returnBoardTileToSpecificRackCell(selectedTilePosition, cell);
         } else {
             // Rack tile selected - move it to this empty rack cell
-            moveRackTileToEmptyCell(selectedTile, cell);
+            await moveRackTileToEmptyCell(selectedTile, cell);
         }
     }
 }
 
-function moveTileBetweenBoardPositions(fromPos, toCell) {
+async function moveTileBetweenBoardPositions(fromPos, toCell) {
     const toRow = parseInt(toCell.dataset.row);
     const toCol = parseInt(toCell.dataset.col);
 
@@ -3888,6 +4587,14 @@ function moveTileBetweenBoardPositions(fromPos, toCell) {
         `.board-cell[data-row="${fromPos.row}"][data-col="${fromPos.col}"]`
     );
     const tile = fromCell.querySelector('.tile');
+
+    // Animate tile flying to new position
+    await animateTileBoardToBoard(tile, fromCell, toCell);
+
+    // Reset tile visibility after animation (display was set to 'none' by animateTileMovement)
+    tile.style.display = '';
+    tile.style.visibility = '';
+    tile.style.opacity = '';
 
     fromCell.innerHTML = '';
     fromCell.classList.remove('occupied', 'placed-this-turn');
@@ -3924,7 +4631,7 @@ function moveTileBetweenBoardPositions(fromPos, toCell) {
     saveGameState();
 }
 
-function returnBoardTileToRack(fromPos) {
+async function returnBoardTileToRack(fromPos) {
     const fromCell = document.querySelector(
         `.board-cell[data-row="${fromPos.row}"][data-col="${fromPos.col}"]`
     );
@@ -3947,6 +4654,14 @@ function returnBoardTileToRack(fromPos) {
     // Get the tile element
     const tile = fromCell.querySelector('.tile');
     if (!tile) return;
+
+    // Find target rack cell BEFORE animation (first empty cell)
+    const rackBoard = document.getElementById('tile-rack-board');
+    const targetRackCell = Array.from(rackBoard.querySelectorAll('.rack-cell'))
+        .find(cell => !cell.querySelector('.tile'));
+
+    // Animate tile flying from board to rack (200ms)
+    await animateTileBoardToRack(fromCell, targetRackCell);
 
     // Clear board position
     gameState.board[fromPos.row][fromPos.col] = null;
@@ -3972,11 +4687,8 @@ function returnBoardTileToRack(fromPos) {
 
     // Create new tile element for rack - blanks show as empty tiles, preserve buffed status
     const newTile = createTileElement(rackLetter, gameState.rackTiles.length - 1, tileData.isBlank, tileData.buffed || false, tileData.bonus || 0);
-    const rackBoard = document.getElementById('tile-rack-board');
-    const firstEmptyCell = Array.from(rackBoard.querySelectorAll('.rack-cell'))
-        .find(cell => !cell.querySelector('.tile'));
-    if (firstEmptyCell) {
-        firstEmptyCell.appendChild(newTile);
+    if (targetRackCell) {
+        targetRackCell.appendChild(newTile);
     }
 
     // Update preview and save state
@@ -4045,6 +4757,9 @@ function returnTileToRack(cell, addToRack = true) {
         if (firstEmptyCell) {
             firstEmptyCell.appendChild(newTile);
         }
+
+        // Update rackTiles array (RogueLetters uses tile objects)
+        gameState.rackTiles.push({ letter: rackLetter, buffed: false, bonus: 0 });
     }
 
     // Save game state and check validity
@@ -4101,7 +4816,7 @@ function checkConnectivity() {
     return false;
 }
 
-function placeTile(cell, tile) {
+async function placeTile(cell, tile) {
     const row = parseInt(cell.dataset.row);
     const col = parseInt(cell.dataset.col);
     const letter = tile.dataset.letter || tile.textContent?.charAt(0); // Handle both rack and board tiles
@@ -4123,13 +4838,24 @@ function placeTile(cell, tile) {
         return;  // Modal will handle the actual placement
     }
 
+    // Get buffed status from source tile (before any DOM changes)
+    const isBuffed = tile.dataset.buffed === 'true';
+    const bonus = parseInt(tile.dataset.bonus) || 0;
+    const isFromRack = tile.parentElement?.classList.contains('rack-cell');
+
+    // Animate tile flying from rack to board (if from rack)
+    if (isFromRack) {
+        await animateTileRackToBoard(tile, cell);
+    }
+
     // Remove tile from its current location
-    if (tile.parentElement?.classList.contains('rack-cell')) {
+    if (isFromRack) {
         // Get the letter before removing
         const removedLetter = tile.dataset.letter;
 
-        // Reset opacity before removing
+        // Reset opacity and display before removing
         tile.style.opacity = '';
+        tile.style.display = '';
         tile.remove();
 
         // Remove from rackTiles array (find by letter since rackTiles stores objects)
@@ -4143,10 +4869,6 @@ function placeTile(cell, tile) {
 
     // Place on board
     gameState.board[row][col] = letter;
-
-    // Get buffed status from source tile
-    const isBuffed = tile.dataset.buffed === 'true';
-    const bonus = parseInt(tile.dataset.bonus) || 0;
 
     // Create tile element for the board
     const tileDiv = document.createElement('div');
@@ -4778,17 +5500,54 @@ function shuffleRack() {
     });
 }
 
-function recallTiles() {
+async function recallTiles() {
     // Don't allow recalling tiles after game ends
     if (gameState.isGameOver) return;
+
+    // Nothing to recall
+    if (gameState.placedTiles.length === 0) return;
 
     // Track tiles recalled
     Analytics.ui.tilesRecalled(gameState.currentTurn, gameState.placedTiles.length);
 
-    gameState.placedTiles.forEach(({ row, col, letter, isBlank, buffed, bonus }) => {
+    // Find empty rack cells for targets
+    const rackBoard = document.getElementById('tile-rack-board');
+    const emptyCells = Array.from(rackBoard.querySelectorAll('.rack-cell'))
+        .filter(cell => !cell.querySelector('.tile'));
+
+    // Gather all tiles to animate
+    const tilesToAnimate = [];
+    gameState.placedTiles.forEach(({ row, col, letter, isBlank, buffed, bonus }, index) => {
+        const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+        const tile = cell?.querySelector('.tile');
+        if (tile && emptyCells[index]) {
+            tilesToAnimate.push({
+                tile,
+                cell,
+                targetCell: emptyCells[index],
+                row, col, letter, isBlank, buffed, bonus
+            });
+        }
+    });
+
+    // Animate all tiles flying back to rack simultaneously
+    if (tilesToAnimate.length > 0) {
+        const tiles = tilesToAnimate.map(t => t.tile);
+        const getTargetRect = (tile, index) => {
+            return tilesToAnimate[index].targetCell.getBoundingClientRect();
+        };
+
+        await animateTileMovement(tiles, getTargetRect, {
+            duration: 200,
+            stagger: 29,  // 200ms / 7 for card-dealing effect
+            cleanup: false
+        });
+    }
+
+    // Now do the actual DOM manipulation
+    tilesToAnimate.forEach(({ tile, cell, targetCell, row, col, letter, isBlank, buffed, bonus }) => {
         // Clear from board
         gameState.board[row][col] = null;
-        const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
         cell.innerHTML = '';
         cell.classList.remove('occupied', 'placed-this-turn');
 
@@ -4836,13 +5595,8 @@ function recallTiles() {
         // Add event listener
         newTile.addEventListener('click', handleTileClick);
 
-        // Return to rack
-        const rackBoard = document.getElementById('tile-rack-board');
-        const firstEmptyCell = Array.from(rackBoard.querySelectorAll('.rack-cell'))
-            .find(cell => !cell.querySelector('.tile'));
-        if (firstEmptyCell) {
-            firstEmptyCell.appendChild(newTile);
-        }
+        // Place in rack
+        targetCell.appendChild(newTile);
     });
 
     gameState.placedTiles = [];
@@ -5075,14 +5829,16 @@ function nextTurn() {
 
             // Track NEW tiles drawn from bag (skip the kept rack tiles)
             // The server returns rackTiles + newTiles, so slice off the rack portion
-            const newTiles = data.tiles.slice(gameState.rackTiles.length);
+            const existingTileCount = gameState.rackTiles.length;
+            const newTiles = data.tiles.slice(existingTileCount);
             gameState.tilesDrawnFromBag.push(...newTiles);
 
             // Save original rack at turn START (before shuffle/placement)
             // This prevents corruption when user shuffles after placing tiles
             gameState.turnStartRack = [...data.tiles];
 
-            displayTiles(data.tiles);
+            // Animate: existing tiles slide left, new tiles fly from bag
+            displayTilesAnimated(data.tiles, existingTileCount);
             saveGameState();
         })
         .catch(error => {

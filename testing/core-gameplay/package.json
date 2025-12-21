@@ -1,17 +1,23 @@
 {
-  "name": "wikiletters-core-gameplay-tests",
+  "name": "rogueletters-gameplay-tests",
   "version": "1.0.0",
-  "description": "Core gameplay validation test suite for WikiLetters",
+  "description": "Gameplay validation test suites for RogueLetters",
   "scripts": {
-    "test": "npx playwright test core-gameplay-suite.spec.js",
+    "test": "npx playwright test rogueletters-gameplay.spec.js run-progression.spec.js",
     "test:all": "npx playwright test",
-    "test:gameplay": "npx playwright test core-gameplay-suite.spec.js",
+    "test:rogue": "npx playwright test rogueletters-gameplay.spec.js",
+    "test:run": "npx playwright test run-progression.spec.js",
+    "test:wiki": "npx playwright test core-gameplay-suite.spec.js",
     "test:ui": "npx playwright test ui-interactions-suite.spec.js",
     "test:headed": "npx playwright test --headed",
     "test:debug": "npx playwright test --debug",
     "test:ui-mode": "npx playwright test --ui",
     "extract": "node tools/extract-scenario.js",
-    "extract:help": "node tools/extract-scenario.js --help"
+    "extract:help": "node tools/extract-scenario.js --help",
+    "extract:rogue": "node tools/extract-rogueletters-scenario.js",
+    "extract:rogue:help": "node tools/extract-rogueletters-scenario.js --help",
+    "extract:rogue:snippet": "node tools/extract-rogueletters-scenario.js --snippet",
+    "generate": "node tools/generate-scenario.js"
   },
   "keywords": [
     "wikiletters",
