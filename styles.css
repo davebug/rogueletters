@@ -33,6 +33,11 @@
     --text-color: #e8e8e8;        /* Light text */
     --text-muted: #9ca3af;        /* Muted text */
     --text-accent: #dc2626;       /* Red accent text */
+
+    /* Cell sizing - shared by board and rack */
+    --cell-size: calc((100vw - 10px) / 9);
+    --max-cell-size: 40px;
+    --actual-cell-size: min(var(--cell-size), var(--max-cell-size));
 }
 
 * {
