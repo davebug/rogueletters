@@ -2439,23 +2439,28 @@ main {
     z-index: -1;
 }
 
-/* Coin tile indicator - green circle with $1 */
+/* Coin tile indicator - green circle with $1 (circle behind, text stays in place) */
 .tile-coin-indicator {
     position: absolute;
     top: 1px;
-    right: 1px;
+    right: 3px;  /* 2px left of edge for better visual balance */
     font-size: 7px;
     font-weight: 700;
     color: #fff;
+    z-index: 1;
+}
+
+.tile-coin-indicator::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 11px;
+    height: 11px;
     background: var(--success-color);
     border-radius: 50%;
-    width: 12px;
-    height: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    z-index: -1;
 }
 
 .shop-tile-buff-label {
@@ -2700,23 +2705,28 @@ main {
     z-index: -1;
 }
 
-/* Coin bag tiles - green circle indicator */
+/* Coin bag tiles - green circle indicator (circle behind, text stays in place) */
 .bag-mini-tile .bag-coin-indicator {
     position: absolute;
     top: -1px;
-    right: -1px;
+    right: 1px;  /* 2px left of edge */
     font-size: 5px;
     font-weight: 700;
     color: #fff;
+    z-index: 1;
+}
+
+.bag-mini-tile .bag-coin-indicator::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
     background: var(--success-color);
     border-radius: 50%;
-    width: 9px;
-    height: 9px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    box-shadow: 0 1px 1px rgba(0,0,0,0.3);
+    z-index: -1;
 }
 
 .bag-tiles-grid.replacement-mode {
