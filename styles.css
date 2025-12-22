@@ -477,8 +477,8 @@ main {
             rgba(255, 255, 255, 0.1) 50%,
             rgba(0, 0, 0, 0.05) 100%
         );
-    border: 1px solid var(--tile-border);
-    border-radius: 3px;
+    border: 2px solid var(--tile-border);
+    border-radius: 4px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -576,6 +576,7 @@ main {
 #tile-rack-board .board-cell {
     border: none;
     background: transparent;
+    padding: 1px;  /* Creates small gap between rack tiles */
 }
 
 .tile-rack {
