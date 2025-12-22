@@ -4,6 +4,143 @@
 const BASE_PATH = window.location.pathname.includes('/letters') ? '/letters' : '';
 const API_BASE = `${BASE_PATH}/cgi-bin`;
 
+// ============================================================================
+// TILE EFFECTS SYSTEM
+// ============================================================================
+// Extensible system for tile modifiers (buffed, coin, future types)
+// Each effect can have: border color, indicator, and special behaviors
+// Tiles can have multiple effects; border priority determines which border shows
+
+const TILE_EFFECTS = {
+    buffed: {
+        id: 'buffed',
+        cssClass: 'buffed-tile',
+        borderPriority: 2,           // Higher = wins border when multiple effects
+        datasetKey: 'buffed',        // data-buffed attribute
+        // Buffed tiles show score in gold circle (handled via CSS)
+        // No separate indicator element needed
+        indicator: null,
+    },
+    coin: {
+        id: 'coin',
+        cssClass: 'coin-tile',
+        borderPriority: 1,
+        datasetKey: 'coinTile',      // data-coin-tile attribute
+        indicator: {
+            text: '$1',
+            className: 'tile-coin-indicator',
+            position: 'top-right',   // For future: different effects use different positions
+        },
+    },
+    // Future effects can be added here:
+    // double: { id: 'double', cssClass: 'double-tile', borderPriority: 3, indicator: { text: '2x', position: 'top-left' } },
+    // wild: { id: 'wild', cssClass: 'wild-tile', borderPriority: 4, indicator: { text: '★', position: 'bottom-left' } },
+};
+
+// Get active effects from tile data (works with current data model)
+function getActiveEffects(tileData) {
+    if (!tileData || typeof tileData !== 'object') return [];
+    const effects = [];
+    if (tileData.buffed) effects.push('buffed');
+    if (tileData.coinTile) effects.push('coin');
+    return effects;
+}
+
+// Get effect data from tile data (for effect-specific properties)
+function getEffectData(tileData) {
+    if (!tileData || typeof tileData !== 'object') return {};
+    return {
+        buffed: tileData.buffed ? { bonus: tileData.bonus || 1 } : null,
+        coin: tileData.coinTile ? { claimed: tileData.coinClaimed || false } : null,
+    };
+}
+
+// Apply effect styling to a tile DOM element
+function applyTileEffects(tileElement, tileData) {
+    // Clear existing effect styling first
+    clearTileEffects(tileElement);
+
+    const activeEffects = getActiveEffects(tileData);
+    if (activeEffects.length === 0) return;
+
+    // Determine which effect gets the border (highest priority wins)
+    let borderEffectId = null;
+    let maxPriority = -1;
+    for (const effectId of activeEffects) {
+        const effect = TILE_EFFECTS[effectId];
+        if (effect && effect.borderPriority > maxPriority) {
+            maxPriority = effect.borderPriority;
+            borderEffectId = effectId;
+        }
+    }
+
+    // Apply the winning border class
+    if (borderEffectId) {
+        tileElement.classList.add(TILE_EFFECTS[borderEffectId].cssClass);
+    }
+
+    // Apply each effect's dataset and indicator
+    for (const effectId of activeEffects) {
+        const effect = TILE_EFFECTS[effectId];
+        if (!effect) continue;
+
+        // Set dataset attribute
+        tileElement.dataset[effect.datasetKey] = 'true';
+
+        // Add indicator element if defined
+        if (effect.indicator) {
+            const indicator = document.createElement('span');
+            indicator.className = effect.indicator.className;
+            indicator.textContent = effect.indicator.text;
+            tileElement.appendChild(indicator);
+        }
+    }
+
+    // Set bonus for buffed tiles
+    if (tileData.buffed) {
+        tileElement.dataset.bonus = tileData.bonus || 1;
+    }
+}
+
+// Clear all effect styling from a tile element
+function clearTileEffects(tileElement) {
+    for (const [effectId, effect] of Object.entries(TILE_EFFECTS)) {
+        tileElement.classList.remove(effect.cssClass);
+        tileElement.dataset[effect.datasetKey] = 'false';
+        if (effect.indicator) {
+            const indicator = tileElement.querySelector(`.${effect.indicator.className}`);
+            if (indicator) indicator.remove();
+        }
+    }
+    tileElement.dataset.bonus = '0';
+}
+
+// Get tile effect data from DOM element (reverse of applyTileEffects)
+function getTileEffectsFromDom(tileElement) {
+    return {
+        buffed: tileElement.dataset.buffed === 'true',
+        bonus: parseInt(tileElement.dataset.bonus) || 0,
+        coinTile: tileElement.dataset.coinTile === 'true',
+    };
+}
+
+// Check if a tile has a specific effect
+function hasTileEffect(tileElement, effectId) {
+    const effect = TILE_EFFECTS[effectId];
+    if (!effect) return false;
+    return tileElement.dataset[effect.datasetKey] === 'true';
+}
+
+// Transfer effects from one tile element to another
+function transferTileEffects(fromTile, toTile) {
+    const effectData = getTileEffectsFromDom(fromTile);
+    applyTileEffects(toTile, effectData);
+}
+
+// ============================================================================
+// END TILE EFFECTS SYSTEM
+// ============================================================================
+
 // Game state
 let gameState = {
     board: [],
@@ -1190,14 +1327,9 @@ function renderExchangeRack() {
         const tileEl = document.createElement('div');
         tileEl.className = 'tile';
         if (isBlank) tileEl.classList.add('blank-tile');
-        if (isBuffed) tileEl.classList.add('buffed-tile');
-        if (isCoinTile) tileEl.classList.add('coin-tile');
         tileEl.dataset.letter = letter;
         tileEl.dataset.isBlank = isBlank;
         tileEl.dataset.index = index;
-        tileEl.dataset.buffed = isBuffed;
-        tileEl.dataset.bonus = bonus;
-        tileEl.dataset.coinTile = isCoinTile;
 
         const letterSpan = document.createElement('span');
         letterSpan.className = 'tile-letter';
@@ -1211,13 +1343,8 @@ function renderExchangeRack() {
         tileEl.appendChild(letterSpan);
         tileEl.appendChild(scoreSpan);
 
-        // Add $1 indicator for coin tiles (buffed tiles show score in gold circle via CSS)
-        if (isCoinTile) {
-            const coinIndicator = document.createElement('span');
-            coinIndicator.className = 'tile-coin-indicator';
-            coinIndicator.textContent = '$1';
-            tileEl.appendChild(coinIndicator);
-        }
+        // Apply tile effects using centralized system
+        applyTileEffects(tileEl, { buffed: isBuffed, bonus, coinTile: isCoinTile });
 
         tileEl.addEventListener('click', () => toggleTileForExchange(tileEl));
 
@@ -3054,22 +3181,9 @@ function createTileElement(letter, index, isBlank = false, buffed = false, bonus
         tile.dataset.isBlank = 'true';
     }
 
-    // Set buffed status (always set for consistency)
-    tile.dataset.buffed = buffed ? 'true' : 'false';
-    tile.dataset.bonus = bonus;
-    if (buffed) {
-        tile.classList.add('buffed-tile');
-    }
-
-    // Set coin tile status
-    tile.dataset.coinTile = coinTile ? 'true' : 'false';
-    if (coinTile) {
-        tile.classList.add('coin-tile');
-    }
-
+    // Create letter span
     const letterSpan = document.createElement('span');
     letterSpan.className = 'tile-letter';
-    // Blank tiles in rack show nothing, assigned blanks show letter at 70% opacity
     if (tileIsBlank && letter === '_') {
         letterSpan.textContent = '';  // Empty in rack
     } else if (tileIsBlank) {
@@ -3079,13 +3193,12 @@ function createTileElement(letter, index, isBlank = false, buffed = false, bonus
         letterSpan.textContent = letter;
     }
 
+    // Create score span
     const scoreSpan = document.createElement('span');
     scoreSpan.className = 'tile-score';
-    // Blank tiles show no score (empty like real Scrabble)
     if (tileIsBlank) {
         scoreSpan.textContent = '';
     } else {
-        // Buffed tiles show their boosted score, coin tiles show base score
         const baseScore = TILE_SCORES[letter] || 0;
         scoreSpan.textContent = baseScore + bonus;
     }
@@ -3093,13 +3206,8 @@ function createTileElement(letter, index, isBlank = false, buffed = false, bonus
     tile.appendChild(letterSpan);
     tile.appendChild(scoreSpan);
 
-    // Add $1 indicator for coin tiles (buffed tiles show score in gold circle via CSS)
-    if (coinTile) {
-        const coinIndicator = document.createElement('span');
-        coinIndicator.className = 'tile-coin-indicator';
-        coinIndicator.textContent = '$1';
-        tile.appendChild(coinIndicator);
-    }
+    // Apply tile effects (buffed, coin, etc.) using centralized system
+    applyTileEffects(tile, { buffed, bonus, coinTile });
 
     // Add click event for selection
     tile.addEventListener('click', handleTileClick);
@@ -3515,8 +3623,6 @@ function animateTileFromBagToRack(letter, rackIndex, isBlank = false, buffed = f
     const tile = document.createElement('div');
     tile.className = 'tile';
     if (isBlank) tile.classList.add('blank-tile');
-    if (buffed) tile.classList.add('buffed-tile');
-    if (coinTile) tile.classList.add('coin-tile');
     tile.style.position = 'fixed';
     tile.style.width = tileWidth + 'px';
     tile.style.height = tileHeight + 'px';
@@ -3531,12 +3637,14 @@ function animateTileFromBagToRack(letter, rackIndex, isBlank = false, buffed = f
     const displayLetter = (letter === '_' || isBlank) ? '' : letter;
     const baseScore = (letter === '_' || isBlank) ? 0 : (TILE_SCORES[letter] || 0);
     const score = (letter === '_' || isBlank) ? '' : (baseScore + bonus);
-    const coinIndicator = coinTile ? '<span class="tile-coin-indicator">$1</span>' : '';
     tile.innerHTML = `
         <span class="tile-letter">${displayLetter}</span>
         <span class="tile-score">${score}</span>
-        ${coinIndicator}
     `;
+
+    // Apply tile effects using centralized system
+    applyTileEffects(tile, { buffed, bonus, coinTile });
+
     document.body.appendChild(tile);
 
     // Pulse bag icon
@@ -4125,17 +4233,8 @@ async function placeBlankTile(cell, tile, assignedLetter) {
     // Create tile element for the board
     const tileDiv = document.createElement('div');
     tileDiv.className = 'tile placed placed-this-turn blank-tile';
-    if (isBuffed) {
-        tileDiv.classList.add('buffed-tile');
-    }
-    if (isCoinTile) {
-        tileDiv.classList.add('coin-tile');
-    }
     tileDiv.dataset.letter = assignedLetter;
     tileDiv.dataset.isBlank = 'true';
-    tileDiv.dataset.buffed = isBuffed;
-    tileDiv.dataset.bonus = bonus;
-    tileDiv.dataset.coinTile = isCoinTile;
     tileDiv.dataset.coinClaimed = coinClaimed;
 
     const letterSpan = document.createElement('span');
@@ -4150,13 +4249,8 @@ async function placeBlankTile(cell, tile, assignedLetter) {
     tileDiv.appendChild(letterSpan);
     tileDiv.appendChild(scoreSpan);
 
-    // Add $1 indicator for coin tiles (buffed tiles show score in gold circle via CSS)
-    if (isCoinTile) {
-        const coinIndicator = document.createElement('span');
-        coinIndicator.className = 'tile-coin-indicator';
-        coinIndicator.textContent = '$1';
-        tileDiv.appendChild(coinIndicator);
-    }
+    // Apply tile effects using centralized system
+    applyTileEffects(tileDiv, { buffed: isBuffed, bonus, coinTile: isCoinTile });
 
     // Add click handler for board tiles
     tileDiv.addEventListener('click', handleTileClick);
@@ -4351,35 +4445,8 @@ async function swapRackAndBoardTile(rackTile, boardPosition) {
     boardLetterSpan.classList.remove('blank-letter');
     boardTile.querySelector('.tile-value').textContent = TILE_SCORES[rackLetter] || 0;
 
-    // Transfer buffed status to board tile
-    if (rackIsBuffed) {
-        boardTile.classList.add('buffed-tile');
-        boardTile.dataset.buffed = 'true';
-        boardTile.dataset.bonus = rackBonus;
-    } else {
-        boardTile.classList.remove('buffed-tile');
-        boardTile.dataset.buffed = 'false';
-        boardTile.dataset.bonus = '0';
-    }
-
-    // Transfer coin tile status to board tile
-    const existingBoardCoinIndicator = boardTile.querySelector('.tile-coin-indicator');
-    if (rackIsCoinTile) {
-        boardTile.classList.add('coin-tile');
-        boardTile.dataset.coinTile = 'true';
-        if (!existingBoardCoinIndicator) {
-            const coinIndicator = document.createElement('span');
-            coinIndicator.className = 'tile-coin-indicator';
-            coinIndicator.textContent = '$1';
-            boardTile.appendChild(coinIndicator);
-        }
-    } else {
-        boardTile.classList.remove('coin-tile');
-        boardTile.dataset.coinTile = 'false';
-        if (existingBoardCoinIndicator) {
-            existingBoardCoinIndicator.remove();
-        }
-    }
+    // Transfer rack tile's effects to board tile using centralized system
+    applyTileEffects(boardTile, { buffed: rackIsBuffed, bonus: rackBonus, coinTile: rackIsCoinTile });
 
     // Update rack tile DOM - transfer board tile's properties
     if (boardIsBlank) {
@@ -4396,35 +4463,8 @@ async function swapRackAndBoardTile(rackTile, boardPosition) {
         rackTile.querySelector('.tile-score').textContent = TILE_SCORES[boardLetter] || 0;
     }
 
-    // Transfer board's buffed status to rack tile
-    if (boardIsBuffed) {
-        rackTile.classList.add('buffed-tile');
-        rackTile.dataset.buffed = 'true';
-        rackTile.dataset.bonus = boardBonus;
-    } else {
-        rackTile.classList.remove('buffed-tile');
-        rackTile.dataset.buffed = 'false';
-        rackTile.dataset.bonus = '0';
-    }
-
-    // Transfer board's coin tile status to rack tile
-    const existingRackCoinIndicator = rackTile.querySelector('.tile-coin-indicator');
-    if (boardIsCoinTile) {
-        rackTile.classList.add('coin-tile');
-        rackTile.dataset.coinTile = 'true';
-        if (!existingRackCoinIndicator) {
-            const coinIndicator = document.createElement('span');
-            coinIndicator.className = 'tile-coin-indicator';
-            coinIndicator.textContent = '$1';
-            rackTile.appendChild(coinIndicator);
-        }
-    } else {
-        rackTile.classList.remove('coin-tile');
-        rackTile.dataset.coinTile = 'false';
-        if (existingRackCoinIndicator) {
-            existingRackCoinIndicator.remove();
-        }
-    }
+    // Transfer board tile's effects to rack tile using centralized system
+    applyTileEffects(rackTile, { buffed: boardIsBuffed, bonus: boardBonus, coinTile: boardIsCoinTile })
 
     // Rebuild rackTiles array from DOM (preserving buffed/coin info)
     const rackBoard = document.getElementById('tile-rack-board');
@@ -4549,35 +4589,8 @@ async function swapBoardTiles(position1, position2) {
             letterSpan.classList.remove('blank-letter');
         }
 
-        // Buffed status
-        if (isBuffed) {
-            tile.classList.add('buffed-tile');
-            tile.dataset.buffed = 'true';
-            tile.dataset.bonus = bonus;
-        } else {
-            tile.classList.remove('buffed-tile');
-            tile.dataset.buffed = 'false';
-            tile.dataset.bonus = '0';
-        }
-
-        // Coin tile status
-        const existingCoinIndicator = tile.querySelector('.tile-coin-indicator');
-        if (isCoinTile) {
-            tile.classList.add('coin-tile');
-            tile.dataset.coinTile = 'true';
-            if (!existingCoinIndicator) {
-                const coinIndicator = document.createElement('span');
-                coinIndicator.className = 'tile-coin-indicator';
-                coinIndicator.textContent = '$1';
-                tile.appendChild(coinIndicator);
-            }
-        } else {
-            tile.classList.remove('coin-tile');
-            tile.dataset.coinTile = 'false';
-            if (existingCoinIndicator) {
-                existingCoinIndicator.remove();
-            }
-        }
+        // Apply tile effects using centralized system
+        applyTileEffects(tile, { buffed: isBuffed, bonus, coinTile: isCoinTile });
 
         // Update score (buffed tiles show boosted score)
         const baseScore = TILE_SCORES[letter] || 0;
@@ -4998,7 +5011,7 @@ function returnTileToRack(cell, addToRack = true) {
 
     if (!letter) return;
 
-    // Find tile data before removing (to check if blank, buffed, coin)
+    // Find tile data before removing (to preserve effects)
     const tileData = gameState.placedTiles.find(t => t.row === row && t.col === col);
     const isBlank = tileData?.isBlank || false;
     const isBuffed = tileData?.buffed || false;
@@ -5022,47 +5035,8 @@ function returnTileToRack(cell, addToRack = true) {
         // Blanks revert to '_' when returned to rack
         const rackLetter = isBlank ? '_' : letter;
 
-        // Create new tile for rack (preserving buffed/coin status)
-        const newTile = document.createElement('div');
-        newTile.className = 'tile';
-        if (isBlank) {
-            newTile.classList.add('blank-tile');
-            newTile.dataset.isBlank = 'true';
-        }
-        if (isBuffed) {
-            newTile.classList.add('buffed-tile');
-            newTile.dataset.buffed = 'true';
-            newTile.dataset.bonus = bonus;
-        }
-        if (isCoinTile) {
-            newTile.classList.add('coin-tile');
-            newTile.dataset.coinTile = 'true';
-        }
-        newTile.dataset.letter = rackLetter;
-
-        const letterSpan = document.createElement('span');
-        letterSpan.className = 'tile-letter';
-        letterSpan.textContent = isBlank ? '' : letter;  // Blank shows empty
-
-        const scoreSpan = document.createElement('span');
-        scoreSpan.className = 'tile-score';
-        // Buffed tiles show boosted score
-        const baseScore = TILE_SCORES[letter] || 0;
-        scoreSpan.textContent = isBlank ? '' : (baseScore + bonus);
-
-        newTile.appendChild(letterSpan);
-        newTile.appendChild(scoreSpan);
-
-        // Add $1 indicator for coin tiles
-        if (isCoinTile) {
-            const coinIndicator = document.createElement('span');
-            coinIndicator.className = 'tile-coin-indicator';
-            coinIndicator.textContent = '$1';
-            newTile.appendChild(coinIndicator);
-        }
-
-        // Add event listeners
-        newTile.addEventListener('click', handleTileClick);
+        // Create new tile using centralized function (handles effects automatically)
+        const newTile = createTileElement(rackLetter, gameState.rackTiles.length, isBlank, isBuffed, bonus, isCoinTile);
 
         // Add to rack
         const rackBoard = document.getElementById('tile-rack-board');
@@ -5072,7 +5046,7 @@ function returnTileToRack(cell, addToRack = true) {
             firstEmptyCell.appendChild(newTile);
         }
 
-        // Update rackTiles array (RogueLetters uses tile objects, preserve buffed/coin status)
+        // Update rackTiles array (preserve effects)
         gameState.rackTiles.push({ letter: rackLetter, buffed: isBuffed, bonus: bonus, coinTile: isCoinTile });
     }
 
@@ -5189,17 +5163,9 @@ async function placeTile(cell, tile) {
     // Create tile element for the board
     const tileDiv = document.createElement('div');
     tileDiv.className = 'tile placed placed-this-turn';
-    if (isBuffed) {
-        tileDiv.classList.add('buffed-tile');
-    }
-    if (isCoinTile) {
-        tileDiv.classList.add('coin-tile');
-    }
     tileDiv.dataset.letter = letter;
-    tileDiv.dataset.buffed = isBuffed;
-    tileDiv.dataset.bonus = bonus;
-    tileDiv.dataset.coinTile = isCoinTile;
     tileDiv.dataset.coinClaimed = coinClaimed;
+
     const letterSpan = document.createElement('span');
     letterSpan.className = 'tile-letter';
     letterSpan.textContent = letter;
@@ -5211,13 +5177,8 @@ async function placeTile(cell, tile) {
     tileDiv.appendChild(letterSpan);
     tileDiv.appendChild(scoreSpan);
 
-    // Add $1 indicator for coin tiles (buffed tiles show score in gold circle via CSS)
-    if (isCoinTile) {
-        const coinIndicator = document.createElement('span');
-        coinIndicator.className = 'tile-coin-indicator';
-        coinIndicator.textContent = '$1';
-        tileDiv.appendChild(coinIndicator);
-    }
+    // Apply tile effects using centralized system
+    applyTileEffects(tileDiv, { buffed: isBuffed, bonus, coinTile: isCoinTile });
 
     // Add click handler for board tiles
     tileDiv.addEventListener('click', handleTileClick);
@@ -5895,48 +5856,8 @@ async function recallTiles() {
             coinTile: coinTile || false
         });
 
-        // Create new tile for rack
-        const newTile = document.createElement('div');
-        newTile.className = 'tile';
-        if (buffed) {
-            newTile.classList.add('buffed-tile');
-        }
-        if (coinTile) {
-            newTile.classList.add('coin-tile');
-        }
-        newTile.dataset.letter = rackLetter;
-        newTile.dataset.buffed = buffed || false;
-        newTile.dataset.bonus = bonus || 0;
-        newTile.dataset.coinTile = coinTile || false;
-
-        // Handle blank tile display in rack
-        if (isBlank) {
-            newTile.classList.add('blank-tile');
-            newTile.dataset.isBlank = 'true';
-        }
-
-        const letterSpan = document.createElement('span');
-        letterSpan.className = 'tile-letter';
-        letterSpan.textContent = isBlank ? '' : rackLetter;  // Empty for blanks in rack
-
-        const scoreSpan = document.createElement('span');
-        scoreSpan.className = 'tile-value';
-        const baseScore = isBlank ? 0 : (TILE_SCORES[rackLetter] || 0);
-        scoreSpan.textContent = isBlank ? '' : (baseScore + (bonus || 0));
-
-        newTile.appendChild(letterSpan);
-        newTile.appendChild(scoreSpan);
-
-        // Add $1 indicator for coin tiles (buffed tiles show score in gold circle via CSS)
-        if (coinTile) {
-            const coinIndicator = document.createElement('span');
-            coinIndicator.className = 'tile-coin-indicator';
-            coinIndicator.textContent = '$1';
-            newTile.appendChild(coinIndicator);
-        }
-
-        // Add event listener
-        newTile.addEventListener('click', handleTileClick);
+        // Create new tile for rack using centralized function
+        const newTile = createTileElement(rackLetter, gameState.rackTiles.length - 1, isBlank, buffed || false, bonus || 0, coinTile || false);
 
         // Place in rack
         targetCell.appendChild(newTile);
@@ -7675,7 +7596,7 @@ function restoreBoard() {
         }
     }
 
-    // Restore placed tiles for current turn (includes buffed indicator)
+    // Restore placed tiles for current turn (includes effect indicators)
     if (gameState.placedTiles && gameState.placedTiles.length > 0) {
         gameState.placedTiles.forEach(({ row, col, coinTile, coinClaimed, buffed, bonus }) => {
             const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
@@ -7684,25 +7605,9 @@ function restoreBoard() {
                 const tile = cell.querySelector('.tile');
                 if (tile) {
                     tile.classList.add('placed-this-turn');
-                    // Restore coin tile styling if applicable
-                    if (coinTile) {
-                        tile.classList.add('coin-tile');
-                        tile.dataset.coinTile = 'true';
-                        tile.dataset.coinClaimed = coinClaimed ? 'true' : 'false';
-                        // Add $1 indicator if not already present
-                        if (!tile.querySelector('.tile-coin-indicator')) {
-                            const coinIndicator = document.createElement('span');
-                            coinIndicator.className = 'tile-coin-indicator';
-                            coinIndicator.textContent = '$1';
-                            tile.appendChild(coinIndicator);
-                        }
-                    }
-                    // Restore buffed tile styling if applicable (score shown in gold circle via CSS)
-                    if (buffed) {
-                        tile.classList.add('buffed-tile');
-                        tile.dataset.buffed = 'true';
-                        tile.dataset.bonus = bonus || 0;
-                    }
+                    tile.dataset.coinClaimed = coinClaimed ? 'true' : 'false';
+                    // Apply tile effects using centralized system
+                    applyTileEffects(tile, { buffed, bonus: bonus || 0, coinTile });
                 }
             }
         });
