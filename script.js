@@ -4876,9 +4876,12 @@ function returnTileToRack(cell, addToRack = true) {
 
     if (!letter) return;
 
-    // Find tile data before removing (to check if blank)
+    // Find tile data before removing (to check if blank, buffed, coin)
     const tileData = gameState.placedTiles.find(t => t.row === row && t.col === col);
     const isBlank = tileData?.isBlank || false;
+    const isBuffed = tileData?.buffed || false;
+    const bonus = tileData?.bonus || 0;
+    const isCoinTile = tileData?.coinTile || false;
 
     // Clear from board
     gameState.board[row][col] = null;
@@ -4897,12 +4900,21 @@ function returnTileToRack(cell, addToRack = true) {
         // Blanks revert to '_' when returned to rack
         const rackLetter = isBlank ? '_' : letter;
 
-        // Create new tile for rack
+        // Create new tile for rack (preserving buffed/coin status)
         const newTile = document.createElement('div');
         newTile.className = 'tile';
         if (isBlank) {
             newTile.classList.add('blank-tile');
             newTile.dataset.isBlank = 'true';
+        }
+        if (isBuffed) {
+            newTile.classList.add('buffed-tile');
+            newTile.dataset.buffed = 'true';
+            newTile.dataset.bonus = bonus;
+        }
+        if (isCoinTile) {
+            newTile.classList.add('coin-tile');
+            newTile.dataset.coinTile = 'true';
         }
         newTile.dataset.letter = rackLetter;
 
@@ -4912,10 +4924,20 @@ function returnTileToRack(cell, addToRack = true) {
 
         const scoreSpan = document.createElement('span');
         scoreSpan.className = 'tile-score';
-        scoreSpan.textContent = isBlank ? '' : (TILE_SCORES[letter] || 0);
+        // Buffed tiles show boosted score
+        const baseScore = TILE_SCORES[letter] || 0;
+        scoreSpan.textContent = isBlank ? '' : (baseScore + bonus);
 
         newTile.appendChild(letterSpan);
         newTile.appendChild(scoreSpan);
+
+        // Add $1 indicator for coin tiles
+        if (isCoinTile) {
+            const coinIndicator = document.createElement('span');
+            coinIndicator.className = 'tile-coin-indicator';
+            coinIndicator.textContent = '$1';
+            newTile.appendChild(coinIndicator);
+        }
 
         // Add event listeners
         newTile.addEventListener('click', handleTileClick);
@@ -4928,8 +4950,8 @@ function returnTileToRack(cell, addToRack = true) {
             firstEmptyCell.appendChild(newTile);
         }
 
-        // Update rackTiles array (RogueLetters uses tile objects)
-        gameState.rackTiles.push({ letter: rackLetter, buffed: false, bonus: 0, coinTile: false });
+        // Update rackTiles array (RogueLetters uses tile objects, preserve buffed/coin status)
+        gameState.rackTiles.push({ letter: rackLetter, buffed: isBuffed, bonus: bonus, coinTile: isCoinTile });
     }
 
     // Save game state and check validity
