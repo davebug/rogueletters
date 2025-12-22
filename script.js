@@ -622,10 +622,9 @@ const runManager = {
                 tileDisplay.style.transform = '';  // Clear any transform
                 const letterContent = isBlank ? '' : tile;
                 const scoreContent = isBlank ? '' : displayScore;
-                // Add +1 indicator for buffed tiles, $1 for coin tiles
-                const bonusIndicator = (!isBlank && !isCoinTile) ? '<span class="tile-bonus-indicator">+1</span>' : '';
+                // Add $1 indicator for coin tiles (buffed tiles show score in gold circle via CSS)
                 const coinIndicator = isCoinTile ? '<span class="tile-coin-indicator">$1</span>' : '';
-                tileDisplay.innerHTML = `<span class="tile-letter" id="shop-tile-letter-${i}">${letterContent}</span><span class="tile-score" id="shop-tile-score-${i}">${scoreContent}</span>${bonusIndicator}${coinIndicator}`;
+                tileDisplay.innerHTML = `<span class="tile-letter" id="shop-tile-letter-${i}">${letterContent}</span><span class="tile-score" id="shop-tile-score-${i}">${scoreContent}</span>${coinIndicator}`;
             }
 
             // Log for debugging
@@ -1212,15 +1211,7 @@ function renderExchangeRack() {
         tileEl.appendChild(letterSpan);
         tileEl.appendChild(scoreSpan);
 
-        // Add +1 indicator for buffed tiles
-        if (isBuffed) {
-            const bonusIndicator = document.createElement('span');
-            bonusIndicator.className = 'tile-bonus-indicator';
-            bonusIndicator.textContent = '+1';
-            tileEl.appendChild(bonusIndicator);
-        }
-
-        // Add $1 indicator for coin tiles
+        // Add $1 indicator for coin tiles (buffed tiles show score in gold circle via CSS)
         if (isCoinTile) {
             const coinIndicator = document.createElement('span');
             coinIndicator.className = 'tile-coin-indicator';
@@ -1638,15 +1629,7 @@ function updateBagViewerGrid() {
             tile.appendChild(letterSpan);
             tile.appendChild(scoreSpan);
 
-            // Add +1 indicator for buffed tiles
-            if (isBuffed) {
-                const bonusIndicator = document.createElement('span');
-                bonusIndicator.className = 'bag-bonus-indicator';
-                bonusIndicator.textContent = '+1';
-                tile.appendChild(bonusIndicator);
-            }
-
-            // Add $1 indicator for coin tiles
+            // Add $1 indicator for coin tiles (buffed tiles show score in gold circle via CSS)
             if (isCoinTile) {
                 const coinIndicator = document.createElement('span');
                 coinIndicator.className = 'bag-coin-indicator';
@@ -3110,15 +3093,7 @@ function createTileElement(letter, index, isBlank = false, buffed = false, bonus
     tile.appendChild(letterSpan);
     tile.appendChild(scoreSpan);
 
-    // Add +1 indicator for buffed tiles
-    if (buffed) {
-        const bonusIndicator = document.createElement('span');
-        bonusIndicator.className = 'tile-bonus-indicator';
-        bonusIndicator.textContent = '+1';
-        tile.appendChild(bonusIndicator);
-    }
-
-    // Add $1 indicator for coin tiles
+    // Add $1 indicator for coin tiles (buffed tiles show score in gold circle via CSS)
     if (coinTile) {
         const coinIndicator = document.createElement('span');
         coinIndicator.className = 'tile-coin-indicator';
@@ -3556,12 +3531,11 @@ function animateTileFromBagToRack(letter, rackIndex, isBlank = false, buffed = f
     const displayLetter = (letter === '_' || isBlank) ? '' : letter;
     const baseScore = (letter === '_' || isBlank) ? 0 : (TILE_SCORES[letter] || 0);
     const score = (letter === '_' || isBlank) ? '' : (baseScore + bonus);
-    const bonusIndicator = buffed ? '<span class="tile-bonus-indicator">+1</span>' : '';
     const coinIndicator = coinTile ? '<span class="tile-coin-indicator">$1</span>' : '';
     tile.innerHTML = `
         <span class="tile-letter">${displayLetter}</span>
         <span class="tile-score">${score}</span>
-        ${bonusIndicator}${coinIndicator}
+        ${coinIndicator}
     `;
     document.body.appendChild(tile);
 
@@ -4176,15 +4150,7 @@ async function placeBlankTile(cell, tile, assignedLetter) {
     tileDiv.appendChild(letterSpan);
     tileDiv.appendChild(scoreSpan);
 
-    // Add +1 indicator for buffed tiles
-    if (isBuffed) {
-        const bonusIndicator = document.createElement('span');
-        bonusIndicator.className = 'tile-bonus-indicator';
-        bonusIndicator.textContent = '+1';
-        tileDiv.appendChild(bonusIndicator);
-    }
-
-    // Add $1 indicator for coin tiles
+    // Add $1 indicator for coin tiles (buffed tiles show score in gold circle via CSS)
     if (isCoinTile) {
         const coinIndicator = document.createElement('span');
         coinIndicator.className = 'tile-coin-indicator';
@@ -5101,15 +5067,7 @@ async function placeTile(cell, tile) {
     tileDiv.appendChild(letterSpan);
     tileDiv.appendChild(scoreSpan);
 
-    // Add +1 indicator for buffed tiles
-    if (isBuffed) {
-        const bonusIndicator = document.createElement('span');
-        bonusIndicator.className = 'tile-bonus-indicator';
-        bonusIndicator.textContent = '+1';
-        tileDiv.appendChild(bonusIndicator);
-    }
-
-    // Add $1 indicator for coin tiles
+    // Add $1 indicator for coin tiles (buffed tiles show score in gold circle via CSS)
     if (isCoinTile) {
         const coinIndicator = document.createElement('span');
         coinIndicator.className = 'tile-coin-indicator';
@@ -5824,15 +5782,7 @@ async function recallTiles() {
         newTile.appendChild(letterSpan);
         newTile.appendChild(scoreSpan);
 
-        // Add +1 indicator for buffed tiles
-        if (buffed) {
-            const bonusIndicator = document.createElement('span');
-            bonusIndicator.className = 'tile-bonus-indicator';
-            bonusIndicator.textContent = '+1';
-            newTile.appendChild(bonusIndicator);
-        }
-
-        // Add $1 indicator for coin tiles
+        // Add $1 indicator for coin tiles (buffed tiles show score in gold circle via CSS)
         if (coinTile) {
             const coinIndicator = document.createElement('span');
             coinIndicator.className = 'tile-coin-indicator';
@@ -7602,18 +7552,11 @@ function restoreBoard() {
                             tile.appendChild(coinIndicator);
                         }
                     }
-                    // Restore buffed tile styling if applicable
+                    // Restore buffed tile styling if applicable (score shown in gold circle via CSS)
                     if (buffed) {
                         tile.classList.add('buffed-tile');
                         tile.dataset.buffed = 'true';
                         tile.dataset.bonus = bonus || 0;
-                        // Add +1 indicator if not already present
-                        if (!tile.querySelector('.tile-bonus-indicator')) {
-                            const bonusIndicator = document.createElement('span');
-                            bonusIndicator.className = 'tile-bonus-indicator';
-                            bonusIndicator.textContent = '+1';
-                            tile.appendChild(bonusIndicator);
-                        }
                     }
                 }
             }

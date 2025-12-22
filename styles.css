@@ -528,7 +528,7 @@ main {
 .tile .tile-value {
     position: absolute;
     bottom: 1px;
-    right: 1px;
+    right: 3px;  /* 2px left of edge for better visual balance */
     font-size: 8px;
     opacity: 0.7;
 }
@@ -550,7 +550,7 @@ main {
 .board-cell .tile .tile-score {
     font-size: calc(var(--actual-cell-size) * 0.25);
     bottom: 0;
-    right: 0;
+    right: 2px;  /* 2px left of edge for better visual balance */
 }
 
 /* Tile Rack Container */
@@ -2420,23 +2420,23 @@ main {
         0 0 0 1px var(--success-color);
 }
 
-/* Buffed tile indicator - gold circle with +1 */
-.tile-bonus-indicator {
-    position: absolute;
-    top: 1px;
-    right: 1px;
-    font-size: 7px;
-    font-weight: 700;
+/* Buffed tile - score in gold circle (circle behind, number stays in same spot) */
+.buffed-tile .tile-score {
     color: #000;
+    z-index: 1;
+}
+
+.buffed-tile .tile-score::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 11px;
+    height: 11px;
     background: #ffd700;
     border-radius: 50%;
-    width: 12px;
-    height: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    z-index: -1;
 }
 
 /* Coin tile indicator - green circle with $1 */
@@ -2681,23 +2681,23 @@ main {
         0 0 0 0.5px var(--success-color);
 }
 
-/* Buffed bag tiles - gold circle indicator */
-.bag-mini-tile .bag-bonus-indicator {
-    position: absolute;
-    top: -1px;
-    right: -1px;
-    font-size: 5px;
-    font-weight: 700;
+/* Buffed bag tiles - score in gold circle (circle behind, number stays in same spot) */
+.bag-mini-tile.buffed-tile .bag-mini-tile-score {
     color: #000;
+    z-index: 1;
+}
+
+.bag-mini-tile.buffed-tile .bag-mini-tile-score::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
     background: #ffd700;
     border-radius: 50%;
-    width: 9px;
-    height: 9px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    box-shadow: 0 1px 1px rgba(0,0,0,0.3);
+    z-index: -1;
 }
 
 /* Coin bag tiles - green circle indicator */
