@@ -4266,6 +4266,11 @@ async function swapRackAndBoardTile(rackTile, boardPosition) {
     const rackLetter = rackTile.dataset.letter;
     const rackIsBlank = rackTile.dataset.isBlank === 'true' || rackLetter === '_';
 
+    // Capture rack tile's buffed/coin properties
+    const rackIsBuffed = rackTile.dataset.buffed === 'true';
+    const rackBonus = parseInt(rackTile.dataset.bonus) || 0;
+    const rackIsCoinTile = rackTile.dataset.coinTile === 'true';
+
     // Get board cell and tile
     const boardCell = document.querySelector(
         `.board-cell[data-row="${boardPosition.row}"][data-col="${boardPosition.col}"]`
@@ -4282,12 +4287,16 @@ async function swapRackAndBoardTile(rackTile, boardPosition) {
         return;
     }
 
-    // Check if board tile is a blank
+    // Check if board tile is a blank and get all properties
     const placedTileIndex = gameState.placedTiles.findIndex(
         t => t.row === boardPosition.row && t.col === boardPosition.col
     );
     const boardTileData = placedTileIndex !== -1 ? gameState.placedTiles[placedTileIndex] : null;
     const boardIsBlank = boardTileData?.isBlank || false;
+    const boardIsBuffed = boardTileData?.buffed || false;
+    const boardBonus = boardTileData?.bonus || 0;
+    const boardIsCoinTile = boardTileData?.coinTile || false;
+    const boardCoinClaimed = boardTileData?.coinClaimed || false;
 
     // If rack tile is a blank, show letter selection modal for swap
     if (rackIsBlank) {
@@ -4323,13 +4332,17 @@ async function swapRackAndBoardTile(rackTile, boardPosition) {
     // Update gameState.board with the rack letter
     gameState.board[boardPosition.row][boardPosition.col] = rackLetter;
 
-    // Update gameState.placedTiles
+    // Update gameState.placedTiles with rack tile's properties
     if (placedTileIndex !== -1) {
         gameState.placedTiles[placedTileIndex].letter = rackLetter;
-        gameState.placedTiles[placedTileIndex].isBlank = false; // No longer a blank
+        gameState.placedTiles[placedTileIndex].isBlank = false;
+        gameState.placedTiles[placedTileIndex].buffed = rackIsBuffed;
+        gameState.placedTiles[placedTileIndex].bonus = rackBonus;
+        gameState.placedTiles[placedTileIndex].coinTile = rackIsCoinTile;
+        gameState.placedTiles[placedTileIndex].coinClaimed = false; // Reset for new tile
     }
 
-    // Update board tile DOM - remove blank styling, add regular tile
+    // Update board tile DOM - transfer rack tile's properties
     boardTile.dataset.letter = rackLetter;
     boardTile.dataset.isBlank = 'false';
     boardTile.classList.remove('blank-tile');
@@ -4338,7 +4351,37 @@ async function swapRackAndBoardTile(rackTile, boardPosition) {
     boardLetterSpan.classList.remove('blank-letter');
     boardTile.querySelector('.tile-value').textContent = TILE_SCORES[rackLetter] || 0;
 
-    // Update rack tile DOM - if board was blank, revert to blank
+    // Transfer buffed status to board tile
+    if (rackIsBuffed) {
+        boardTile.classList.add('buffed-tile');
+        boardTile.dataset.buffed = 'true';
+        boardTile.dataset.bonus = rackBonus;
+    } else {
+        boardTile.classList.remove('buffed-tile');
+        boardTile.dataset.buffed = 'false';
+        boardTile.dataset.bonus = '0';
+    }
+
+    // Transfer coin tile status to board tile
+    const existingBoardCoinIndicator = boardTile.querySelector('.tile-coin-indicator');
+    if (rackIsCoinTile) {
+        boardTile.classList.add('coin-tile');
+        boardTile.dataset.coinTile = 'true';
+        if (!existingBoardCoinIndicator) {
+            const coinIndicator = document.createElement('span');
+            coinIndicator.className = 'tile-coin-indicator';
+            coinIndicator.textContent = '$1';
+            boardTile.appendChild(coinIndicator);
+        }
+    } else {
+        boardTile.classList.remove('coin-tile');
+        boardTile.dataset.coinTile = 'false';
+        if (existingBoardCoinIndicator) {
+            existingBoardCoinIndicator.remove();
+        }
+    }
+
+    // Update rack tile DOM - transfer board tile's properties
     if (boardIsBlank) {
         rackTile.dataset.letter = '_';
         rackTile.dataset.isBlank = 'true';
@@ -4351,6 +4394,36 @@ async function swapRackAndBoardTile(rackTile, boardPosition) {
         rackTile.classList.remove('blank-tile');
         rackTile.querySelector('.tile-letter').textContent = boardLetter;
         rackTile.querySelector('.tile-score').textContent = TILE_SCORES[boardLetter] || 0;
+    }
+
+    // Transfer board's buffed status to rack tile
+    if (boardIsBuffed) {
+        rackTile.classList.add('buffed-tile');
+        rackTile.dataset.buffed = 'true';
+        rackTile.dataset.bonus = boardBonus;
+    } else {
+        rackTile.classList.remove('buffed-tile');
+        rackTile.dataset.buffed = 'false';
+        rackTile.dataset.bonus = '0';
+    }
+
+    // Transfer board's coin tile status to rack tile
+    const existingRackCoinIndicator = rackTile.querySelector('.tile-coin-indicator');
+    if (boardIsCoinTile) {
+        rackTile.classList.add('coin-tile');
+        rackTile.dataset.coinTile = 'true';
+        if (!existingRackCoinIndicator) {
+            const coinIndicator = document.createElement('span');
+            coinIndicator.className = 'tile-coin-indicator';
+            coinIndicator.textContent = '$1';
+            rackTile.appendChild(coinIndicator);
+        }
+    } else {
+        rackTile.classList.remove('coin-tile');
+        rackTile.dataset.coinTile = 'false';
+        if (existingRackCoinIndicator) {
+            existingRackCoinIndicator.remove();
+        }
     }
 
     // Rebuild rackTiles array from DOM (preserving buffed/coin info)
@@ -4425,48 +4498,97 @@ async function swapBoardTiles(position1, position2) {
     if (idx1 !== -1) gameState.placedTiles[idx1].letter = letter2;
     if (idx2 !== -1) gameState.placedTiles[idx2].letter = letter1;
 
-    // Check if tiles are blanks
+    // Capture all tile properties BEFORE modifying
     const tile1IsBlank = tile1.dataset.isBlank === 'true';
     const tile2IsBlank = tile2.dataset.isBlank === 'true';
+    const tile1IsBuffed = tile1.dataset.buffed === 'true';
+    const tile2IsBuffed = tile2.dataset.buffed === 'true';
+    const tile1Bonus = parseInt(tile1.dataset.bonus) || 0;
+    const tile2Bonus = parseInt(tile2.dataset.bonus) || 0;
+    const tile1IsCoinTile = tile1.dataset.coinTile === 'true';
+    const tile2IsCoinTile = tile2.dataset.coinTile === 'true';
 
-    // Also swap isBlank status in placedTiles
+    // Also swap isBlank, buffed, bonus, coinTile status in placedTiles
     if (idx1 !== -1 && idx2 !== -1) {
-        const temp = gameState.placedTiles[idx1].isBlank;
+        // Swap isBlank
+        const tempIsBlank = gameState.placedTiles[idx1].isBlank;
         gameState.placedTiles[idx1].isBlank = gameState.placedTiles[idx2].isBlank;
-        gameState.placedTiles[idx2].isBlank = temp;
+        gameState.placedTiles[idx2].isBlank = tempIsBlank;
+        // Swap buffed
+        const tempBuffed = gameState.placedTiles[idx1].buffed;
+        gameState.placedTiles[idx1].buffed = gameState.placedTiles[idx2].buffed;
+        gameState.placedTiles[idx2].buffed = tempBuffed;
+        // Swap bonus
+        const tempBonus = gameState.placedTiles[idx1].bonus;
+        gameState.placedTiles[idx1].bonus = gameState.placedTiles[idx2].bonus;
+        gameState.placedTiles[idx2].bonus = tempBonus;
+        // Swap coinTile
+        const tempCoinTile = gameState.placedTiles[idx1].coinTile;
+        gameState.placedTiles[idx1].coinTile = gameState.placedTiles[idx2].coinTile;
+        gameState.placedTiles[idx2].coinTile = tempCoinTile;
+        // Swap coinClaimed
+        const tempCoinClaimed = gameState.placedTiles[idx1].coinClaimed;
+        gameState.placedTiles[idx1].coinClaimed = gameState.placedTiles[idx2].coinClaimed;
+        gameState.placedTiles[idx2].coinClaimed = tempCoinClaimed;
     }
 
-    // Update DOM for tile1 (gets letter2 and tile2's blank status)
-    tile1.dataset.letter = letter2;
-    const tile1LetterSpan = tile1.querySelector('.tile-letter');
-    tile1LetterSpan.textContent = letter2;
-    if (tile2IsBlank) {
-        tile1.classList.add('blank-tile');
-        tile1.dataset.isBlank = 'true';
-        tile1LetterSpan.classList.add('blank-letter');
-        tile1.querySelector('.tile-value').textContent = '';
-    } else {
-        tile1.classList.remove('blank-tile');
-        delete tile1.dataset.isBlank;
-        tile1LetterSpan.classList.remove('blank-letter');
-        tile1.querySelector('.tile-value').textContent = TILE_SCORES[letter2] || 0;
+    // Helper to update a tile's DOM with new properties
+    function updateTileDom(tile, letter, isBlank, isBuffed, bonus, isCoinTile) {
+        tile.dataset.letter = letter;
+        const letterSpan = tile.querySelector('.tile-letter');
+        letterSpan.textContent = letter;
+
+        // Blank status
+        if (isBlank) {
+            tile.classList.add('blank-tile');
+            tile.dataset.isBlank = 'true';
+            letterSpan.classList.add('blank-letter');
+        } else {
+            tile.classList.remove('blank-tile');
+            delete tile.dataset.isBlank;
+            letterSpan.classList.remove('blank-letter');
+        }
+
+        // Buffed status
+        if (isBuffed) {
+            tile.classList.add('buffed-tile');
+            tile.dataset.buffed = 'true';
+            tile.dataset.bonus = bonus;
+        } else {
+            tile.classList.remove('buffed-tile');
+            tile.dataset.buffed = 'false';
+            tile.dataset.bonus = '0';
+        }
+
+        // Coin tile status
+        const existingCoinIndicator = tile.querySelector('.tile-coin-indicator');
+        if (isCoinTile) {
+            tile.classList.add('coin-tile');
+            tile.dataset.coinTile = 'true';
+            if (!existingCoinIndicator) {
+                const coinIndicator = document.createElement('span');
+                coinIndicator.className = 'tile-coin-indicator';
+                coinIndicator.textContent = '$1';
+                tile.appendChild(coinIndicator);
+            }
+        } else {
+            tile.classList.remove('coin-tile');
+            tile.dataset.coinTile = 'false';
+            if (existingCoinIndicator) {
+                existingCoinIndicator.remove();
+            }
+        }
+
+        // Update score (buffed tiles show boosted score)
+        const baseScore = TILE_SCORES[letter] || 0;
+        tile.querySelector('.tile-value').textContent = isBlank ? '' : (baseScore + bonus);
     }
 
-    // Update DOM for tile2 (gets letter1 and tile1's blank status)
-    tile2.dataset.letter = letter1;
-    const tile2LetterSpan = tile2.querySelector('.tile-letter');
-    tile2LetterSpan.textContent = letter1;
-    if (tile1IsBlank) {
-        tile2.classList.add('blank-tile');
-        tile2.dataset.isBlank = 'true';
-        tile2LetterSpan.classList.add('blank-letter');
-        tile2.querySelector('.tile-value').textContent = '';
-    } else {
-        tile2.classList.remove('blank-tile');
-        delete tile2.dataset.isBlank;
-        tile2LetterSpan.classList.remove('blank-letter');
-        tile2.querySelector('.tile-value').textContent = TILE_SCORES[letter1] || 0;
-    }
+    // Update DOM for tile1 (gets tile2's properties)
+    updateTileDom(tile1, letter2, tile2IsBlank, tile2IsBuffed, tile2Bonus, tile2IsCoinTile);
+
+    // Update DOM for tile2 (gets tile1's properties)
+    updateTileDom(tile2, letter1, tile1IsBlank, tile1IsBuffed, tile1Bonus, tile1IsCoinTile);
 
     // Clear selection
     if (selectedTile) {
@@ -5687,11 +5809,12 @@ function shuffleRack() {
         }
     });
 
-    // Update gameState to match new shuffled order (preserving buffed info)
+    // Update gameState to match new shuffled order (preserving buffed/coin info)
     const newRackOrder = tiles.map(tile => ({
         letter: tile.dataset.letter,
         buffed: tile.dataset.buffed === 'true',
-        bonus: parseInt(tile.dataset.bonus) || 0
+        bonus: parseInt(tile.dataset.bonus) || 0,
+        coinTile: tile.dataset.coinTile === 'true'
     }));
     gameState.rackTiles = newRackOrder;
 
