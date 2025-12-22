@@ -2396,54 +2396,42 @@ main {
     font-size: 9px;
 }
 
-/* Buffed tile styling - gold border and gold score */
-.buffed-tile {
-    border: 2px solid #ffd700 !important;
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.5),
-        0 2px 3px rgba(0, 0, 0, 0.3),
-        0 0 0 1px #ffd700;
-}
-
-.buffed-tile .tile-score {
-    color: #000;  /* Black text as normal */
+/* Buffed tile indicator - gold circle with +1 */
+.tile-bonus-indicator {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    font-size: 7px;
     font-weight: 700;
-    text-shadow:
-        -1px -1px 0 #ffd700,
-        1px -1px 0 #ffd700,
-        -1px 1px 0 #ffd700,
-        1px 1px 0 #ffd700;
-}
-
-/* Coin tile styling - green border, $1 indicator */
-.coin-tile {
-    border: 2px solid var(--success-color) !important;
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.5),
-        0 2px 3px rgba(0, 0, 0, 0.3),
-        0 0 0 1px var(--success-color);
-}
-
-.coin-tile .tile-score {
     color: #000;
-    font-weight: 700;
-    text-shadow:
-        -1px -1px 0 var(--success-color),
-        1px -1px 0 var(--success-color),
-        -1px 1px 0 var(--success-color),
-        1px 1px 0 var(--success-color);
+    background: #ffd700;
+    border-radius: 50%;
+    width: 12px;
+    height: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
 
-/* $1 indicator on coin tiles - positioned like exchange-cost */
+/* Coin tile indicator - green circle with $1 */
 .tile-coin-indicator {
     position: absolute;
     top: 1px;
     right: 1px;
-    font-size: 8px;
+    font-size: 7px;
     font-weight: 700;
-    color: var(--success-color);
-    text-shadow: 0 0 2px rgba(0,0,0,0.8);
+    color: #fff;
+    background: var(--success-color);
+    border-radius: 50%;
+    width: 12px;
+    height: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     line-height: 1;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
 
 .shop-tile-buff-label {
@@ -2651,54 +2639,42 @@ main {
     z-index: 1;
 }
 
-/* Buffed bag tiles - gold border and score */
-.bag-mini-tile.buffed-tile {
-    border: 1.5px solid #ffd700;
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.5),
-        0 1px 2px rgba(0, 0, 0, 0.2),
-        0 0 0 0.5px #ffd700;
-}
-
-.bag-mini-tile.buffed-tile .bag-mini-tile-score {
-    color: #000;
+/* Buffed bag tiles - gold circle indicator */
+.bag-mini-tile .bag-bonus-indicator {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    font-size: 5px;
     font-weight: 700;
-    text-shadow:
-        -0.5px -0.5px 0 #ffd700,
-        0.5px -0.5px 0 #ffd700,
-        -0.5px 0.5px 0 #ffd700,
-        0.5px 0.5px 0 #ffd700;
-}
-
-/* Coin bag tiles - green border */
-.bag-mini-tile.coin-tile {
-    border: 1.5px solid var(--success-color);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.5),
-        0 1px 2px rgba(0, 0, 0, 0.2),
-        0 0 0 0.5px var(--success-color);
-}
-
-.bag-mini-tile.coin-tile .bag-mini-tile-score {
     color: #000;
-    font-weight: 700;
-    text-shadow:
-        -0.5px -0.5px 0 var(--success-color),
-        0.5px -0.5px 0 var(--success-color),
-        -0.5px 0.5px 0 var(--success-color),
-        0.5px 0.5px 0 var(--success-color);
+    background: #ffd700;
+    border-radius: 50%;
+    width: 9px;
+    height: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.3);
 }
 
-/* $1 indicator on coin tiles in bag */
+/* Coin bag tiles - green circle indicator */
 .bag-mini-tile .bag-coin-indicator {
     position: absolute;
-    top: 0;
-    right: 0;
-    font-size: 6px;
+    top: -1px;
+    right: -1px;
+    font-size: 5px;
     font-weight: 700;
-    color: var(--success-color);
-    text-shadow: 0 0 1px rgba(0,0,0,0.8);
+    color: #fff;
+    background: var(--success-color);
+    border-radius: 50%;
+    width: 9px;
+    height: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     line-height: 1;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.3);
 }
 
 .bag-tiles-grid.replacement-mode {
