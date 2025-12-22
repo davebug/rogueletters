@@ -30,6 +30,39 @@ Game > Set > Round > Turn
 - `styles.css` - Dark roguelike theme
 - `index.html` - UI structure including all popup screens
 
+### Adding New Tile Types
+
+Tile effects (buffed, coin, etc.) use the `TILE_EFFECTS` system at top of `script.js`. To add a new tile type:
+
+1. **Add to TILE_EFFECTS config:**
+```javascript
+newEffect: {
+    id: 'newEffect',
+    cssClass: 'new-effect-tile',      // Border styling class
+    borderPriority: 3,                 // Higher = wins when multiple effects
+    datasetKey: 'newEffect',           // data-new-effect attribute
+    indicator: {                       // null if no indicator needed
+        text: '★',
+        className: 'tile-new-indicator',
+        position: 'top-left',          // top-right, top-left, bottom-right, bottom-left
+    },
+},
+```
+
+2. **Add CSS in styles.css:**
+```css
+.new-effect-tile { border: 2px solid var(--your-color) !important; }
+.tile-new-indicator { /* position styles */ }
+```
+
+3. **Update data model** - add property to tile objects (e.g., `newEffect: true`)
+
+4. **Update helper functions** if needed:
+   - `getActiveEffects()` - check for new property
+   - `markBuffedTiles()` - if effect comes from shop purchases
+
+Tiles can have multiple effects - border goes to highest priority, all indicators show.
+
 ## Development
 
 - Cache-busting: Update version numbers in HTML when changing CSS/JS
