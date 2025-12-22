@@ -489,11 +489,13 @@ main {
         0 1px 0 var(--tile-shadow);
 }
 
-.tile:hover {
-    transform: translateY(-2px);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.6),
-        0 4px 8px rgba(0, 0, 0, 0.3);
+@media (hover: hover) {
+    .tile:hover {
+        transform: translateY(-2px);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.6),
+            0 4px 8px rgba(0, 0, 0, 0.3);
+    }
 }
 
 .tile.selected {
@@ -687,9 +689,25 @@ main {
     transition: all 0.2s ease;
 }
 
-.tile-rack .tile:hover {
-    /* Subtle hover effect */
-    transform: translateY(-2px);
+/* Match board tile font sizes for consistent animation */
+.tile-rack .tile .tile-letter,
+.rack-cell .tile .tile-letter {
+    font-size: calc(var(--actual-cell-size) * 0.55);
+}
+
+.tile-rack .tile .tile-value,
+.tile-rack .tile .tile-score,
+.rack-cell .tile .tile-value,
+.rack-cell .tile .tile-score {
+    font-size: calc(var(--actual-cell-size) * 0.25);
+}
+
+/* Only apply hover effects on devices that support hover (not touch) */
+@media (hover: hover) {
+    .tile-rack .tile:hover {
+        /* Subtle hover effect */
+        transform: translateY(-2px);
+    }
 }
 
 /* Game over state styling */
@@ -785,10 +803,12 @@ main {
     z-index: 10;
 }
 
-.exchange-btn:hover {
-    background: var(--primary-color);
-    color: white;
-    transform: scale(1.1);
+@media (hover: hover) {
+    .exchange-btn:hover {
+        background: var(--primary-color);
+        color: white;
+        transform: scale(1.1);
+    }
 }
 
 .exchange-btn:active {
@@ -2395,6 +2415,37 @@ main {
         1px 1px 0 #ffd700;
 }
 
+/* Coin tile styling - green border, $1 indicator */
+.coin-tile {
+    border: 2px solid var(--success-color) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        0 2px 3px rgba(0, 0, 0, 0.3),
+        0 0 0 1px var(--success-color);
+}
+
+.coin-tile .tile-score {
+    color: #000;
+    font-weight: 700;
+    text-shadow:
+        -1px -1px 0 var(--success-color),
+        1px -1px 0 var(--success-color),
+        -1px 1px 0 var(--success-color),
+        1px 1px 0 var(--success-color);
+}
+
+/* $1 indicator on coin tiles - positioned like exchange-cost */
+.tile-coin-indicator {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    font-size: 8px;
+    font-weight: 700;
+    color: var(--success-color);
+    text-shadow: 0 0 2px rgba(0,0,0,0.8);
+    line-height: 1;
+}
+
 .shop-tile-buff-label {
     font-size: 10px;
     color: #ffd700;
@@ -2617,6 +2668,37 @@ main {
         0.5px -0.5px 0 #ffd700,
         -0.5px 0.5px 0 #ffd700,
         0.5px 0.5px 0 #ffd700;
+}
+
+/* Coin bag tiles - green border */
+.bag-mini-tile.coin-tile {
+    border: 1.5px solid var(--success-color);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        0 1px 2px rgba(0, 0, 0, 0.2),
+        0 0 0 0.5px var(--success-color);
+}
+
+.bag-mini-tile.coin-tile .bag-mini-tile-score {
+    color: #000;
+    font-weight: 700;
+    text-shadow:
+        -0.5px -0.5px 0 var(--success-color),
+        0.5px -0.5px 0 var(--success-color),
+        -0.5px 0.5px 0 var(--success-color),
+        0.5px 0.5px 0 var(--success-color);
+}
+
+/* $1 indicator on coin tiles in bag */
+.bag-mini-tile .bag-coin-indicator {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 6px;
+    font-weight: 700;
+    color: var(--success-color);
+    text-shadow: 0 0 1px rgba(0,0,0,0.8);
+    line-height: 1;
 }
 
 .bag-tiles-grid.replacement-mode {

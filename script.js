@@ -81,43 +81,63 @@ let runState = {
 // Helper to mark tiles as buffed when drawn from bag
 // Takes array of letters (strings) or tile objects, returns array of {letter, buffed, bonus} objects
 function markBuffedTiles(tiles) {
-    // If tiles are already objects with buffed info (restored from localStorage), preserve it
+    // If tiles are already objects with buffed/coin info (restored from localStorage), preserve it
     if (tiles.length > 0 && typeof tiles[0] === 'object' && tiles[0].letter) {
         return tiles.map(t => ({
             letter: t.letter,
             buffed: t.buffed || false,
-            bonus: t.bonus || 0
+            bonus: t.bonus || 0,
+            coinTile: t.coinTile || false
         }));
     }
 
-    // Otherwise, tiles are strings (fresh draw from server), calculate buffed status
+    // Otherwise, tiles are strings (fresh draw from server), calculate buffed/coin status
     if (!runState.purchasedTiles?.length) {
         // No purchased tiles, all tiles are normal
-        return tiles.map(letter => ({ letter, buffed: false, bonus: 0 }));
+        return tiles.map(letter => ({ letter, buffed: false, bonus: 0, coinTile: false }));
     }
 
-    // Count how many buffed tiles of each letter we purchased
-    const purchasedCounts = {};
+    // Count how many buffed and coin tiles of each letter we purchased
+    const buffedCounts = {};
+    const coinCounts = {};
     for (const tile of runState.purchasedTiles) {
         const ltr = typeof tile === 'object' ? tile.letter : tile;
-        purchasedCounts[ltr] = (purchasedCounts[ltr] || 0) + 1;
+        if (tile.coinTile) {
+            coinCounts[ltr] = (coinCounts[ltr] || 0) + 1;
+        } else {
+            buffedCounts[ltr] = (buffedCounts[ltr] || 0) + 1;
+        }
     }
 
     // Initialize drawn counts if needed
     runState.buffedTilesDrawn = runState.buffedTilesDrawn || {};
+    runState.coinTilesDrawn = runState.coinTilesDrawn || {};
 
-    // Mark tiles - buffed tiles are drawn first
+    // Mark tiles - special tiles are drawn first (buffed, then coin)
     return tiles.map(letter => {
-        const purchased = purchasedCounts[letter] || 0;
-        const alreadyDrawn = runState.buffedTilesDrawn[letter] || 0;
-        const buffedRemaining = purchased - alreadyDrawn;
+        // Check buffed tiles first
+        const buffedPurchased = buffedCounts[letter] || 0;
+        const buffedAlreadyDrawn = runState.buffedTilesDrawn[letter] || 0;
+        const buffedRemaining = buffedPurchased - buffedAlreadyDrawn;
 
         if (buffedRemaining > 0) {
             // This is a buffed tile
-            runState.buffedTilesDrawn[letter] = alreadyDrawn + 1;
-            return { letter, buffed: true, bonus: 1 };
+            runState.buffedTilesDrawn[letter] = buffedAlreadyDrawn + 1;
+            return { letter, buffed: true, bonus: 1, coinTile: false };
         }
-        return { letter, buffed: false, bonus: 0 };
+
+        // Check coin tiles next
+        const coinPurchased = coinCounts[letter] || 0;
+        const coinAlreadyDrawn = runState.coinTilesDrawn[letter] || 0;
+        const coinRemaining = coinPurchased - coinAlreadyDrawn;
+
+        if (coinRemaining > 0) {
+            // This is a coin tile
+            runState.coinTilesDrawn[letter] = coinAlreadyDrawn + 1;
+            return { letter, buffed: false, bonus: 0, coinTile: true };
+        }
+
+        return { letter, buffed: false, bonus: 0, coinTile: false };
     });
 }
 
@@ -490,6 +510,7 @@ const runManager = {
 
     // Shop state (reset each shop visit)
     shopTiles: [],           // The 2 tiles offered this visit
+    shopTileTypes: [],       // Type of each tile: 'buffed' (+1 point) or 'coin' ($1 when played)
     shopPurchased: [false, false],  // Which tiles have been purchased
     pendingReplacementTileIndex: null,  // Index of tile being purchased via Replace (waiting for bag selection)
 
@@ -515,6 +536,12 @@ const runManager = {
             weightedTiles[Math.floor(Math.random() * weightedTiles.length)]
         ];
 
+        // Randomly assign tile types: 50% buffed (+1 point), 50% coin ($1 when played)
+        this.shopTileTypes = [
+            Math.random() < 0.5 ? 'buffed' : 'coin',
+            Math.random() < 0.5 ? 'buffed' : 'coin'
+        ];
+
         // Validate tiles - if undefined or empty, use fallback
         for (let i = 0; i < this.shopTiles.length; i++) {
             if (!this.shopTiles[i]) {
@@ -523,11 +550,12 @@ const runManager = {
             }
         }
 
-        console.log('[Shop] Generated tiles:', this.shopTiles);
+        console.log('[Shop] Generated tiles:', this.shopTiles, 'types:', this.shopTileTypes);
         this.shopPurchased = [false, false];
 
         // Persist to runState for refresh survival
         runState.shopTiles = this.shopTiles.slice();
+        runState.shopTileTypes = this.shopTileTypes.slice();
         runState.shopPurchased = this.shopPurchased.slice();
     },
 
@@ -535,8 +563,9 @@ const runManager = {
     showShopScreen() {
         // Check if we have persisted shop tiles (from refresh)
         if (runState.shopTiles && runState.shopTiles.length === 2) {
-            console.log('[Shop] Restoring persisted tiles:', runState.shopTiles);
+            console.log('[Shop] Restoring persisted tiles:', runState.shopTiles, 'types:', runState.shopTileTypes);
             this.shopTiles = runState.shopTiles.slice();
+            this.shopTileTypes = runState.shopTileTypes ? runState.shopTileTypes.slice() : ['buffed', 'buffed'];
             this.shopPurchased = runState.shopPurchased ? runState.shopPurchased.slice() : [false, false];
         } else {
             // Generate fresh tiles for this shop visit
@@ -562,12 +591,19 @@ const runManager = {
         // Update tile displays
         for (let i = 0; i < 2; i++) {
             const tile = this.shopTiles[i];
+            const tileType = this.shopTileTypes[i] || 'buffed';
             const isBlank = tile === '_';
+            const isCoinTile = tileType === 'coin';
             const baseScore = TILE_SCORES[tile] || 0;
+            // Buffed tiles get +1 bonus, coin tiles show base score
             // Blanks don't get +1 bonus (they're already powerful)
-            const displayScore = isBlank ? 0 : baseScore + 1;
+            const displayScore = isBlank ? 0 : (isCoinTile ? baseScore : baseScore + 1);
             const option = document.getElementById(`shop-tile-${i}`);
             const tileDisplay = document.getElementById(`shop-tile-display-${i}`);
+
+            // Pricing: buffed = $2/$3, coin = $3/$4
+            const addCost = isCoinTile ? 3 : 2;
+            const replaceCost = isCoinTile ? 4 : 3;
 
             // IMPORTANT: Reset classes FIRST before setting text content
             // The 'purchased' class sets width:0 and overflow:hidden which can prevent text rendering
@@ -586,32 +622,43 @@ const runManager = {
                 tileDisplay.style.transform = '';  // Clear any transform
                 const letterContent = isBlank ? '' : tile;
                 const scoreContent = isBlank ? '' : displayScore;
-                tileDisplay.innerHTML = `<span class="tile-letter" id="shop-tile-letter-${i}">${letterContent}</span><span class="tile-score" id="shop-tile-score-${i}">${scoreContent}</span>`;
+                // Add $1 indicator for coin tiles
+                const coinIndicator = isCoinTile ? '<span class="tile-coin-indicator">$1</span>' : '';
+                tileDisplay.innerHTML = `<span class="tile-letter" id="shop-tile-letter-${i}">${letterContent}</span><span class="tile-score" id="shop-tile-score-${i}">${scoreContent}</span>${coinIndicator}`;
             }
 
             // Log for debugging
-            console.log(`[Shop] Setting tile ${i}: letter="${tile}", score=${displayScore}, isBlank=${isBlank}`);
+            console.log(`[Shop] Setting tile ${i}: letter="${tile}", type=${tileType}, score=${displayScore}, isBlank=${isBlank}`);
 
-            // Toggle buffed styling - blanks don't get the gold treatment
+            // Toggle tile styling based on type
             if (tileDisplay) {
-                if (isBlank) {
-                    tileDisplay.classList.remove('buffed-tile');
-                } else {
-                    tileDisplay.classList.add('buffed-tile');
+                tileDisplay.classList.remove('buffed-tile', 'coin-tile');
+                if (!isBlank) {
+                    tileDisplay.classList.add(isCoinTile ? 'coin-tile' : 'buffed-tile');
                 }
             }
 
-            // Show/hide the "+1 value" label (blanks don't get the bonus)
+            // Update the label: "+1 value" for buffed, "$1 on play" for coin (hide for blanks)
             const buffLabel = document.getElementById(`shop-buff-label-${i}`);
             if (buffLabel) {
-                buffLabel.style.visibility = isBlank ? 'hidden' : 'visible';
+                if (isBlank) {
+                    buffLabel.style.visibility = 'hidden';
+                } else {
+                    buffLabel.style.visibility = 'visible';
+                    buffLabel.textContent = isCoinTile ? '$1 on play' : '+1 value';
+                    buffLabel.style.color = isCoinTile ? 'var(--success-color)' : '#ffd700';
+                }
             }
 
-            // Check affordability for each button type (Add $2, Replace $3)
+            // Update button labels with correct pricing
             const addBtn = document.getElementById(`shop-add-${i}`);
             const replaceBtn = document.getElementById(`shop-replace-${i}`);
 
-            if (runState.coins < 2) {
+            if (addBtn) addBtn.textContent = `Add $${addCost}`;
+            if (replaceBtn) replaceBtn.textContent = `Replace $${replaceCost}`;
+
+            // Check affordability based on tile type pricing
+            if (runState.coins < addCost) {
                 addBtn?.classList.add('cannot-afford');
                 if (addBtn) addBtn.title = 'Not enough coins';
             } else {
@@ -619,7 +666,7 @@ const runManager = {
                 if (addBtn) addBtn.title = '';
             }
 
-            if (runState.coins < 3) {
+            if (runState.coins < replaceCost) {
                 replaceBtn?.classList.add('cannot-afford');
                 if (replaceBtn) replaceBtn.title = 'Not enough coins';
             } else {
@@ -639,17 +686,31 @@ const runManager = {
 
     // Purchase a tile via "Add" - adds to bag, costs $2
     purchaseTileAdd(index) {
-        if (runState.coins < 2 || this.shopPurchased[index]) return;
+        const tileType = this.shopTileTypes[index] || 'buffed';
+        const isCoinTile = tileType === 'coin';
+        const cost = isCoinTile ? 3 : 2;
 
-        // Deduct coins and add tile (blanks don't get bonus - they're already powerful)
+        if (runState.coins < cost || this.shopPurchased[index]) return;
+
+        // Deduct coins and add tile
         const tile = this.shopTiles[index];
         const isBlank = tile === '_';
-        runState.coins -= 2;
+        runState.coins -= cost;
         runState.purchasedTiles = runState.purchasedTiles || [];
-        runState.purchasedTiles.push({
-            letter: tile,
-            bonus: isBlank ? 0 : 1  // +1 point value, except blanks
-        });
+
+        // Buffed tiles get +1 bonus, coin tiles get coinTile flag (blanks get neither bonus)
+        if (isCoinTile) {
+            runState.purchasedTiles.push({
+                letter: tile,
+                coinTile: true
+            });
+        } else {
+            runState.purchasedTiles.push({
+                letter: tile,
+                bonus: isBlank ? 0 : 1  // +1 point value, except blanks
+            });
+        }
+
         this.shopPurchased[index] = true;
         runState.shopPurchased = this.shopPurchased.slice();  // Persist for refresh
         this.saveRunState();
@@ -660,9 +721,13 @@ const runManager = {
         });
     },
 
-    // Purchase a tile via "Replace" - costs $3, then pick a tile to remove
+    // Purchase a tile via "Replace" - costs $3 (buffed) or $4 (coin), then pick a tile to remove
     purchaseTileReplace(index) {
-        if (runState.coins < 3 || this.shopPurchased[index]) return;
+        const tileType = this.shopTileTypes[index] || 'buffed';
+        const isCoinTile = tileType === 'coin';
+        const cost = isCoinTile ? 4 : 3;
+
+        if (runState.coins < cost || this.shopPurchased[index]) return;
 
         // Store pending replacement and show bag viewer for selection
         this.pendingReplacementTileIndex = index;
@@ -676,15 +741,28 @@ const runManager = {
         const index = this.pendingReplacementTileIndex;
         if (index === null) return;
 
-        // Deduct $3 and add the new tile (blanks don't get bonus)
+        const tileType = this.shopTileTypes[index] || 'buffed';
+        const isCoinTile = tileType === 'coin';
+        const cost = isCoinTile ? 4 : 3;
+
+        // Deduct coins and add the new tile
         const tile = this.shopTiles[index];
         const isBlank = tile === '_';
-        runState.coins -= 3;
+        runState.coins -= cost;
         runState.purchasedTiles = runState.purchasedTiles || [];
-        runState.purchasedTiles.push({
-            letter: tile,
-            bonus: isBlank ? 0 : 1  // +1 point value, except blanks
-        });
+
+        // Buffed tiles get +1 bonus, coin tiles get coinTile flag (blanks get neither bonus)
+        if (isCoinTile) {
+            runState.purchasedTiles.push({
+                letter: tile,
+                coinTile: true
+            });
+        } else {
+            runState.purchasedTiles.push({
+                letter: tile,
+                bonus: isBlank ? 0 : 1  // +1 point value, except blanks
+            });
+        }
 
         // Track the removed tile
         runState.removedTiles = runState.removedTiles || [];
@@ -992,6 +1070,8 @@ const runManager = {
         runState.pendingScore = null;
         runState.shopTiles = null;
         runState.shopPurchased = null;
+        runState.shopTileTypes = null;
+        runState.coinTilesDrawn = {};
     },
 
     // Clear run state from localStorage
@@ -1456,16 +1536,39 @@ function updateBagViewerGrid() {
     // Add replacement mode class to grid
     grid.classList.toggle('replacement-mode', bagReplacementMode);
 
-    // Calculate how many buffed tiles of each letter remain in the bag
-    // Purchased tiles are buffed, minus the ones already drawn
+    // Calculate how many buffed/coin tiles of each letter remain in the bag
+    // Purchased tiles are either buffed or coin, minus the ones already drawn
     const buffedRemaining = {};
+    const coinRemaining = {};
     for (const tile of (runState.purchasedTiles || [])) {
         const letter = typeof tile === 'object' ? tile.letter : tile;
-        buffedRemaining[letter] = (buffedRemaining[letter] || 0) + 1;
+        const isCoinTile = typeof tile === 'object' && tile.coinTile;
+        if (isCoinTile) {
+            coinRemaining[letter] = (coinRemaining[letter] || 0) + 1;
+        } else {
+            buffedRemaining[letter] = (buffedRemaining[letter] || 0) + 1;
+        }
     }
     // Subtract buffed tiles already drawn
     for (const [letter, count] of Object.entries(runState.buffedTilesDrawn || {})) {
         buffedRemaining[letter] = Math.max(0, (buffedRemaining[letter] || 0) - count);
+    }
+    // Subtract coin tiles already drawn
+    for (const [letter, count] of Object.entries(runState.coinTilesDrawn || {})) {
+        coinRemaining[letter] = Math.max(0, (coinRemaining[letter] || 0) - count);
+    }
+
+    // Calculate total purchased counts (for Total view - shows all purchased, not just remaining)
+    const buffedTotal = {};
+    const coinTotal = {};
+    for (const tile of (runState.purchasedTiles || [])) {
+        const letter = typeof tile === 'object' ? tile.letter : tile;
+        const isCoinTile = typeof tile === 'object' && tile.coinTile;
+        if (isCoinTile) {
+            coinTotal[letter] = (coinTotal[letter] || 0) + 1;
+        } else {
+            buffedTotal[letter] = (buffedTotal[letter] || 0) + 1;
+        }
     }
 
     // Create individual tiles for each letter, sorted alphabetically
@@ -1473,16 +1576,23 @@ function updateBagViewerGrid() {
     for (const letter of letters) {
         const count = displayCounts[letter] || 0;
         const score = TILE_SCORES[letter] || 0;
-        const buffedCount = bagViewMode === 'remaining' ? (buffedRemaining[letter] || 0) : 0;
+        // Remaining view: show tiles still in bag; Total view: show all purchased
+        const buffedCount = bagViewMode === 'remaining' ? (buffedRemaining[letter] || 0) : (buffedTotal[letter] || 0);
+        const coinCount = bagViewMode === 'remaining' ? (coinRemaining[letter] || 0) : (coinTotal[letter] || 0);
 
         // Create one mini-tile for each instance of this letter
+        // Order: coin tiles first, then buffed tiles, then regular tiles
         for (let i = 0; i < count; i++) {
             const tile = document.createElement('div');
             tile.className = 'bag-mini-tile';
 
-            // Mark buffed tiles (show buffed ones first)
-            const isBuffed = i < buffedCount;
-            if (isBuffed) {
+            // Determine tile type (coin tiles shown first, then buffed)
+            const isCoinTile = i < coinCount;
+            const isBuffed = !isCoinTile && i < (coinCount + buffedCount);
+
+            if (isCoinTile) {
+                tile.classList.add('coin-tile');
+            } else if (isBuffed) {
                 tile.classList.add('buffed-tile');
             }
 
@@ -1500,11 +1610,20 @@ function updateBagViewerGrid() {
 
             const scoreSpan = document.createElement('span');
             scoreSpan.className = 'bag-mini-tile-score';
-            // Show buffed score (+1) for buffed tiles
+            // Show buffed score (+1) for buffed tiles, regular for coin tiles
             scoreSpan.textContent = isBuffed ? (score + 1) : score;
 
             tile.appendChild(letterSpan);
             tile.appendChild(scoreSpan);
+
+            // Add $1 indicator for coin tiles
+            if (isCoinTile) {
+                const coinIndicator = document.createElement('span');
+                coinIndicator.className = 'bag-coin-indicator';
+                coinIndicator.textContent = '$1';
+                tile.appendChild(coinIndicator);
+            }
+
             grid.appendChild(tile);
         }
     }
@@ -2903,13 +3022,13 @@ function displayTiles(tiles) {
     markedTiles.forEach((tileData, index) => {
         const cell = document.getElementById(`rack-0-${index}`); // Row 0, columns 0-6
         if (cell) {
-            const tile = createTileElement(tileData.letter, index, false, tileData.buffed, tileData.bonus);
+            const tile = createTileElement(tileData.letter, index, false, tileData.buffed, tileData.bonus, tileData.coinTile);
             cell.appendChild(tile);
         }
     });
 }
 
-function createTileElement(letter, index, isBlank = false, buffed = false, bonus = 0) {
+function createTileElement(letter, index, isBlank = false, buffed = false, bonus = 0, coinTile = false) {
     const tile = document.createElement('div');
     tile.className = 'tile';
     tile.dataset.letter = letter;
@@ -2927,6 +3046,12 @@ function createTileElement(letter, index, isBlank = false, buffed = false, bonus
     tile.dataset.bonus = bonus;
     if (buffed) {
         tile.classList.add('buffed-tile');
+    }
+
+    // Set coin tile status
+    tile.dataset.coinTile = coinTile ? 'true' : 'false';
+    if (coinTile) {
+        tile.classList.add('coin-tile');
     }
 
     const letterSpan = document.createElement('span');
@@ -2947,13 +3072,21 @@ function createTileElement(letter, index, isBlank = false, buffed = false, bonus
     if (tileIsBlank) {
         scoreSpan.textContent = '';
     } else {
-        // Buffed tiles show their boosted score
+        // Buffed tiles show their boosted score, coin tiles show base score
         const baseScore = TILE_SCORES[letter] || 0;
         scoreSpan.textContent = baseScore + bonus;
     }
 
     tile.appendChild(letterSpan);
     tile.appendChild(scoreSpan);
+
+    // Add $1 indicator for coin tiles
+    if (coinTile) {
+        const coinIndicator = document.createElement('span');
+        coinIndicator.className = 'tile-coin-indicator';
+        coinIndicator.textContent = '$1';
+        tile.appendChild(coinIndicator);
+    }
 
     // Add click event for selection
     tile.addEventListener('click', handleTileClick);
@@ -3353,7 +3486,7 @@ async function animateTilesToBag(tiles) {
 }
 
 // Animate a tile flying from bag icon to a rack cell
-function animateTileFromBagToRack(letter, rackIndex, isBlank = false, buffed = false, bonus = 0) {
+function animateTileFromBagToRack(letter, rackIndex, isBlank = false, buffed = false, bonus = 0, coinTile = false) {
     const bagIcon = document.getElementById('bag-viewer-btn');
     const targetCell = document.getElementById(`rack-0-${rackIndex}`);
     if (!bagIcon || !targetCell) return Promise.resolve();
@@ -3370,6 +3503,7 @@ function animateTileFromBagToRack(letter, rackIndex, isBlank = false, buffed = f
     tile.className = 'tile';
     if (isBlank) tile.classList.add('blank-tile');
     if (buffed) tile.classList.add('buffed-tile');
+    if (coinTile) tile.classList.add('coin-tile');
     tile.style.position = 'fixed';
     tile.style.width = tileWidth + 'px';
     tile.style.height = tileHeight + 'px';
@@ -3384,9 +3518,11 @@ function animateTileFromBagToRack(letter, rackIndex, isBlank = false, buffed = f
     const displayLetter = (letter === '_' || isBlank) ? '' : letter;
     const baseScore = (letter === '_' || isBlank) ? 0 : (TILE_SCORES[letter] || 0);
     const score = (letter === '_' || isBlank) ? '' : (baseScore + bonus);
+    const coinIndicator = coinTile ? '<span class="tile-coin-indicator">$1</span>' : '';
     tile.innerHTML = `
         <span class="tile-letter">${displayLetter}</span>
         <span class="tile-score">${score}</span>
+        ${coinIndicator}
     `;
     document.body.appendChild(tile);
 
@@ -3438,7 +3574,7 @@ async function displayTilesAnimated(tiles, existingTileCount = 0) {
             const cell = document.getElementById(`rack-0-${index}`);
             if (cell) {
                 const isBlank = tileData.letter === '_';
-                const tile = createTileElement(tileData.letter, index, isBlank, tileData.buffed, tileData.bonus);
+                const tile = createTileElement(tileData.letter, index, isBlank, tileData.buffed, tileData.bonus, tileData.coinTile);
                 cell.appendChild(tile);
             }
         });
@@ -3461,7 +3597,7 @@ async function displayTilesAnimated(tiles, existingTileCount = 0) {
         const isBlank = tileData.letter === '_';
         const cell = document.getElementById(`rack-0-${index}`);
         if (cell) {
-            const tile = createTileElement(tileData.letter, index, isBlank, tileData.buffed, tileData.bonus);
+            const tile = createTileElement(tileData.letter, index, isBlank, tileData.buffed, tileData.bonus, tileData.coinTile);
             cell.appendChild(tile);
         }
     }
@@ -3484,12 +3620,12 @@ async function displayTilesAnimated(tiles, existingTileCount = 0) {
             }
 
             // Animate tile from bag to rack
-            await animateTileFromBagToRack(tileData.letter, index, isBlank, tileData.buffed, tileData.bonus);
+            await animateTileFromBagToRack(tileData.letter, index, isBlank, tileData.buffed, tileData.bonus, tileData.coinTile);
 
             // Place real tile in cell
             const cell = document.getElementById(`rack-0-${index}`);
             if (cell) {
-                const tile = createTileElement(tileData.letter, index, isBlank, tileData.buffed, tileData.bonus);
+                const tile = createTileElement(tileData.letter, index, isBlank, tileData.buffed, tileData.bonus, tileData.coinTile);
                 cell.appendChild(tile);
             }
             resolve();
@@ -3856,7 +3992,8 @@ async function handleBlankLetterSelection(letter) {
                 gameState.rackTiles.push({
                     letter: rackTileInCell.dataset.letter,
                     buffed: rackTileInCell.dataset.buffed === 'true',
-                    bonus: parseInt(rackTileInCell.dataset.bonus) || 0
+                    bonus: parseInt(rackTileInCell.dataset.bonus) || 0,
+                    coinTile: rackTileInCell.dataset.coinTile === 'true'
                 });
             }
         });
@@ -3969,6 +4106,8 @@ async function placeBlankTile(cell, tile, assignedLetter) {
     // Get buffed status from source tile (blanks can be buffed too)
     const isBuffed = tile.dataset.buffed === 'true';
     const bonus = parseInt(tile.dataset.bonus) || 0;
+    const isCoinTile = tile.dataset.coinTile === 'true';
+    const coinClaimed = tile.dataset.coinClaimed === 'true';
 
     // Create tile element for the board
     const tileDiv = document.createElement('div');
@@ -3976,10 +4115,15 @@ async function placeBlankTile(cell, tile, assignedLetter) {
     if (isBuffed) {
         tileDiv.classList.add('buffed-tile');
     }
+    if (isCoinTile) {
+        tileDiv.classList.add('coin-tile');
+    }
     tileDiv.dataset.letter = assignedLetter;
     tileDiv.dataset.isBlank = 'true';
     tileDiv.dataset.buffed = isBuffed;
     tileDiv.dataset.bonus = bonus;
+    tileDiv.dataset.coinTile = isCoinTile;
+    tileDiv.dataset.coinClaimed = coinClaimed;
 
     const letterSpan = document.createElement('span');
     letterSpan.className = 'tile-letter blank-letter';
@@ -3993,6 +4137,14 @@ async function placeBlankTile(cell, tile, assignedLetter) {
     tileDiv.appendChild(letterSpan);
     tileDiv.appendChild(scoreSpan);
 
+    // Add $1 indicator for coin tiles
+    if (isCoinTile) {
+        const coinIndicator = document.createElement('span');
+        coinIndicator.className = 'tile-coin-indicator';
+        coinIndicator.textContent = '$1';
+        tileDiv.appendChild(coinIndicator);
+    }
+
     // Add click handler for board tiles
     tileDiv.addEventListener('click', handleTileClick);
 
@@ -4000,8 +4152,8 @@ async function placeBlankTile(cell, tile, assignedLetter) {
     cell.appendChild(tileDiv);
     cell.classList.add('occupied', 'placed-this-turn');
 
-    // Track placed tile with isBlank and buffed flags
-    gameState.placedTiles.push({ row, col, letter: assignedLetter, isBlank: true, buffed: isBuffed, bonus });
+    // Track placed tile with isBlank, buffed, and coinTile flags
+    gameState.placedTiles.push({ row, col, letter: assignedLetter, isBlank: true, buffed: isBuffed, bonus, coinTile: isCoinTile, coinClaimed });
 
     // Save game state
     saveGameState();
@@ -4086,7 +4238,8 @@ async function swapTilesInRack(tile1, tile2) {
             gameState.rackTiles.push({
                 letter: tile.dataset.letter,
                 buffed: tile.dataset.buffed === 'true',
-                bonus: parseInt(tile.dataset.bonus) || 0
+                bonus: parseInt(tile.dataset.bonus) || 0,
+                coinTile: tile.dataset.coinTile === 'true'
             });
         }
     });
@@ -4187,7 +4340,7 @@ async function swapRackAndBoardTile(rackTile, boardPosition) {
         rackTile.querySelector('.tile-score').textContent = TILE_SCORES[boardLetter] || 0;
     }
 
-    // Rebuild rackTiles array from DOM (preserving buffed info)
+    // Rebuild rackTiles array from DOM (preserving buffed/coin info)
     const rackBoard = document.getElementById('tile-rack-board');
     const cells = rackBoard.querySelectorAll('.rack-cell');
     gameState.rackTiles = [];
@@ -4197,7 +4350,8 @@ async function swapRackAndBoardTile(rackTile, boardPosition) {
             gameState.rackTiles.push({
                 letter: tile.dataset.letter,
                 buffed: tile.dataset.buffed === 'true',
-                bonus: parseInt(tile.dataset.bonus) || 0
+                bonus: parseInt(tile.dataset.bonus) || 0,
+                coinTile: tile.dataset.coinTile === 'true'
             });
         }
     });
@@ -4329,7 +4483,7 @@ async function moveRackTileToEmptyCell(rackTile, emptyCell) {
     rackTile.style.visibility = '';
     rackTile.style.opacity = '';
 
-    // Rebuild rackTiles array from DOM (preserving buffed info)
+    // Rebuild rackTiles array from DOM (preserving buffed/coin info)
     const rackBoard = document.getElementById('tile-rack-board');
     const cells = rackBoard.querySelectorAll('.rack-cell');
     gameState.rackTiles = [];
@@ -4339,7 +4493,8 @@ async function moveRackTileToEmptyCell(rackTile, emptyCell) {
             gameState.rackTiles.push({
                 letter: tile.dataset.letter,
                 buffed: tile.dataset.buffed === 'true',
-                bonus: parseInt(tile.dataset.bonus) || 0
+                bonus: parseInt(tile.dataset.bonus) || 0,
+                coinTile: tile.dataset.coinTile === 'true'
             });
         }
     });
@@ -4393,10 +4548,10 @@ async function returnBoardTileToSpecificRackCell(fromPos, targetRackCell) {
     // Create new tile element for the specific rack cell
     // Blanks revert to '_' when returned to rack
     const rackLetter = tileData.isBlank ? '_' : tileData.letter;
-    const newTile = createTileElement(rackLetter, 0, tileData.isBlank, tileData.buffed || false, tileData.bonus || 0);
+    const newTile = createTileElement(rackLetter, 0, tileData.isBlank, tileData.buffed || false, tileData.bonus || 0, tileData.coinTile || false);
     targetRackCell.appendChild(newTile);
 
-    // Rebuild rackTiles array from DOM (preserving buffed info)
+    // Rebuild rackTiles array from DOM (preserving buffed/coin info)
     const rackBoard = document.getElementById('tile-rack-board');
     const cells = rackBoard.querySelectorAll('.rack-cell');
     gameState.rackTiles = [];
@@ -4406,7 +4561,8 @@ async function returnBoardTileToSpecificRackCell(fromPos, targetRackCell) {
             gameState.rackTiles.push({
                 letter: tile.dataset.letter,
                 buffed: tile.dataset.buffed === 'true',
-                bonus: parseInt(tile.dataset.bonus) || 0
+                bonus: parseInt(tile.dataset.bonus) || 0,
+                coinTile: tile.dataset.coinTile === 'true'
             });
         }
     });
@@ -4682,11 +4838,12 @@ async function returnBoardTileToRack(fromPos) {
     gameState.rackTiles.push({
         letter: rackLetter,
         buffed: tileData.buffed || false,
-        bonus: tileData.bonus || 0
+        bonus: tileData.bonus || 0,
+        coinTile: tileData.coinTile || false
     });
 
-    // Create new tile element for rack - blanks show as empty tiles, preserve buffed status
-    const newTile = createTileElement(rackLetter, gameState.rackTiles.length - 1, tileData.isBlank, tileData.buffed || false, tileData.bonus || 0);
+    // Create new tile element for rack - blanks show as empty tiles, preserve buffed/coin status
+    const newTile = createTileElement(rackLetter, gameState.rackTiles.length - 1, tileData.isBlank, tileData.buffed || false, tileData.bonus || 0, tileData.coinTile || false);
     if (targetRackCell) {
         targetRackCell.appendChild(newTile);
     }
@@ -4759,7 +4916,7 @@ function returnTileToRack(cell, addToRack = true) {
         }
 
         // Update rackTiles array (RogueLetters uses tile objects)
-        gameState.rackTiles.push({ letter: rackLetter, buffed: false, bonus: 0 });
+        gameState.rackTiles.push({ letter: rackLetter, buffed: false, bonus: 0, coinTile: false });
     }
 
     // Save game state and check validity
@@ -4838,9 +4995,11 @@ async function placeTile(cell, tile) {
         return;  // Modal will handle the actual placement
     }
 
-    // Get buffed status from source tile (before any DOM changes)
+    // Get buffed/coin status from source tile (before any DOM changes)
     const isBuffed = tile.dataset.buffed === 'true';
     const bonus = parseInt(tile.dataset.bonus) || 0;
+    const isCoinTile = tile.dataset.coinTile === 'true';
+    const coinClaimed = tile.dataset.coinClaimed === 'true';
     const isFromRack = tile.parentElement?.classList.contains('rack-cell');
 
     // Animate tile flying from rack to board (if from rack)
@@ -4876,9 +5035,14 @@ async function placeTile(cell, tile) {
     if (isBuffed) {
         tileDiv.classList.add('buffed-tile');
     }
+    if (isCoinTile) {
+        tileDiv.classList.add('coin-tile');
+    }
     tileDiv.dataset.letter = letter;
     tileDiv.dataset.buffed = isBuffed;
     tileDiv.dataset.bonus = bonus;
+    tileDiv.dataset.coinTile = isCoinTile;
+    tileDiv.dataset.coinClaimed = coinClaimed;
     const letterSpan = document.createElement('span');
     letterSpan.className = 'tile-letter';
     letterSpan.textContent = letter;
@@ -4890,6 +5054,14 @@ async function placeTile(cell, tile) {
     tileDiv.appendChild(letterSpan);
     tileDiv.appendChild(scoreSpan);
 
+    // Add $1 indicator for coin tiles
+    if (isCoinTile) {
+        const coinIndicator = document.createElement('span');
+        coinIndicator.className = 'tile-coin-indicator';
+        coinIndicator.textContent = '$1';
+        tileDiv.appendChild(coinIndicator);
+    }
+
     // Add click handler for board tiles
     tileDiv.addEventListener('click', handleTileClick);
 
@@ -4897,8 +5069,8 @@ async function placeTile(cell, tile) {
     cell.appendChild(tileDiv);
     cell.classList.add('occupied', 'placed-this-turn');
 
-    // Track placed tile with buffed info
-    gameState.placedTiles.push({ row, col, letter, isBlank: false, buffed: isBuffed, bonus });
+    // Track placed tile with buffed and coinTile info
+    gameState.placedTiles.push({ row, col, letter, isBlank: false, buffed: isBuffed, bonus, coinTile: isCoinTile, coinClaimed });
 
     // Save game state
     saveGameState();
@@ -5517,7 +5689,7 @@ async function recallTiles() {
 
     // Gather all tiles to animate
     const tilesToAnimate = [];
-    gameState.placedTiles.forEach(({ row, col, letter, isBlank, buffed, bonus }, index) => {
+    gameState.placedTiles.forEach(({ row, col, letter, isBlank, buffed, bonus, coinTile }, index) => {
         const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
         const tile = cell?.querySelector('.tile');
         if (tile && emptyCells[index]) {
@@ -5525,7 +5697,7 @@ async function recallTiles() {
                 tile,
                 cell,
                 targetCell: emptyCells[index],
-                row, col, letter, isBlank, buffed, bonus
+                row, col, letter, isBlank, buffed, bonus, coinTile
             });
         }
     });
@@ -5545,7 +5717,7 @@ async function recallTiles() {
     }
 
     // Now do the actual DOM manipulation
-    tilesToAnimate.forEach(({ tile, cell, targetCell, row, col, letter, isBlank, buffed, bonus }) => {
+    tilesToAnimate.forEach(({ tile, cell, targetCell, row, col, letter, isBlank, buffed, bonus, coinTile }) => {
         // Clear from board
         gameState.board[row][col] = null;
         cell.innerHTML = '';
@@ -5557,11 +5729,12 @@ async function recallTiles() {
         // For blank tiles, restore as '_' (unassigned blank)
         const rackLetter = isBlank ? '_' : letter;
 
-        // Add back to rackTiles array (preserving buffed info)
+        // Add back to rackTiles array (preserving buffed/coin info)
         gameState.rackTiles.push({
             letter: rackLetter,
             buffed: buffed || false,
-            bonus: bonus || 0
+            bonus: bonus || 0,
+            coinTile: coinTile || false
         });
 
         // Create new tile for rack
@@ -5570,9 +5743,13 @@ async function recallTiles() {
         if (buffed) {
             newTile.classList.add('buffed-tile');
         }
+        if (coinTile) {
+            newTile.classList.add('coin-tile');
+        }
         newTile.dataset.letter = rackLetter;
         newTile.dataset.buffed = buffed || false;
         newTile.dataset.bonus = bonus || 0;
+        newTile.dataset.coinTile = coinTile || false;
 
         // Handle blank tile display in rack
         if (isBlank) {
@@ -5591,6 +5768,14 @@ async function recallTiles() {
 
         newTile.appendChild(letterSpan);
         newTile.appendChild(scoreSpan);
+
+        // Add $1 indicator for coin tiles
+        if (coinTile) {
+            const coinIndicator = document.createElement('span');
+            coinIndicator.className = 'tile-coin-indicator';
+            coinIndicator.textContent = '$1';
+            newTile.appendChild(coinIndicator);
+        }
 
         // Add event listener
         newTile.addEventListener('click', handleTileClick);
@@ -5674,6 +5859,33 @@ function submitWord() {
             gameState.turnScores.push(turnScore);  // Save this turn's score
             updateTargetProgress();
             runManager.updateRunUI();  // Update "X to go" display
+
+            // Award $1 for each unclaimed coin tile placed this turn
+            let coinsEarned = 0;
+            gameState.placedTiles.forEach(tile => {
+                if (tile.coinTile && !tile.coinClaimed) {
+                    coinsEarned++;
+                    tile.coinClaimed = true;
+                    // Track claimed position for persistence
+                    if (!gameState.coinClaimedPositions) {
+                        gameState.coinClaimedPositions = [];
+                    }
+                    gameState.coinClaimedPositions.push({ row: tile.row, col: tile.col });
+                    // Update DOM tile to mark as claimed
+                    const cell = document.querySelector(`.board-cell[data-row="${tile.row}"][data-col="${tile.col}"]`);
+                    if (cell) {
+                        const tileEl = cell.querySelector('.tile');
+                        if (tileEl) {
+                            tileEl.dataset.coinClaimed = 'true';
+                        }
+                    }
+                }
+            });
+            if (coinsEarned > 0) {
+                runState.coins += coinsEarned;
+                runManager.updateRunUI();
+                console.log(`[Coin Tiles] Earned $${coinsEarned} from coin tiles`);
+            }
 
             // Note: Tiles have already been removed from rackTiles when placed on board
             // so gameState.rackTiles already contains only the tiles left in the rack
@@ -7268,6 +7480,14 @@ function restoreBoard() {
                     tileDiv.dataset.isBlank = 'true';
                 }
 
+                // Check if this position is a coin tile (already claimed)
+                const isCoinTile = gameState.coinClaimedPositions?.some(c => c.row === row && c.col === col) || false;
+                if (isCoinTile) {
+                    tileDiv.classList.add('coin-tile');
+                    tileDiv.dataset.coinTile = 'true';
+                    tileDiv.dataset.coinClaimed = 'true';
+                }
+
                 const letterSpan = document.createElement('span');
                 letterSpan.className = 'tile-letter';
                 if (isBlank) {
@@ -7281,6 +7501,15 @@ function restoreBoard() {
 
                 tileDiv.appendChild(letterSpan);
                 tileDiv.appendChild(scoreSpan);
+
+                // Add $1 indicator for coin tiles
+                if (isCoinTile) {
+                    const coinIndicator = document.createElement('span');
+                    coinIndicator.className = 'tile-coin-indicator';
+                    coinIndicator.textContent = '$1';
+                    tileDiv.appendChild(coinIndicator);
+                }
+
                 cell.innerHTML = '';
                 cell.appendChild(tileDiv);
                 cell.classList.add('occupied');
@@ -7290,13 +7519,32 @@ function restoreBoard() {
 
     // Restore placed tiles for current turn
     if (gameState.placedTiles && gameState.placedTiles.length > 0) {
-        gameState.placedTiles.forEach(({ row, col }) => {
+        gameState.placedTiles.forEach(({ row, col, coinTile, coinClaimed, buffed, bonus }) => {
             const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
             if (cell) {
                 cell.classList.add('placed-this-turn');
                 const tile = cell.querySelector('.tile');
                 if (tile) {
                     tile.classList.add('placed-this-turn');
+                    // Restore coin tile styling if applicable
+                    if (coinTile) {
+                        tile.classList.add('coin-tile');
+                        tile.dataset.coinTile = 'true';
+                        tile.dataset.coinClaimed = coinClaimed ? 'true' : 'false';
+                        // Add $1 indicator if not already present
+                        if (!tile.querySelector('.tile-coin-indicator')) {
+                            const coinIndicator = document.createElement('span');
+                            coinIndicator.className = 'tile-coin-indicator';
+                            coinIndicator.textContent = '$1';
+                            tile.appendChild(coinIndicator);
+                        }
+                    }
+                    // Restore buffed tile styling if applicable
+                    if (buffed) {
+                        tile.classList.add('buffed-tile');
+                        tile.dataset.buffed = 'true';
+                        tile.dataset.bonus = bonus || 0;
+                    }
                 }
             }
         });
