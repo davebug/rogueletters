@@ -13,7 +13,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui, viewport-fit=cover">
     <title>RogueLetters - A Daily Word Game</title>
-    <link rel="stylesheet" href="./styles.css?v=27.6">
+    <link rel="stylesheet" href="./styles.css?v=28.1">
     <meta name="description" content="Play RogueLetters - a daily word puzzle game. Build words on a letter-tile board to maximize your score!">
 
 
@@ -86,6 +86,13 @@
                                 <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>
                             </svg>
                         </button>
+                    </div>
+
+                    <!-- Boost Inventory - shows owned boosts (roguelike mode) -->
+                    <div id="boost-inventory" class="hidden">
+                        <div id="boost-slots">
+                            <!-- Filled dynamically by renderBoostInventory() -->
+                        </div>
                     </div>
 
                     <!-- Potential Words - shown for both desktop and mobile -->
@@ -350,6 +357,10 @@
 					<span>Round bonus</span>
 					<span>$<span id="earnings-base">0</span></span>
 				</div>
+				<div class="earnings-row earnings-boost-row" id="earnings-salary-bump-row" style="display: none;">
+					<span>💵 Salary Bump</span>
+					<span>+$3</span>
+				</div>
 				<div class="earnings-row" id="earnings-extra-row">
 					<span>Extra bonus <span class="bonus-rate">($1 per <span id="earnings-bonus-threshold">10</span> pts)</span></span>
 					<span>$<span id="earnings-extra-bonus">0</span></span>
@@ -398,6 +409,22 @@
 				</div>
 			</div>
 
+			<!-- Boost Section -->
+			<div id="shop-boost-section" class="hidden">
+				<h3 class="shop-section-header">Boosts</h3>
+				<div class="shop-boost-card" id="shop-boost-card">
+					<div class="boost-card-left">
+						<span class="boost-icon" id="shop-boost-icon"></span>
+						<div class="boost-info">
+							<span class="boost-name" id="shop-boost-name"></span>
+							<span class="boost-desc" id="shop-boost-desc"></span>
+						</div>
+					</div>
+					<button class="shop-boost-buy-btn" id="shop-boost-buy">$<span id="shop-boost-price">4</span></button>
+				</div>
+				<p class="boost-inventory-status" id="shop-boost-status"></p>
+			</div>
+
 			<p class="shop-pool-info">Your tile bag: <span id="shop-pool-count">100</span> tiles</p>
 			<button id="shop-continue-btn" class="popup-btn popup-btn-primary">Continue</button>
 		</div>
@@ -443,9 +470,22 @@
 		</div>
 	</div>
 
+	<!-- Boost Details Modal -->
+	<div id="boost-modal" class="modal" style="display: none;">
+		<div class="modal-content boost-modal-content">
+			<div class="popup-content">
+				<button id="boost-modal-close" class="popup-close-btn" aria-label="Close">×</button>
+				<div id="boost-modal-icon" class="boost-modal-icon"></div>
+				<h2 id="boost-modal-name"></h2>
+				<p id="boost-modal-description" class="boost-modal-desc"></p>
+				<button id="boost-discard-btn" class="btn btn-danger">Discard</button>
+			</div>
+		</div>
+	</div>
+
     <!-- LZ-String compression library for shareable URLs -->
     <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 
-    <script src="./script.js?v=31.5"></script>
+    <script src="./script.js?v=33.1"></script>
 </body>
 </html>

@@ -172,10 +172,10 @@ def get_starting_word(seed):
     # Fallback if something goes wrong
     return "SAILING"
 
-def get_all_tiles_for_day(seed, starting_word, purchased_tiles=None, removed_tiles=None):
+def get_all_tiles_for_day(seed, starting_word, purchased_tiles=None, removed_tiles=None, rack_size=7):
     """Pre-generate all tiles for the entire day in order
 
-    Returns a list of 35 tiles that will be drawn in order throughout the game.
+    Returns a list of tiles that will be drawn in order throughout the game.
     The starting word tiles are already removed from the bag.
     Purchased tiles are added to expand the pool.
     Removed tiles are removed from the pool.
@@ -185,6 +185,7 @@ def get_all_tiles_for_day(seed, starting_word, purchased_tiles=None, removed_til
         starting_word: The starting word (tiles removed from bag)
         purchased_tiles: List of purchased tile letters to add to the pool
         removed_tiles: List of tile letters to remove from the pool
+        rack_size: Number of tiles in rack (default 7, can be 8 with Big Pockets boost)
     """
     # Create deterministic random based on seed only
     random.seed(get_seed_hash(seed))
@@ -210,49 +211,48 @@ def get_all_tiles_for_day(seed, starting_word, purchased_tiles=None, removed_til
     # Shuffle the entire bag once for the day
     random.shuffle(bag)
 
-    # Return first 35 tiles (maximum needed for 5 turns)
-    # Turn 1: 7 tiles
-    # Turns 2-5: up to 7 tiles each = 28 tiles
-    # Total: 35 tiles maximum
-    return bag[:35]
+    # Return enough tiles for max turns (6 with Overtime boost)
+    # With rack_size=8: Turn 1: 8 tiles, Turns 2-6: up to 8 each = 48 tiles max
+    max_tiles_needed = rack_size * 6  # 6 turns max with Overtime
+    return bag[:max_tiles_needed]
 
-def get_tiles_for_turn(seed, turn, starting_word=None, rack_tiles=None, tiles_drawn_so_far=0, purchased_tiles=None, removed_tiles=None):
+def get_tiles_for_turn(seed, turn, starting_word=None, rack_tiles=None, tiles_drawn_so_far=0, purchased_tiles=None, removed_tiles=None, rack_size=7):
     """Get tiles for a given turn
 
     Args:
         seed: Daily seed
-        turn: Current turn number (1-5)
+        turn: Current turn number (1-6)
         starting_word: The starting word (needed to generate tile order)
         rack_tiles: Current tiles on the rack (persist between turns)
         tiles_drawn_so_far: Total number of tiles drawn from bag so far (not including rack)
         purchased_tiles: List of purchased tile letters to add to the pool
         removed_tiles: List of tile letters to remove from the pool
+        rack_size: Number of tiles in rack (default 7, can be 8 with Big Pockets boost)
 
     Returns:
-        List of tiles for the rack (7 tiles total)
+        List of tiles for the rack (rack_size tiles total)
     """
     if turn == 1:
-        # First turn: get first 7 tiles from pre-generated list
-        all_tiles = get_all_tiles_for_day(seed, starting_word or "", purchased_tiles, removed_tiles)
-        return all_tiles[:7]
+        # First turn: get first rack_size tiles from pre-generated list
+        all_tiles = get_all_tiles_for_day(seed, starting_word or "", purchased_tiles, removed_tiles, rack_size)
+        return all_tiles[:rack_size]
     else:
         # Subsequent turns: keep rack tiles and add new ones to replace placed tiles
         if rack_tiles is None:
             rack_tiles = []
 
         # Get all tiles for the day
-        all_tiles = get_all_tiles_for_day(seed, starting_word or "", purchased_tiles, removed_tiles)
+        all_tiles = get_all_tiles_for_day(seed, starting_word or "", purchased_tiles, removed_tiles, rack_size)
 
         # Calculate how many new tiles we need
-        tiles_needed = 7 - len(rack_tiles)
+        tiles_needed = rack_size - len(rack_tiles)
 
         # Get the next tiles from the pre-generated list
         # tiles_drawn_so_far tells us how many tiles have been drawn total
-        # For turn 2 with 4 tiles placed: we drew 7 initially, now need 4 more = start at index 7
+        # For turn 2 with 4 tiles placed: we drew rack_size initially, now need 4 more
         if tiles_drawn_so_far == 0:
             # If not provided, calculate based on turn
-            # Turn 2 starts at index 7 (after initial 7 tiles)
-            start_index = 7
+            start_index = rack_size
         else:
             start_index = tiles_drawn_so_far
 
@@ -339,6 +339,11 @@ def main():
     turn = int(form.getvalue('turn', 1))
     is_retry = form.getvalue('retry', 'false').lower() == 'true'
 
+    # Parse rack_size (default 7, can be 8 with Big Pockets boost)
+    rack_size = int(form.getvalue('rack_size', 7))
+    if rack_size < 7 or rack_size > 8:
+        rack_size = 7  # Clamp to valid range
+
     # Validate seed
     if not seed:
         print("Content-Type: application/json\n")
@@ -375,7 +380,7 @@ def main():
     if not all(isinstance(t, str) and t in valid_tiles for t in rack_tiles):
         # Corrupted data detected - recalculate from scratch
         rack_tiles = []
-        tiles_drawn = 7 * (turn - 1)  # Approximate tiles drawn based on turn
+        tiles_drawn = rack_size * (turn - 1)  # Approximate tiles drawn based on turn
 
     # Handle exchange action
     if action == 'exchange':
@@ -392,11 +397,11 @@ def main():
             print(json.dumps({"error": "No tiles specified for exchange"}))
             return
 
-        if len(tiles_to_exchange) > 7:
+        if len(tiles_to_exchange) > rack_size:
             print("Content-Type: application/json")
             print("Access-Control-Allow-Origin: *")
             print()
-            print(json.dumps({"error": "Cannot exchange more than 7 tiles"}))
+            print(json.dumps({"error": f"Cannot exchange more than {rack_size} tiles"}))
             return
 
         # Validate all tiles to exchange are valid
@@ -435,14 +440,14 @@ def main():
         return
 
     # Validate tiles_drawn is in reasonable range for this turn
-    # Maximum possible: 7 tiles per turn (turn 1: 7, turn 2: 14, etc.)
-    max_tiles_drawn = 7 * turn
-    if tiles_drawn < 7 or tiles_drawn > max_tiles_drawn:
+    # Maximum possible: rack_size tiles per turn (turn 1: rack_size, turn 2: 2*rack_size, etc.)
+    max_tiles_drawn = rack_size * turn
+    if tiles_drawn < rack_size or tiles_drawn > max_tiles_drawn:
         # Invalid tiles_drawn counter - recalculate
-        tiles_drawn = 7 * (turn - 1)
+        tiles_drawn = rack_size * (turn - 1)
 
     # Get tiles for the turn
-    tiles = get_tiles_for_turn(seed, turn, starting_word, rack_tiles, tiles_drawn, purchased_tiles, removed_tiles)
+    tiles = get_tiles_for_turn(seed, turn, starting_word, rack_tiles, tiles_drawn, purchased_tiles, removed_tiles, rack_size)
 
     # Prepare response
     response = {

@@ -2251,6 +2251,11 @@ main {
     color: #4caf50;
 }
 
+.earnings-row.earnings-boost-row {
+    color: #ffd700;
+    font-size: 14px;
+}
+
 .bank-update {
     margin-top: 15px;
     padding-top: 15px;
@@ -2747,4 +2752,172 @@ main {
     padding: 8px;
     border-radius: 8px;
     margin: -8px;
+}
+
+/* ============================================================================
+   BOOST SYSTEM STYLES
+   ============================================================================ */
+
+/* Boost Inventory (below rack during gameplay) */
+#boost-inventory {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 0;
+    margin-top: 8px;
+}
+
+#boost-slots {
+    display: flex;
+    gap: 6px;
+}
+
+.boost-slot {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.boost-slot.empty {
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+}
+
+.boost-slot.filled {
+    background: linear-gradient(135deg, #3a2d5c 0%, #2a1f4c 100%);
+    border: 2px solid var(--accent-color);
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.boost-slot.filled:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 12px rgba(220, 38, 38, 0.4);
+}
+
+.boost-slot-icon {
+    pointer-events: none;
+}
+
+/* Shop Boost Section */
+#shop-boost-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.shop-section-header {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0 0 12px 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.shop-boost-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #3a2d5c 0%, #2a1f4c 100%);
+    border: 2px solid var(--accent-color);
+    border-radius: 12px;
+    padding: 12px 16px;
+    gap: 12px;
+}
+
+.shop-boost-card.hidden {
+    display: none;
+}
+
+.boost-card-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.boost-icon {
+    font-size: 28px;
+}
+
+.boost-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.boost-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.boost-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.shop-boost-buy-btn {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+}
+
+.shop-boost-buy-btn:hover:not(.cannot-afford):not(:disabled) {
+    background: #ffd700;
+    color: #000;
+}
+
+.shop-boost-buy-btn.cannot-afford {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.boost-inventory-status {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin: 8px 0 0 0;
+    text-align: center;
+}
+
+/* Boost Details Modal */
+.boost-modal-content {
+    max-width: 280px;
+    text-align: center;
+}
+
+.boost-modal-icon {
+    font-size: 48px;
+    margin-bottom: 8px;
+}
+
+.boost-modal-desc {
+    color: var(--text-secondary);
+    margin: 8px 0 20px 0;
+}
+
+.btn-danger {
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-danger:hover {
+    background: #b91c1c;
 }

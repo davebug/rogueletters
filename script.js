@@ -155,6 +155,60 @@ function transferTileEffects(fromTile, toTile) {
 // END TILE EFFECTS SYSTEM
 // ============================================================================
 
+// ============================================================================
+// BOOST SYSTEM
+// ============================================================================
+// Persistent modifiers (like Balatro's Jokers) that apply effects each round
+// Player can hold up to maxBoostSlots boosts, kept until discarded or run ends
+
+const BOOSTS = {
+    extraTurn: {
+        id: 'extraTurn',
+        name: 'Overtime',
+        description: '+1 turn per round',
+        basePrice: 6,
+        icon: '⏰',
+    },
+    extraRack: {
+        id: 'extraRack',
+        name: 'Big Pockets',
+        description: '+1 rack capacity',
+        basePrice: 7,
+        icon: '🎒',
+    },
+    basePayout: {
+        id: 'basePayout',
+        name: 'Salary Bump',
+        description: '+$3 base payout',
+        basePrice: 4,
+        icon: '💵',
+    },
+    vowelBonus: {
+        id: 'vowelBonus',
+        name: 'Vowel Power',
+        description: '+1 to all vowels',
+        basePrice: 10,
+        icon: '🔤',
+    },
+};
+
+// Check if player has a specific boost
+function hasBoost(boostId) {
+    return runState.boosts && runState.boosts.includes(boostId);
+}
+
+// Calculate boost price: base + $1 per owned boost
+function getBoostPrice(boostId) {
+    const boost = BOOSTS[boostId];
+    if (!boost) return 999;
+    const ownedCount = runState.boosts ? runState.boosts.length : 0;
+    return boost.basePrice + ownedCount;
+}
+
+// ============================================================================
+// END BOOST SYSTEM
+// ============================================================================
+
 // Game state
 let gameState = {
     board: [],
@@ -226,7 +280,13 @@ let runState = {
     pendingScore: null,  // Score to display on earnings screen
     // Shop tiles for current visit (persists across refresh)
     shopTiles: null,        // The 2 tiles offered this visit, e.g. ['E', 'N']
-    shopPurchased: null     // Which tiles have been purchased, e.g. [false, true]
+    shopTileTypes: null,    // Type of each shop tile, e.g. ['buffed', 'coin']
+    shopPurchased: null,    // Which tiles have been purchased, e.g. [false, true]
+    // Boosts (persistent Joker-like modifiers)
+    boosts: [],             // Array of boost IDs owned, e.g. ['extraTurn', 'vowelBonus']
+    maxBoostSlots: 5,       // Max boosts player can hold
+    shopBoost: null,        // Current boost offering (boost ID)
+    shopBoostPurchased: false  // Whether boost was purchased this shop visit
 };
 
 // Helper to mark tiles as buffed/coin/pink when drawn from bag
@@ -320,7 +380,9 @@ function getTargetScore(set, round) {
 // Calculate earnings for a completed round
 // Base: $3 (R1), $4 (R2), $5 (R3) + $1 per 25% above target
 function calculateEarnings(score, target, roundInSet) {
-    const basePayout = [3, 4, 5][roundInSet - 1] || 3;
+    const baseAmount = [3, 4, 5][roundInSet - 1] || 3;
+    // Apply basePayout boost: +$3 to base payout
+    const salaryBumpBonus = hasBoost('basePayout') ? 3 : 0;
     const extra = Math.max(0, score - target);
 
     // $1 bonus for every 25% of target scored above target
@@ -329,9 +391,10 @@ function calculateEarnings(score, target, roundInSet) {
     const extraBonus = bonusThreshold > 0 ? Math.floor(extra / bonusThreshold) : 0;
 
     return {
-        base: basePayout,
+        base: baseAmount,
+        salaryBumpBonus: salaryBumpBonus,
         extraBonus: extraBonus,
-        total: basePayout + extraBonus,
+        total: baseAmount + salaryBumpBonus + extraBonus,
         extraPoints: extra,
         bonusThreshold: bonusThreshold
     };
@@ -434,7 +497,6 @@ const runManager = {
         gameState.hasSubmittedScore = false;
         gameState.isSubmitting = false;
         gameState.rackTiles = [];
-        gameState.totalTilesDrawn = 7;
         gameState.gameStartTime = Date.now();
         gameState.preGeneratedShareURL = null;
         gameState.isNewHighScore = false;
@@ -446,6 +508,12 @@ const runManager = {
         gameState.selectedForExchange = [];
         gameState.exchangeCount = 0;
         gameState.exchangeHistory = [];
+
+        // Apply boost effects
+        // extraTurn: +1 turn per round
+        gameState.maxTurns = 5 + (hasBoost('extraTurn') ? 1 : 0);
+        // extraRack: +1 rack capacity (set initial tiles drawn accordingly)
+        gameState.totalTilesDrawn = hasBoost('extraRack') ? 8 : 7;
 
         // Generate new seed for this round (as string for consistency)
         gameState.seed = String(runState.runSeed + runState.round);
@@ -652,6 +720,12 @@ const runManager = {
             extraBonusRow.style.display = earnings.extraBonus > 0 ? 'flex' : 'none';
         }
 
+        // Show/hide Salary Bump row based on whether player has the boost
+        const salaryBumpRow = document.getElementById('earnings-salary-bump-row');
+        if (salaryBumpRow) {
+            salaryBumpRow.style.display = earnings.salaryBumpBonus > 0 ? 'flex' : 'none';
+        }
+
         // Update coin display in header
         this.updateCoinDisplay();
 
@@ -727,6 +801,33 @@ const runManager = {
         runState.shopPurchased = this.shopPurchased.slice();
     },
 
+    // Generate a random boost for shop (picks from unowned boosts)
+    generateShopBoost() {
+        // If player has max boosts, no boost available
+        if (runState.boosts.length >= runState.maxBoostSlots) {
+            runState.shopBoost = null;
+            runState.shopBoostPurchased = false;
+            return;
+        }
+
+        // Get list of unowned boosts
+        const ownedBoosts = runState.boosts || [];
+        const availableBoosts = Object.keys(BOOSTS).filter(id => !ownedBoosts.includes(id));
+
+        if (availableBoosts.length === 0) {
+            // Player owns all boosts
+            runState.shopBoost = null;
+            runState.shopBoostPurchased = false;
+            return;
+        }
+
+        // Pick a random boost
+        const randomIndex = Math.floor(Math.random() * availableBoosts.length);
+        runState.shopBoost = availableBoosts[randomIndex];
+        runState.shopBoostPurchased = false;
+        console.log('[Shop] Generated boost:', runState.shopBoost);
+    },
+
     // Show the shop screen
     showShopScreen() {
         // Check if we have persisted shop tiles (from refresh)
@@ -738,6 +839,11 @@ const runManager = {
         } else {
             // Generate fresh tiles for this shop visit
             this.generateShopTiles();
+        }
+
+        // Generate boost offering if not already persisted
+        if (runState.shopBoost === null && !runState.shopBoostPurchased) {
+            this.generateShopBoost();
         }
 
         // Track that we're showing the shop (survives refresh)
@@ -871,6 +977,170 @@ const runManager = {
             document.getElementById('shop-tile-0')?.classList.remove('no-transition');
             document.getElementById('shop-tile-1')?.classList.remove('no-transition');
         });
+
+        // Render boost section
+        this.renderShopBoostSection();
+    },
+
+    // Render the boost section in the shop
+    renderShopBoostSection() {
+        const boostSection = document.getElementById('shop-boost-section');
+        const boostCard = document.getElementById('shop-boost-card');
+        const boostStatus = document.getElementById('shop-boost-status');
+
+        if (!boostSection) return;
+
+        // Check if player has max boosts
+        if (runState.boosts.length >= runState.maxBoostSlots) {
+            boostSection.classList.remove('hidden');
+            boostCard.classList.add('hidden');
+            boostStatus.textContent = `Boost inventory full (${runState.boosts.length}/${runState.maxBoostSlots})`;
+            return;
+        }
+
+        // Check if no boost available (all owned)
+        if (!runState.shopBoost) {
+            boostSection.classList.remove('hidden');
+            boostCard.classList.add('hidden');
+            boostStatus.textContent = 'No boosts available';
+            return;
+        }
+
+        // Check if boost already purchased this visit
+        if (runState.shopBoostPurchased) {
+            boostSection.classList.remove('hidden');
+            boostCard.classList.add('hidden');
+            boostStatus.textContent = 'Boost purchased!';
+            return;
+        }
+
+        // Show the boost card
+        const boost = BOOSTS[runState.shopBoost];
+        if (!boost) {
+            boostSection.classList.add('hidden');
+            return;
+        }
+
+        boostSection.classList.remove('hidden');
+        boostCard.classList.remove('hidden');
+        boostStatus.textContent = `Owned: ${runState.boosts.length}/${runState.maxBoostSlots}`;
+
+        // Update boost card content
+        document.getElementById('shop-boost-icon').textContent = boost.icon;
+        document.getElementById('shop-boost-name').textContent = boost.name;
+        document.getElementById('shop-boost-desc').textContent = boost.description;
+
+        const price = getBoostPrice(runState.shopBoost);
+        document.getElementById('shop-boost-price').textContent = price;
+
+        const buyBtn = document.getElementById('shop-boost-buy');
+        if (runState.coins < price) {
+            buyBtn.classList.add('cannot-afford');
+            buyBtn.disabled = true;
+        } else {
+            buyBtn.classList.remove('cannot-afford');
+            buyBtn.disabled = false;
+        }
+    },
+
+    // Purchase the current shop boost
+    purchaseBoost() {
+        if (!runState.shopBoost || runState.shopBoostPurchased) return;
+        if (runState.boosts.length >= runState.maxBoostSlots) return;
+
+        const price = getBoostPrice(runState.shopBoost);
+        if (runState.coins < price) return;
+
+        // Deduct coins and add boost
+        runState.coins -= price;
+        runState.boosts.push(runState.shopBoost);
+        runState.shopBoostPurchased = true;
+
+        console.log('[Shop] Purchased boost:', runState.shopBoost, 'for $' + price);
+        this.saveRunState();
+
+        // Update displays
+        document.getElementById('shop-coins').textContent = runState.coins;
+        this.renderShopBoostSection();
+        this.renderBoostInventory();
+    },
+
+    // Render boost inventory display (below rack during gameplay)
+    renderBoostInventory() {
+        const container = document.getElementById('boost-inventory');
+        const slotsContainer = document.getElementById('boost-slots');
+        if (!container || !slotsContainer) return;
+
+        // Only show in run mode
+        if (!runState.isRunMode) {
+            container.classList.add('hidden');
+            return;
+        }
+
+        // Show container
+        container.classList.remove('hidden');
+
+        // Build slots HTML
+        let html = '';
+        for (let i = 0; i < runState.maxBoostSlots; i++) {
+            const boostId = runState.boosts[i];
+            if (boostId && BOOSTS[boostId]) {
+                const boost = BOOSTS[boostId];
+                html += `<div class="boost-slot filled" data-boost-id="${boostId}" title="${boost.name}: ${boost.description}">
+                    <span class="boost-slot-icon">${boost.icon}</span>
+                </div>`;
+            } else {
+                html += `<div class="boost-slot empty"></div>`;
+            }
+        }
+        slotsContainer.innerHTML = html;
+
+        // Add click handlers for filled slots
+        slotsContainer.querySelectorAll('.boost-slot.filled').forEach(slot => {
+            slot.addEventListener('click', () => {
+                const boostId = slot.dataset.boostId;
+                if (boostId) this.showBoostDetails(boostId);
+            });
+        });
+    },
+
+    // Show boost details modal
+    showBoostDetails(boostId) {
+        const boost = BOOSTS[boostId];
+        if (!boost) return;
+
+        const modal = document.getElementById('boost-modal');
+        if (!modal) return;
+
+        document.getElementById('boost-modal-icon').textContent = boost.icon;
+        document.getElementById('boost-modal-name').textContent = boost.name;
+        document.getElementById('boost-modal-description').textContent = boost.description;
+
+        // Store current boost ID for discard button
+        modal.dataset.boostId = boostId;
+
+        modal.style.display = 'flex';
+    },
+
+    // Hide boost details modal
+    hideBoostModal() {
+        const modal = document.getElementById('boost-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    },
+
+    // Discard a boost from inventory
+    discardBoost(boostId) {
+        const index = runState.boosts.indexOf(boostId);
+        if (index === -1) return;
+
+        runState.boosts.splice(index, 1);
+        console.log('[Boost] Discarded:', boostId);
+        this.saveRunState();
+
+        this.hideBoostModal();
+        this.renderBoostInventory();
     },
 
     // Purchase a tile via "Add" - adds to bag, costs $2/$3/$4 based on type
@@ -1499,6 +1769,7 @@ async function confirmExchange() {
         const removedLetters = runState.removedTiles || [];
 
         // Call backend to exchange tiles
+        const rackSize = hasBoost('extraRack') ? 8 : 7;
         const params = new URLSearchParams({
             seed: gameState.seed,
             action: 'exchange',
@@ -1508,7 +1779,8 @@ async function confirmExchange() {
             tiles_drawn: gameState.totalTilesDrawn,
             exchange_count: gameState.exchangeCount,
             purchased_tiles: JSON.stringify(purchasedLetters),
-            removed_tiles: JSON.stringify(removedLetters)
+            removed_tiles: JSON.stringify(removedLetters),
+            rack_size: rackSize
         });
 
         const response = await fetch(`${API_BASE}/letters.py?${params.toString()}`);
@@ -1578,7 +1850,8 @@ async function confirmExchange() {
 
         // Re-render the rack with new tiles, animating them from the bag
         // Calculate how many tiles were kept (not exchanged)
-        const keptTileCount = 7 - tilesToExchange.length;
+        const currentRackSize = hasBoost('extraRack') ? 8 : 7;
+        const keptTileCount = currentRackSize - tilesToExchange.length;
         await displayTilesAnimated(data.tiles, keptTileCount);
 
         // Update exchange button visibility (may need to hide if can't afford another)
@@ -3295,7 +3568,8 @@ function fetchGameData(seed) {
     const removedParam = runState.removedTiles?.length
         ? `&removed_tiles=${encodeURIComponent(JSON.stringify(runState.removedTiles))}`
         : '';
-    fetch(`${API_BASE}/letters.py?seed=${seed}${purchasedParam}${removedParam}`)
+    const rackSize = hasBoost('extraRack') ? 8 : 7;
+    fetch(`${API_BASE}/letters.py?seed=${seed}${purchasedParam}${removedParam}&rack_size=${rackSize}`)
         .then(response => {
             // Check HTTP status before parsing JSON
             if (!response.ok) {
@@ -3471,15 +3745,23 @@ function createRackBoard() {
     const rackBoard = document.getElementById('tile-rack-board');
     rackBoard.innerHTML = '';
 
-    // Create a 1x7 rack board
+    // Create a 1x7 or 1x8 rack board (8 with Big Pockets boost)
+    const rackSize = hasBoost('extraRack') ? 8 : 7;
     const row = 0;
-    for (let col = 0; col < 7; col++) {
+    for (let col = 0; col < rackSize; col++) {
         const cell = document.createElement('div');
         cell.className = 'board-cell rack-cell';
         cell.dataset.row = row;
         cell.dataset.col = col;
         cell.id = `rack-${row}-${col}`;
         rackBoard.appendChild(cell);
+    }
+
+    // Update CSS grid to accommodate extra cell if needed
+    if (rackSize === 8) {
+        rackBoard.style.gridTemplateColumns = 'repeat(8, 1fr)';
+    } else {
+        rackBoard.style.gridTemplateColumns = 'repeat(7, 1fr)';
     }
 }
 
@@ -4299,6 +4581,26 @@ function setupEventListeners() {
     });
     document.getElementById('shop-replace-1')?.addEventListener('click', () => {
         runManager.purchaseTileReplace(1);
+    });
+
+    // Shop boost button
+    document.getElementById('shop-boost-buy')?.addEventListener('click', () => {
+        runManager.purchaseBoost();
+    });
+
+    // Boost modal buttons
+    document.getElementById('boost-modal-close')?.addEventListener('click', () => {
+        runManager.hideBoostModal();
+    });
+    document.getElementById('boost-discard-btn')?.addEventListener('click', () => {
+        const modal = document.getElementById('boost-modal');
+        if (modal && modal.dataset.boostId) {
+            runManager.discardBoost(modal.dataset.boostId);
+        }
+    });
+    document.getElementById('boost-modal')?.addEventListener('click', (e) => {
+        // Close when clicking outside the content
+        if (e.target.id === 'boost-modal') runManager.hideBoostModal();
     });
 
     // Bag viewer buttons
@@ -5713,7 +6015,14 @@ function calculateWordScore(positions) {
             pinkMultiplier *= 1.5;
         }
 
+        // Calculate base letter score
         let letterScore = isBlank ? 0 : (TILE_SCORES[letter] || 0) + tileBonus;
+
+        // Apply vowelBonus boost: +1 to all vowels
+        const vowels = ['A', 'E', 'I', 'O', 'U'];
+        if (!isBlank && hasBoost('vowelBonus') && vowels.includes(letter)) {
+            letterScore += 1;
+        }
 
         // Check if this is a newly placed tile for multipliers
         const isNew = gameState.placedTiles.some(t => t.row === row && t.col === col);
@@ -5739,14 +6048,15 @@ function calculateWordScore(positions) {
     // Apply pink tile multiplier last (1.5× per pink tile)
     score = Math.floor(score * pinkMultiplier);
 
-    // Add bingo bonus if all 7 tiles used IN THIS SPECIFIC WORD
-    if (gameState.placedTiles.length === 7) {
-        // Check if all 7 placed tiles are in this word
+    // Add bingo bonus if all tiles used IN THIS SPECIFIC WORD (7 or 8 with Big Pockets)
+    const rackSize = hasBoost('extraRack') ? 8 : 7;
+    if (gameState.placedTiles.length === rackSize) {
+        // Check if all placed tiles are in this word
         const placedInThisWord = positions.filter(pos =>
             gameState.placedTiles.some(t => t.row === pos.row && t.col === pos.col)
         ).length;
 
-        if (placedInThisWord === 7) {
+        if (placedInThisWord === rackSize) {
             score += 50;
         }
     }
@@ -6329,10 +6639,11 @@ function submitWord() {
             // No need to update totalTilesDrawn here - it's updated in nextTurn
 
             // Save turn to history
+            const rackSizeForBingo = hasBoost('extraRack') ? 8 : 7;
             gameState.turnHistory.push({
                 tiles: placedWord,
                 score: turnScore,
-                bingo: placedWord.length === 7,
+                bingo: placedWord.length === rackSizeForBingo,
                 originalRack: gameState.turnStartRack || []  // Cache original rack from turn START (before shuffle/placement)
             });
 
@@ -6452,13 +6763,15 @@ function nextTurn() {
     // Get new tiles for next turn, passing current rack tiles and total tiles drawn
     // Extract just letters for server (rackTiles stores objects with buffed info)
     const rackLetters = gameState.rackTiles.map(t => typeof t === 'object' ? t.letter : t);
+    const rackSize = hasBoost('extraRack') ? 8 : 7;
     const params = new URLSearchParams({
         seed: gameState.seed,
         turn: gameState.currentTurn,
         rack_tiles: JSON.stringify(rackLetters),
         tiles_drawn: gameState.totalTilesDrawn,
         purchased_tiles: JSON.stringify(runState.purchasedTiles || []),
-        removed_tiles: JSON.stringify(runState.removedTiles || [])
+        removed_tiles: JSON.stringify(runState.removedTiles || []),
+        rack_size: rackSize
     });
 
     fetch(`${API_BASE}/letters.py?${params.toString()}`)
