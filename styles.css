@@ -2451,6 +2451,33 @@ main {
     padding: 0 1px;
 }
 
+/* Pink tile styling - pink border for 1.5× word multiplier */
+.pink-tile {
+    border: 2px solid #ff69b4 !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        0 2px 3px rgba(0, 0, 0, 0.3),
+        0 0 0 1px #ff69b4;
+}
+
+/* Pink tile indicator - pink pill with ×1.5 */
+.tile-pink-indicator {
+    position: absolute;
+    top: 1px;
+    right: 3px;
+    font-size: 6px;
+    font-weight: 700;
+    color: #000;  /* Black text for visibility on pink */
+    background: #ff69b4;
+    border-radius: 6px;
+    min-width: 16px;
+    height: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 2px;
+}
+
 .shop-tile-buff-label {
     font-size: 10px;
     color: #ffd700;
@@ -2672,6 +2699,15 @@ main {
         inset 0 1px 0 rgba(255, 255, 255, 0.5),
         0 1px 2px rgba(0, 0, 0, 0.2),
         0 0 0 0.5px var(--success-color);
+}
+
+/* Pink bag tiles - pink border */
+.bag-mini-tile.pink-tile {
+    border: 1.5px solid #ff69b4;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        0 1px 2px rgba(0, 0, 0, 0.2),
+        0 0 0 0.5px #ff69b4;
 }
 
 /* Buffed bag tiles - score in gold circle */

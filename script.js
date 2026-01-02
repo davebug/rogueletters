@@ -32,9 +32,20 @@ const TILE_EFFECTS = {
             position: 'top-right',   // For future: different effects use different positions
         },
     },
+    pink: {
+        id: 'pink',
+        cssClass: 'pink-tile',
+        borderPriority: 3,           // Higher than buffed and coin
+        datasetKey: 'pinkTile',      // data-pink-tile attribute
+        indicator: {
+            text: '×1.5',
+            className: 'tile-pink-indicator',
+            position: 'top-right',
+        },
+    },
     // Future effects can be added here:
-    // double: { id: 'double', cssClass: 'double-tile', borderPriority: 3, indicator: { text: '2x', position: 'top-left' } },
-    // wild: { id: 'wild', cssClass: 'wild-tile', borderPriority: 4, indicator: { text: '★', position: 'bottom-left' } },
+    // double: { id: 'double', cssClass: 'double-tile', borderPriority: 4, indicator: { text: '2x', position: 'top-left' } },
+    // wild: { id: 'wild', cssClass: 'wild-tile', borderPriority: 5, indicator: { text: '★', position: 'bottom-left' } },
 };
 
 // Get active effects from tile data (works with current data model)
@@ -43,6 +54,7 @@ function getActiveEffects(tileData) {
     const effects = [];
     if (tileData.buffed) effects.push('buffed');
     if (tileData.coinTile) effects.push('coin');
+    if (tileData.pinkTile) effects.push('pink');
     return effects;
 }
 
@@ -52,6 +64,7 @@ function getEffectData(tileData) {
     return {
         buffed: tileData.buffed ? { bonus: tileData.bonus || 1 } : null,
         coin: tileData.coinTile ? { claimed: tileData.coinClaimed || false } : null,
+        pink: tileData.pinkTile ? { multiplier: 1.5 } : null,
     };
 }
 
@@ -121,6 +134,7 @@ function getTileEffectsFromDom(tileElement) {
         buffed: tileElement.dataset.buffed === 'true',
         bonus: parseInt(tileElement.dataset.bonus) || 0,
         coinTile: tileElement.dataset.coinTile === 'true',
+        pinkTile: tileElement.dataset.pinkTile === 'true',
     };
 }
 
@@ -215,31 +229,35 @@ let runState = {
     shopPurchased: null     // Which tiles have been purchased, e.g. [false, true]
 };
 
-// Helper to mark tiles as buffed when drawn from bag
-// Takes array of letters (strings) or tile objects, returns array of {letter, buffed, bonus} objects
+// Helper to mark tiles as buffed/coin/pink when drawn from bag
+// Takes array of letters (strings) or tile objects, returns array of tile objects with effect flags
 function markBuffedTiles(tiles) {
-    // If tiles are already objects with buffed/coin info (restored from localStorage), preserve it
+    // If tiles are already objects with effect info (restored from localStorage), preserve it
     if (tiles.length > 0 && typeof tiles[0] === 'object' && tiles[0].letter) {
         return tiles.map(t => ({
             letter: t.letter,
             buffed: t.buffed || false,
             bonus: t.bonus || 0,
-            coinTile: t.coinTile || false
+            coinTile: t.coinTile || false,
+            pinkTile: t.pinkTile || false
         }));
     }
 
-    // Otherwise, tiles are strings (fresh draw from server), calculate buffed/coin status
+    // Otherwise, tiles are strings (fresh draw from server), calculate effect status
     if (!runState.purchasedTiles?.length) {
         // No purchased tiles, all tiles are normal
-        return tiles.map(letter => ({ letter, buffed: false, bonus: 0, coinTile: false }));
+        return tiles.map(letter => ({ letter, buffed: false, bonus: 0, coinTile: false, pinkTile: false }));
     }
 
-    // Count how many buffed and coin tiles of each letter we purchased
+    // Count how many of each tile type we purchased per letter
     const buffedCounts = {};
     const coinCounts = {};
+    const pinkCounts = {};
     for (const tile of runState.purchasedTiles) {
         const ltr = typeof tile === 'object' ? tile.letter : tile;
-        if (tile.coinTile) {
+        if (tile.pinkTile) {
+            pinkCounts[ltr] = (pinkCounts[ltr] || 0) + 1;
+        } else if (tile.coinTile) {
             coinCounts[ltr] = (coinCounts[ltr] || 0) + 1;
         } else {
             buffedCounts[ltr] = (buffedCounts[ltr] || 0) + 1;
@@ -249,32 +267,41 @@ function markBuffedTiles(tiles) {
     // Initialize drawn counts if needed
     runState.buffedTilesDrawn = runState.buffedTilesDrawn || {};
     runState.coinTilesDrawn = runState.coinTilesDrawn || {};
+    runState.pinkTilesDrawn = runState.pinkTilesDrawn || {};
 
-    // Mark tiles - special tiles are drawn first (buffed, then coin)
+    // Mark tiles - special tiles are drawn in priority order: pink, buffed, coin
     return tiles.map(letter => {
-        // Check buffed tiles first
+        // Check pink tiles first (highest priority)
+        const pinkPurchased = pinkCounts[letter] || 0;
+        const pinkAlreadyDrawn = runState.pinkTilesDrawn[letter] || 0;
+        const pinkRemaining = pinkPurchased - pinkAlreadyDrawn;
+
+        if (pinkRemaining > 0) {
+            runState.pinkTilesDrawn[letter] = pinkAlreadyDrawn + 1;
+            return { letter, buffed: false, bonus: 0, coinTile: false, pinkTile: true };
+        }
+
+        // Check buffed tiles next
         const buffedPurchased = buffedCounts[letter] || 0;
         const buffedAlreadyDrawn = runState.buffedTilesDrawn[letter] || 0;
         const buffedRemaining = buffedPurchased - buffedAlreadyDrawn;
 
         if (buffedRemaining > 0) {
-            // This is a buffed tile
             runState.buffedTilesDrawn[letter] = buffedAlreadyDrawn + 1;
-            return { letter, buffed: true, bonus: 1, coinTile: false };
+            return { letter, buffed: true, bonus: 1, coinTile: false, pinkTile: false };
         }
 
-        // Check coin tiles next
+        // Check coin tiles last
         const coinPurchased = coinCounts[letter] || 0;
         const coinAlreadyDrawn = runState.coinTilesDrawn[letter] || 0;
         const coinRemaining = coinPurchased - coinAlreadyDrawn;
 
         if (coinRemaining > 0) {
-            // This is a coin tile
             runState.coinTilesDrawn[letter] = coinAlreadyDrawn + 1;
-            return { letter, buffed: false, bonus: 0, coinTile: true };
+            return { letter, buffed: false, bonus: 0, coinTile: true, pinkTile: false };
         }
 
-        return { letter, buffed: false, bonus: 0, coinTile: false };
+        return { letter, buffed: false, bonus: 0, coinTile: false, pinkTile: false };
     });
 }
 
@@ -673,11 +700,15 @@ const runManager = {
             weightedTiles[Math.floor(Math.random() * weightedTiles.length)]
         ];
 
-        // Randomly assign tile types: 50% buffed (+1 point), 50% coin ($1 when played)
-        this.shopTileTypes = [
-            Math.random() < 0.5 ? 'buffed' : 'coin',
-            Math.random() < 0.5 ? 'buffed' : 'coin'
-        ];
+        // Randomly assign tile types with weighted distribution
+        // buffed (+1 point): 40%, coin ($1 when played): 40%, pink (1.5× word): 20%
+        const pickTileType = () => {
+            const roll = Math.random();
+            if (roll < 0.4) return 'buffed';
+            if (roll < 0.8) return 'coin';
+            return 'pink';
+        };
+        this.shopTileTypes = [pickTileType(), pickTileType()];
 
         // Validate tiles - if undefined or empty, use fallback
         for (let i = 0; i < this.shopTiles.length; i++) {
@@ -731,16 +762,18 @@ const runManager = {
             const tileType = this.shopTileTypes[i] || 'buffed';
             const isBlank = tile === '_';
             const isCoinTile = tileType === 'coin';
+            const isPinkTile = tileType === 'pink';
+            const isBuffedTile = tileType === 'buffed';
             const baseScore = TILE_SCORES[tile] || 0;
-            // Buffed tiles get +1 bonus, coin tiles show base score
+            // Buffed tiles get +1 bonus, coin/pink tiles show base score
             // Blanks don't get +1 bonus (they're already powerful)
-            const displayScore = isBlank ? 0 : (isCoinTile ? baseScore : baseScore + 1);
+            const displayScore = isBlank ? 0 : (isBuffedTile ? baseScore + 1 : baseScore);
             const option = document.getElementById(`shop-tile-${i}`);
             const tileDisplay = document.getElementById(`shop-tile-display-${i}`);
 
-            // Pricing: buffed = $2/$3, coin = $3/$4
-            const addCost = isCoinTile ? 3 : 2;
-            const replaceCost = isCoinTile ? 4 : 3;
+            // Pricing: buffed = $2/$3, coin = $3/$4, pink = $4/$5
+            const addCost = isPinkTile ? 4 : (isCoinTile ? 3 : 2);
+            const replaceCost = isPinkTile ? 5 : (isCoinTile ? 4 : 3);
 
             // IMPORTANT: Reset classes FIRST before setting text content
             // The 'purchased' class sets width:0 and overflow:hidden which can prevent text rendering
@@ -759,9 +792,14 @@ const runManager = {
                 tileDisplay.style.transform = '';  // Clear any transform
                 const letterContent = isBlank ? '' : tile;
                 const scoreContent = isBlank ? '' : displayScore;
-                // Add $1 indicator for coin tiles (buffed tiles show score in gold circle via CSS)
-                const coinIndicator = isCoinTile ? '<span class="tile-coin-indicator">$1</span>' : '';
-                tileDisplay.innerHTML = `<span class="tile-letter" id="shop-tile-letter-${i}">${letterContent}</span><span class="tile-score" id="shop-tile-score-${i}">${scoreContent}</span>${coinIndicator}`;
+                // Add indicator for special tiles
+                let indicator = '';
+                if (isCoinTile) {
+                    indicator = '<span class="tile-coin-indicator">$1</span>';
+                } else if (isPinkTile) {
+                    indicator = '<span class="tile-pink-indicator">×1.5</span>';
+                }
+                tileDisplay.innerHTML = `<span class="tile-letter" id="shop-tile-letter-${i}">${letterContent}</span><span class="tile-score" id="shop-tile-score-${i}">${scoreContent}</span>${indicator}`;
             }
 
             // Log for debugging
@@ -769,21 +807,35 @@ const runManager = {
 
             // Toggle tile styling based on type
             if (tileDisplay) {
-                tileDisplay.classList.remove('buffed-tile', 'coin-tile');
+                tileDisplay.classList.remove('buffed-tile', 'coin-tile', 'pink-tile');
                 if (!isBlank) {
-                    tileDisplay.classList.add(isCoinTile ? 'coin-tile' : 'buffed-tile');
+                    if (isPinkTile) {
+                        tileDisplay.classList.add('pink-tile');
+                    } else if (isCoinTile) {
+                        tileDisplay.classList.add('coin-tile');
+                    } else {
+                        tileDisplay.classList.add('buffed-tile');
+                    }
                 }
             }
 
-            // Update the label: "+1 value" for buffed, "$1 on play" for coin (hide for blanks)
+            // Update the label based on tile type (hide for blanks)
             const buffLabel = document.getElementById(`shop-buff-label-${i}`);
             if (buffLabel) {
                 if (isBlank) {
                     buffLabel.style.visibility = 'hidden';
                 } else {
                     buffLabel.style.visibility = 'visible';
-                    buffLabel.textContent = isCoinTile ? '$1 on play' : '+1 value';
-                    buffLabel.style.color = isCoinTile ? 'var(--success-color)' : '#ffd700';
+                    if (isPinkTile) {
+                        buffLabel.textContent = '×1.5 word';
+                        buffLabel.style.color = '#ff69b4';  // Pink color
+                    } else if (isCoinTile) {
+                        buffLabel.textContent = '$1 on play';
+                        buffLabel.style.color = 'var(--success-color)';
+                    } else {
+                        buffLabel.textContent = '+1 value';
+                        buffLabel.style.color = '#ffd700';
+                    }
                 }
             }
 
@@ -821,11 +873,12 @@ const runManager = {
         });
     },
 
-    // Purchase a tile via "Add" - adds to bag, costs $2
+    // Purchase a tile via "Add" - adds to bag, costs $2/$3/$4 based on type
     purchaseTileAdd(index) {
         const tileType = this.shopTileTypes[index] || 'buffed';
         const isCoinTile = tileType === 'coin';
-        const cost = isCoinTile ? 3 : 2;
+        const isPinkTile = tileType === 'pink';
+        const cost = isPinkTile ? 4 : (isCoinTile ? 3 : 2);
 
         if (runState.coins < cost || this.shopPurchased[index]) return;
 
@@ -835,8 +888,13 @@ const runManager = {
         runState.coins -= cost;
         runState.purchasedTiles = runState.purchasedTiles || [];
 
-        // Buffed tiles get +1 bonus, coin tiles get coinTile flag (blanks get neither bonus)
-        if (isCoinTile) {
+        // Set tile properties based on type (blanks don't get bonuses)
+        if (isPinkTile) {
+            runState.purchasedTiles.push({
+                letter: tile,
+                pinkTile: true
+            });
+        } else if (isCoinTile) {
             runState.purchasedTiles.push({
                 letter: tile,
                 coinTile: true
@@ -858,11 +916,12 @@ const runManager = {
         });
     },
 
-    // Purchase a tile via "Replace" - costs $3 (buffed) or $4 (coin), then pick a tile to remove
+    // Purchase a tile via "Replace" - costs $3/$4/$5 based on type, then pick a tile to remove
     purchaseTileReplace(index) {
         const tileType = this.shopTileTypes[index] || 'buffed';
         const isCoinTile = tileType === 'coin';
-        const cost = isCoinTile ? 4 : 3;
+        const isPinkTile = tileType === 'pink';
+        const cost = isPinkTile ? 5 : (isCoinTile ? 4 : 3);
 
         if (runState.coins < cost || this.shopPurchased[index]) return;
 
@@ -880,7 +939,8 @@ const runManager = {
 
         const tileType = this.shopTileTypes[index] || 'buffed';
         const isCoinTile = tileType === 'coin';
-        const cost = isCoinTile ? 4 : 3;
+        const isPinkTile = tileType === 'pink';
+        const cost = isPinkTile ? 5 : (isCoinTile ? 4 : 3);
 
         // Deduct coins and add the new tile
         const tile = this.shopTiles[index];
@@ -888,8 +948,13 @@ const runManager = {
         runState.coins -= cost;
         runState.purchasedTiles = runState.purchasedTiles || [];
 
-        // Buffed tiles get +1 bonus, coin tiles get coinTile flag (blanks get neither bonus)
-        if (isCoinTile) {
+        // Set tile properties based on type (blanks don't get bonuses)
+        if (isPinkTile) {
+            runState.purchasedTiles.push({
+                letter: tile,
+                pinkTile: true
+            });
+        } else if (isCoinTile) {
             runState.purchasedTiles.push({
                 letter: tile,
                 coinTile: true
@@ -2419,6 +2484,266 @@ async function encodeV3URL() {
     }
 }
 
+// ============================================================================
+// V4 URL Encoding/Decoding (synced from WikiLetters)
+// V4 encodes letters directly - no API calls needed for decoding
+// ============================================================================
+
+/**
+ * Encode letter to 6-bit value
+ * A-Z (normal) = 0-25, a-z (blank) = 26-51
+ */
+function encodeLetterV4(letter) {
+    if (letter >= 'A' && letter <= 'Z') {
+        return letter.charCodeAt(0) - 65; // A=0, B=1, ... Z=25
+    } else if (letter >= 'a' && letter <= 'z') {
+        return letter.charCodeAt(0) - 97 + 26; // a=26, b=27, ... z=51
+    }
+    console.error('[V4 Encoder] Invalid letter:', letter);
+    return 0;
+}
+
+/**
+ * Decode 6-bit value to letter
+ * 0-25 = A-Z (normal), 26-51 = a-z (blank)
+ */
+function decodeLetterV4(value) {
+    if (value < 26) {
+        return String.fromCharCode(65 + value); // A-Z
+    } else {
+        return String.fromCharCode(97 + value - 26); // a-z (blank)
+    }
+}
+
+/**
+ * Build V4 URL from tiles with direct letters
+ * Format: 16 bits per tile (position:7 + letter:6 + turn:3)
+ */
+function buildV4URL(tiles) {
+    const bitStream = new BitStream();
+
+    // Date (14 bits)
+    const daysSinceEpoch = dateToDaysSinceEpoch(gameState.seed);
+    bitStream.writeBits(daysSinceEpoch, 14);
+
+    // Starting word length (4 bits, max 15 letters)
+    const startingWord = gameState.startingWord || '';
+    bitStream.writeBits(startingWord.length, 4);
+
+    // Starting word letters (5 bits each, A=0 to Z=25)
+    for (const char of startingWord) {
+        const letterCode = char.toUpperCase().charCodeAt(0) - 65; // A=0, Z=25
+        bitStream.writeBits(letterCode, 5);
+    }
+
+    // Tile count (5 bits)
+    bitStream.writeBits(tiles.length, 5);
+
+    // Tiles (16 bits each: 7 position + 6 letter + 3 turn)
+    tiles.forEach(tile => {
+        const position = tile.row * 9 + tile.col; // 0-80
+        const letterCode = encodeLetterV4(tile.letter);
+        bitStream.writeBits(position, 7);
+        bitStream.writeBits(letterCode, 6);
+        bitStream.writeBits(tile.turn, 3);
+    });
+
+    // Convert to URL-safe Base64
+    const bytes = bitStream.getBytes();
+    const encoded = base64UrlEncode(bytes);
+
+    // Build URL with ?_= parameter (V4 format with direct letters)
+    const baseUrl = window.location.origin + window.location.pathname;
+    const url = `${baseUrl}?_=${encoded}`;
+    return url;
+}
+
+/**
+ * V4 Encoder: Build URL with direct letter encoding (no API calls needed)
+ * Supports blank tiles (lowercase letters)
+ */
+function encodeV4URL() {
+    try {
+        // Build tile array from turn history
+        const tiles = [];
+
+        gameState.turnHistory.forEach((turn, turnIndex) => {
+            if (turn && turn.tiles) {
+                turn.tiles.forEach(tile => {
+                    // Blank tiles are encoded as lowercase letters (26-51 in V4)
+                    const encodedLetter = tile.isBlank ? tile.letter.toLowerCase() : tile.letter.toUpperCase();
+                    tiles.push({
+                        row: tile.row,
+                        col: tile.col,
+                        letter: encodedLetter,
+                        turn: turnIndex + 1
+                    });
+                });
+            }
+        });
+
+        if (tiles.length === 0) {
+            console.error('[V4 Encoder] No tiles to encode');
+            return null;
+        }
+
+        // V4 is simple - just encode all tiles directly (no rack lookup needed!)
+        return buildV4URL(tiles);
+
+    } catch (err) {
+        console.error('[V4 Encoder] Failed to encode:', err);
+        return null;
+    }
+}
+
+/**
+ * V4 Decoder: Decode URL with direct letter encoding
+ * Format: date(14) + wordLen(4) + word(5*len) + tileCount(5) + tiles(16 each)
+ * Supports blank tiles (lowercase letters = 26-51)
+ * Still needs API call for score calculation
+ */
+async function decodeV4URL(encodedData) {
+    try {
+        // Decode Base64 to bytes
+        const bytes = base64UrlDecode(encodedData);
+        const bitStream = new BitStream(Array.from(bytes));
+
+        // Read date (14 bits)
+        const daysSinceEpoch = bitStream.readBits(14);
+
+        // Validate date range (should be 0-16383 for years 2020-2065)
+        if (daysSinceEpoch < 0 || daysSinceEpoch > 16383) {
+            throw new Error(`Invalid V4 data: date out of range (${daysSinceEpoch})`);
+        }
+
+        const seed = daysSinceEpochToDate(daysSinceEpoch);
+
+        // Validate seed format (YYYYMMDD)
+        if (!/^\d{8}$/.test(seed)) {
+            throw new Error(`Invalid V4 data: malformed date (${seed})`);
+        }
+
+        // Read starting word length (4 bits)
+        const wordLength = bitStream.readBits(4);
+
+        // Read starting word letters (5 bits each)
+        let startingWord = '';
+        for (let i = 0; i < wordLength; i++) {
+            const letterCode = bitStream.readBits(5);
+            startingWord += String.fromCharCode(65 + letterCode); // A=0 -> 'A'
+        }
+
+        // Read tile count (5 bits)
+        const tileCount = bitStream.readBits(5);
+
+        // Validate tile count (max 35 tiles in a 5-turn game)
+        if (tileCount > 35) {
+            throw new Error(`Invalid V4 data: tile count too high (${tileCount})`);
+        }
+
+        // Read tiles (position:7 + letter:6 + turn:3 = 16 bits each)
+        const tilesWithLetters = [];
+        for (let i = 0; i < tileCount; i++) {
+            const position = bitStream.readBits(7);
+            const letterCode = bitStream.readBits(6);
+            const turn = bitStream.readBits(3);
+
+            // Validate position (0-80 for 9x9 board)
+            if (position > 80) {
+                throw new Error(`Invalid V4 data: tile position out of range (${position})`);
+            }
+
+            // Validate turn (1-5)
+            if (turn < 1 || turn > 5) {
+                throw new Error(`Invalid V4 data: turn out of range (${turn})`);
+            }
+
+            const row = Math.floor(position / 9);
+            const col = position % 9;
+            const letter = decodeLetterV4(letterCode);
+            const isBlank = letterCode >= 26; // 26-51 = blank tiles
+
+            tilesWithLetters.push({ row, col, letter, turn, isBlank });
+        }
+
+        // Calculate scores using server endpoint
+        const scoresResponse = await fetch(`${API_BASE}/calculate_scores.py`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tiles: tilesWithLetters, seed: seed })
+        });
+
+        if (!scoresResponse.ok) {
+            throw new Error('Failed to calculate scores');
+        }
+
+        const scoresData = await scoresResponse.json();
+
+        // Build game data in same format as other decoders
+        const gameData = {
+            d: seed,
+            w: startingWord,  // Decoded from URL - no API call needed!
+            t: tilesWithLetters.map(tile => [
+                tile.row,
+                tile.col,
+                tile.letter,
+                tile.turn,
+                tile.isBlank ? 1 : 0  // blank flag
+            ]),
+            s: scoresData.scores
+        };
+
+        return gameData;
+
+    } catch (err) {
+        console.error('[V4 Decoder] Failed to decode:', err);
+        throw err;
+    }
+}
+
+/**
+ * Load V4 shared game from URL
+ */
+async function loadV4SharedGame(encodedParam) {
+    const startTime = Date.now();
+
+    try {
+        // Decode the V4 URL - starting word is encoded, no API calls needed!
+        const gameData = await decodeV4URL(encodedParam);
+
+        // Set game state for shared game
+        gameState.seed = gameData.d;
+        gameState.dateStr = formatSeedToDate(gameData.d);
+        gameState.startingWord = gameData.w;
+        gameState.turnScores = gameData.s;
+        gameState.score = gameData.s.reduce((sum, score) => sum + score, 0);
+        gameState.isGameOver = true; // Shared games are always complete
+        gameState.currentTurn = 6; // Beyond max turns
+
+        // Update UI
+        const dateDisplay = document.getElementById('dateDisplay');
+        if (dateDisplay) {
+            dateDisplay.textContent = gameState.dateStr;
+        }
+
+        // Initialize boards
+        createBoard();
+        createRackBoard();
+
+        // Render the shared board
+        renderSharedBoard(gameData);
+
+        // Track shared game loaded
+        const tileCount = gameData.t ? gameData.t.length : 0;
+        const duration = Date.now() - startTime;
+        Analytics.navigation.sharedGameLoaded('v4', tileCount, gameState.score, duration);
+
+    } catch (err) {
+        console.error('[V4 Load] Failed to load:', err);
+        throw err;
+    }
+}
+
 // V3 Decoder: Decode 45-character URL with rack indices
 async function decodeV3URL(encodedData, isSortedFormat = false) {
     try {
@@ -2795,7 +3120,20 @@ async function initializeGame() {
 
     // Get or generate seed from URL (moved up for hasSeedParam check)
 
-    // Phase 3: Check for compressed game share (?g= legacy or ?w= sorted)
+    // Phase 3a: Check for V4 game share (?_= with direct letter encoding)
+    const v4Param = urlParams.get('_');
+    if (v4Param) {
+        console.log('[Load] Detected V4 game share parameter (?_=)');
+        try {
+            await loadV4SharedGame(v4Param);
+            return; // Exit early - V4 shared game loading succeeded
+        } catch (v4Error) {
+            console.error('[Load] V4 decode failed:', v4Error);
+            // Continue with normal game initialization
+        }
+    }
+
+    // Phase 3b: Check for V3 compressed game share (?g= legacy or ?w= sorted)
     const legacyParam = urlParams.get('g');  // V3 original (no sorting)
     const sortedParam = urlParams.get('w');  // V3 sorted (with rack caching)
     const compressedParam = sortedParam || legacyParam;
@@ -5336,6 +5674,7 @@ function getWordAt(row, col, direction) {
 function calculateWordScore(positions) {
     let score = 0;
     let wordMultiplier = 1;
+    let pinkMultiplier = 1;  // Multiplier from pink tiles (1.5× per pink tile)
 
     positions.forEach(({ row, col }) => {
         const letter = gameState.board[row][col];
@@ -5349,15 +5688,29 @@ function calculateWordScore(positions) {
         // Get bonus from buffed tiles (purchased from shop)
         // Check placedTiles first (this turn), then DOM element (previous turns)
         let tileBonus = 0;
+        let isPinkTile = false;
         if (placedTile?.bonus) {
             tileBonus = placedTile.bonus;
-        } else {
-            // Check DOM for tiles from previous turns
+        }
+        if (placedTile?.pinkTile) {
+            isPinkTile = true;
+        }
+
+        // Also check DOM for tiles from previous turns
+        if (!placedTile) {
             const cell = document.querySelector(`.board-cell[data-row="${row}"][data-col="${col}"]`);
             const tileEl = cell?.querySelector('.tile');
             if (tileEl?.dataset.bonus) {
                 tileBonus = parseInt(tileEl.dataset.bonus) || 0;
             }
+            if (tileEl?.dataset.pinkTile === 'true') {
+                isPinkTile = true;
+            }
+        }
+
+        // Apply pink tile multiplier (1.5× per pink tile in the word)
+        if (isPinkTile) {
+            pinkMultiplier *= 1.5;
         }
 
         let letterScore = isBlank ? 0 : (TILE_SCORES[letter] || 0) + tileBonus;
@@ -5380,7 +5733,11 @@ function calculateWordScore(positions) {
         score += letterScore;
     });
 
+    // Apply word multiplier first (from 2W/3W squares)
     score *= wordMultiplier;
+
+    // Apply pink tile multiplier last (1.5× per pink tile)
+    score = Math.floor(score * pinkMultiplier);
 
     // Add bingo bonus if all 7 tiles used IN THIS SPECIFIC WORD
     if (gameState.placedTiles.length === 7) {
@@ -7096,28 +7453,42 @@ async function generateShareableBoardURL() {
     let method = 'seed_only';
     let fallbackReason = 'none';
 
+    // Try V4 first (fastest - no API calls needed)
     try {
-        // Try V3 encoding with 5-second timeout (sequential fetching needs more time)
-        const v3URL = await Promise.race([
-            encodeV3URL(),
-            new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('V3 encoding timeout after 5 seconds')), 5000)
-            )
-        ]);
-
-        if (v3URL && typeof v3URL === 'string' && v3URL.length > 0) {
-            shareURL = v3URL;
-            method = 'v3';
-            console.log('[Share Board] Pre-generated V3 compressed URL:', shareURL.length, 'chars');
+        const v4URL = encodeV4URL();
+        if (v4URL && typeof v4URL === 'string' && v4URL.length > 0) {
+            shareURL = v4URL;
+            method = 'v4';
+            console.log('[Share Board] Pre-generated V4 URL:', shareURL.length, 'chars');
         } else {
-            // V3 returned invalid data
-            const errorMsg = v3URL === null ? 'V3 returned null' : `V3 returned invalid: ${typeof v3URL}`;
-            console.warn('[Share Board] V3 encoding returned invalid result:', errorMsg);
-            fallbackReason = 'v3_invalid_result';
-            Analytics.shareBoard.failed('v3_invalid_result', errorMsg);
-            throw new Error(errorMsg); // Fall through to LZ-String
+            throw new Error('V4 encoding returned invalid result');
         }
-    } catch (err) {
+    } catch (v4Err) {
+        console.log('[Share Board] V4 encoding failed, trying V3...', v4Err.message);
+        fallbackReason = 'v4_failed';
+
+        try {
+            // Try V3 encoding with 5-second timeout (sequential fetching needs more time)
+            const v3URL = await Promise.race([
+                encodeV3URL(),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('V3 encoding timeout after 5 seconds')), 5000)
+                )
+            ]);
+
+            if (v3URL && typeof v3URL === 'string' && v3URL.length > 0) {
+                shareURL = v3URL;
+                method = 'v3';
+                console.log('[Share Board] Pre-generated V3 compressed URL:', shareURL.length, 'chars');
+            } else {
+                // V3 returned invalid data
+                const errorMsg = v3URL === null ? 'V3 returned null' : `V3 returned invalid: ${typeof v3URL}`;
+                console.warn('[Share Board] V3 encoding returned invalid result:', errorMsg);
+                fallbackReason = 'v3_invalid_result';
+                Analytics.shareBoard.failed('v3_invalid_result', errorMsg);
+                throw new Error(errorMsg); // Fall through to LZ-String
+            }
+        } catch (err) {
         // V3 encoding failed or timed out - fall back to LZ-String
         const errorType = err.message.includes('timeout') ? 'v3_timeout' :
                          err.message.includes('invalid') ? 'v3_invalid_result' :
@@ -7170,6 +7541,7 @@ async function generateShareableBoardURL() {
             Analytics.shareBoard.failed(lzErrorType, lzErr.message);
             // shareURL already set to seed-only fallback at top
         }
+        }
     }
 
     // Store the pre-generated URL in gameState
@@ -7212,7 +7584,9 @@ async function shareBoardGame() {
 
     // Determine method from URL
     let method = 'seed_only';
-    if (shareURL.includes('?g=') || shareURL.includes('?w=')) {
+    if (shareURL.includes('?_=')) {
+        method = 'v4';  // V4 format uses ?_= parameter (direct letter encoding)
+    } else if (shareURL.includes('?g=') || shareURL.includes('?w=')) {
         method = 'v3';  // V3 format uses ?g= (legacy) or ?w= (sorted) parameter
     } else if (shareURL.includes('&s=')) {
         method = shareURL.includes('v3=') ? 'v3' : 'lz_string';
@@ -7233,8 +7607,8 @@ function copyToClipboardWithFeedback(text, button, originalText = null, method =
 
     // Determine success message based on compression method
     let successMessage = "Copied!";
-    if (method === 'v3') {
-        successMessage = "Copied!";  // Best case - V3 compressed
+    if (method === 'v4' || method === 'v3') {
+        successMessage = "Copied!";  // Best case - V4 or V3 compressed
     } else if (method === 'lz_string') {
         successMessage = "Copied.";  // Good - LZ-String (longer but full board)
     } else if (method === 'seed_only') {
