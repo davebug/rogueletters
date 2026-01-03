@@ -2598,11 +2598,6 @@ function buildV3URLFromTiles(tilesWithRackIdx) {
 
     // Build URL with new ?w= parameter (sorted format, enables rack caching)
     const url = `https://letters.wiki/?w=${encoded}`;
-
-    console.log('[V3 Encoder] Generated URL (sorted format):', url);
-    console.log('[V3 Encoder] URL length:', url.length);
-    console.log('[V3 Encoder] Tiles encoded:', tilesWithRackIdx.length);
-
     return url;
 }
 
@@ -2611,11 +2606,9 @@ async function encodeV3URL() {
     try {
         // Build tile array from turn history
         const tiles = [];
-        console.log('[V3 Encoder] Turn history:', JSON.parse(JSON.stringify(gameState.turnHistory)));
 
         gameState.turnHistory.forEach((turn, turnIndex) => {
             if (turn && turn.tiles) {
-                console.log(`[V3 Encoder] Turn ${turnIndex + 1}: ${turn.tiles.length} tiles`);
                 turn.tiles.forEach(tile => {
                     tiles.push({
                         row: tile.row,
@@ -2623,17 +2616,13 @@ async function encodeV3URL() {
                         letter: tile.letter,
                         turn: turnIndex + 1
                     });
-                    console.log(`[V3 Encoder]   - (${tile.row},${tile.col}) = ${tile.letter}`);
                 });
             }
         });
 
         if (tiles.length === 0) {
-            console.error('[V3 Encoder] No tiles to encode');
             return null;
         }
-
-        console.log('[V3 Encoder] Total tiles to encode:', tiles.length);
 
         // Group tiles by turn to fetch racks
         const tilesByTurn = {};
@@ -2650,9 +2639,6 @@ async function encodeV3URL() {
         const allRacksCached = gameState.turnHistory.every(turn => turn && turn.originalRack && turn.originalRack.length > 0);
 
         if (allRacksCached) {
-            console.log('[V3 Encoder] ✓ All racks cached! Using fast path (no API calls)');
-            const fastPathStart = Date.now();
-
             const tilesWithRackIdx = [];
             for (let turn = 1; turn <= 5; turn++) {
                 const turnTiles = tilesByTurn[turn] || [];
@@ -2661,8 +2647,6 @@ async function encodeV3URL() {
                 const rack = gameState.turnHistory[turn - 1].originalRack;
                 // Sort rack alphabetically for new ?w= format (enables rack caching!)
                 const sortedRack = [...rack].sort();
-                console.log(`[V3 Encoder] Turn ${turn} rack (cached):`, rack);
-                console.log(`[V3 Encoder] Turn ${turn} sorted rack:`, sortedRack);
 
                 const usedIndices = new Set();
                 turnTiles.forEach(tile => {
@@ -4972,6 +4956,14 @@ async function handleRackClick(e) {
 }
 
 async function swapTilesInRack(tile1, tile2) {
+    // Clear selection FIRST to prevent race conditions during async operations
+    if (selectedTile) {
+        selectedTile.classList.remove('selected');
+    }
+    selectedTile = null;
+    window.selectedTile = null;
+    selectedTilePosition = null;
+
     const cell1 = tile1.parentElement;
     const cell2 = tile2.parentElement;
 
@@ -5009,6 +5001,14 @@ async function swapTilesInRack(tile1, tile2) {
 
 // Swap a rack tile with a board tile (placed-this-turn only)
 async function swapRackAndBoardTile(rackTile, boardPosition) {
+    // Clear selection FIRST to prevent race conditions during async operations
+    if (selectedTile) {
+        selectedTile.classList.remove('selected');
+    }
+    selectedTile = null;
+    window.selectedTile = null;
+    selectedTilePosition = null;
+
     const rackLetter = rackTile.dataset.letter;
     const rackIsBlank = rackTile.dataset.isBlank === 'true' || rackLetter === '_';
 
@@ -5150,6 +5150,14 @@ async function swapRackAndBoardTile(rackTile, boardPosition) {
 
 // Swap two board tiles (both placed-this-turn)
 async function swapBoardTiles(position1, position2) {
+    // Clear selection FIRST to prevent race conditions during async operations
+    if (selectedTile) {
+        selectedTile.classList.remove('selected');
+    }
+    selectedTile = null;
+    window.selectedTile = null;
+    selectedTilePosition = null;
+
     const cell1 = document.querySelector(
         `.board-cell[data-row="${position1.row}"][data-col="${position1.col}"]`
     );
@@ -7691,7 +7699,7 @@ function buildShareableGameData() {
                     tile.col,
                     tile.letter,
                     turnIndex + 1,  // Turn number (1-5)
-                    0  // Blank flag (0 = normal tile, 1 = blank - for future use)
+                    tile.isBlank ? 1 : 0  // Blank flag (0 = normal, 1 = blank)
                 ]);
             });
         }
