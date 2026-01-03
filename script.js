@@ -4653,6 +4653,17 @@ function initLetterGrid() {
 
     // Cancel button handler
     document.getElementById('cancel-blank-selection')?.addEventListener('click', hideBlankLetterModal);
+
+    // Click outside modal content dismisses it
+    const modal = document.getElementById('blank-letter-modal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            // Only dismiss if clicking the backdrop, not the modal content
+            if (e.target === modal) {
+                hideBlankLetterModal();
+            }
+        });
+    }
 }
 
 function showBlankLetterModal(cell, tile) {
@@ -4677,6 +4688,7 @@ function hideBlankLetterModal() {
         selectedTile.classList.remove('selected');
         selectedTile = null;
     }
+    selectedTilePosition = null;
 }
 
 async function handleBlankLetterSelection(letter) {
@@ -5410,6 +5422,8 @@ async function handleTileClick(e) {
             // If selected tile is from board, swap board tile with this rack tile
             else {
                 await swapRackAndBoardTile(tile, selectedTilePosition);
+                // Defensive: ensure potential words are updated after swap
+                updatePotentialWordsSidebar();
             }
         } else {
             // Select this tile
@@ -5445,6 +5459,8 @@ async function handleTileClick(e) {
                 col: parseInt(parentCell.dataset.col)
             };
             await swapRackAndBoardTile(selectedTile, boardPosition);
+            // Defensive: ensure potential words are updated after swap
+            updatePotentialWordsSidebar();
         } else if (selectedTile && selectedTilePosition) {
             // Another board tile is selected, swap the two board tiles
             const newPosition = {
@@ -5452,6 +5468,8 @@ async function handleTileClick(e) {
                 col: parseInt(parentCell.dataset.col)
             };
             await swapBoardTiles(selectedTilePosition, newPosition);
+            // Defensive: ensure potential words are updated after swap
+            updatePotentialWordsSidebar();
         } else {
             // No tile selected, select this board tile
             selectedTile = tile;
@@ -6248,15 +6266,22 @@ function updatePotentialWordsSidebar() {
         if (words.length === 0) {
             potentialWordsDiv.innerHTML = '';
         } else {
-            // Check validity of all words with retry
+            // Check validity of all words with retry and exponential backoff
             const wordStrings = words.map(w => w.word);
             if (wordStrings.length > 0) {
-                const maxRetries = 2;
-                const retryDelay = 300; // ms
+                const maxRetries = 3;
+                const retryDelays = [200, 500, 1250]; // Exponential backoff
 
                 const attemptValidation = (attempt = 0) => {
-                    fetch(`${API_BASE}/check_word.py?words=${encodeURIComponent(JSON.stringify(wordStrings))}`)
+                    // Add 5 second timeout to prevent hanging requests
+                    const controller = new AbortController();
+                    const timeout = setTimeout(() => controller.abort(), 5000);
+
+                    fetch(`${API_BASE}/check_word.py?words=${encodeURIComponent(JSON.stringify(wordStrings))}`, {
+                        signal: controller.signal
+                    })
                         .then(response => {
+                            clearTimeout(timeout);
                             if (!response.ok) {
                                 throw new Error(`check_word_http_${response.status}`);
                             }
@@ -6305,10 +6330,13 @@ function updatePotentialWordsSidebar() {
                             potentialWordsDiv.innerHTML = html;
                         })
                         .catch(error => {
+                            clearTimeout(timeout);
+
                             // Retry if attempts remaining
                             if (attempt < maxRetries) {
-                                console.log(`[DEBUG] Word validation failed, retrying (${attempt + 1}/${maxRetries})...`);
-                                setTimeout(() => attemptValidation(attempt + 1), retryDelay);
+                                const delay = retryDelays[attempt] || retryDelays[retryDelays.length - 1];
+                                console.log(`[DEBUG] Word validation failed, retrying in ${delay}ms (${attempt + 1}/${maxRetries})...`);
+                                setTimeout(() => attemptValidation(attempt + 1), delay);
                                 return;
                             }
 
