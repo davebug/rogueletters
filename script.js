@@ -5663,7 +5663,6 @@ async function returnBoardTileToRack(fromPos) {
     }
 
     // Update preview and save state
-    console.log('[DEBUG] returnBoardTileToRack: Updating displays after tile removal');
     updateWordPreview();
     checkWordValidity();
     updatePotentialWordsSidebar();
@@ -5921,8 +5920,6 @@ function updateWordPreview() {
 function findFormedWords() {
     const words = [];
 
-    console.log('[DEBUG] findFormedWords: placedTiles=', gameState.placedTiles);
-    console.log('[DEBUG] findFormedWords: board state=', gameState.board);
 
     // Check each placed tile for words it forms
     gameState.placedTiles.forEach(({ row, col }) => {
@@ -6267,7 +6264,6 @@ function updatePotentialWordsSidebar() {
 
     // Continue to show words even if placement is invalid
     const words = findFormedWords();
-    console.log('[DEBUG] updatePotentialWordsSidebar called, words found:', words.length);
 
     // Single unified version for both desktop and mobile
     if (potentialWordsDiv) {
@@ -6343,7 +6339,6 @@ function updatePotentialWordsSidebar() {
                             // Retry if attempts remaining
                             if (attempt < maxRetries) {
                                 const delay = retryDelays[attempt] || retryDelays[retryDelays.length - 1];
-                                console.log(`[DEBUG] Word validation failed, retrying in ${delay}ms (${attempt + 1}/${maxRetries})...`);
                                 setTimeout(() => attemptValidation(attempt + 1), delay);
                                 return;
                             }
@@ -6392,17 +6387,14 @@ function updatePotentialWordsSidebar() {
 function checkWordValidity() {
     // Show/hide buttons based on tile placement
     const hasTiles = gameState.placedTiles.length > 0;
-    console.log('[DEBUG] checkWordValidity called, placedTiles:', gameState.placedTiles.length, 'hasTiles:', hasTiles);
 
     // Show/hide potential words container
     const potentialWords = document.getElementById('potential-words');
     if (potentialWords) {
         if (hasTiles) {
             potentialWords.classList.add('has-tiles');
-            console.log('[DEBUG] Added has-tiles class to potential words');
         } else {
             potentialWords.classList.remove('has-tiles');
-            console.log('[DEBUG] Removed has-tiles class from potential words');
         }
     }
 
