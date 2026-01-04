@@ -205,6 +205,15 @@ function getBoostPrice(boostId) {
     return boost.basePrice + ownedCount;
 }
 
+// Get display score for a tile (includes vowel boost if active)
+function getTileDisplayScore(letter, bonus = 0) {
+    if (!letter || letter === '_') return '';
+    const baseScore = TILE_SCORES[letter] || 0;
+    const vowels = ['A', 'E', 'I', 'O', 'U'];
+    const vowelBonus = hasBoost('vowelBonus') && vowels.includes(letter) ? 1 : 0;
+    return baseScore + bonus + vowelBonus;
+}
+
 // ============================================================================
 // END BOOST SYSTEM
 // ============================================================================
@@ -3713,7 +3722,7 @@ function placeStartingWord(word) {
 
         const scoreSpan = document.createElement('span');
         scoreSpan.className = 'tile-value';
-        scoreSpan.textContent = TILE_SCORES[word[i]] || 0;
+        scoreSpan.textContent = getTileDisplayScore(word[i]);
 
         tileDiv.appendChild(letterSpan);
         tileDiv.appendChild(scoreSpan);
@@ -3800,12 +3809,7 @@ function createTileElement(letter, index, isBlank = false, buffed = false, bonus
     // Create score span
     const scoreSpan = document.createElement('span');
     scoreSpan.className = 'tile-score';
-    if (tileIsBlank) {
-        scoreSpan.textContent = '';
-    } else {
-        const baseScore = TILE_SCORES[letter] || 0;
-        scoreSpan.textContent = baseScore + bonus;
-    }
+    scoreSpan.textContent = tileIsBlank ? '' : getTileDisplayScore(letter, bonus);
 
     tile.appendChild(letterSpan);
     tile.appendChild(scoreSpan);
@@ -4712,7 +4716,7 @@ async function handleBlankLetterSelection(letter) {
             rackTile.dataset.isBlank = 'false';
             rackTile.classList.remove('blank-tile');
             rackTile.querySelector('.tile-letter').textContent = boardLetter;
-            rackTile.querySelector('.tile-score').textContent = TILE_SCORES[boardLetter] || 0;
+            rackTile.querySelector('.tile-score').textContent = getTileDisplayScore(boardLetter);
         }
 
         // 2. Update the board tile to show the blank with chosen letter
@@ -5095,7 +5099,7 @@ async function swapRackAndBoardTile(rackTile, boardPosition) {
     const boardLetterSpan = boardTile.querySelector('.tile-letter');
     boardLetterSpan.textContent = rackLetter;
     boardLetterSpan.classList.remove('blank-letter');
-    boardTile.querySelector('.tile-value').textContent = TILE_SCORES[rackLetter] || 0;
+    boardTile.querySelector('.tile-value').textContent = getTileDisplayScore(rackLetter, rackBonus);
 
     // Transfer rack tile's effects to board tile using centralized system
     applyTileEffects(boardTile, { buffed: rackIsBuffed, bonus: rackBonus, coinTile: rackIsCoinTile });
@@ -5112,7 +5116,7 @@ async function swapRackAndBoardTile(rackTile, boardPosition) {
         rackTile.dataset.isBlank = 'false';
         rackTile.classList.remove('blank-tile');
         rackTile.querySelector('.tile-letter').textContent = boardLetter;
-        rackTile.querySelector('.tile-score').textContent = TILE_SCORES[boardLetter] || 0;
+        rackTile.querySelector('.tile-score').textContent = getTileDisplayScore(boardLetter, boardBonus);
     }
 
     // Transfer board tile's effects to rack tile using centralized system
@@ -5837,7 +5841,7 @@ async function placeTile(cell, tile) {
 
     const scoreSpan = document.createElement('span');
     scoreSpan.className = 'tile-value';
-    scoreSpan.textContent = (TILE_SCORES[letter] || 0) + bonus;
+    scoreSpan.textContent = getTileDisplayScore(letter, bonus);
 
     tileDiv.appendChild(letterSpan);
     tileDiv.appendChild(scoreSpan);
@@ -7615,7 +7619,7 @@ function renderSharedBoard(gameData) {
 
         const scoreSpan = document.createElement('span');
         scoreSpan.className = 'tile-value';
-        scoreSpan.textContent = tileIsBlank ? '' : (TILE_SCORES[displayLetter] || 0);
+        scoreSpan.textContent = tileIsBlank ? '' : getTileDisplayScore(displayLetter);
 
         tileDiv.appendChild(letterSpan);
         tileDiv.appendChild(scoreSpan);
@@ -8291,7 +8295,7 @@ function restoreBoard() {
 
                 const scoreSpan = document.createElement('span');
                 scoreSpan.className = 'tile-value';
-                scoreSpan.textContent = isBlank ? '' : (TILE_SCORES[letter] || 0);
+                scoreSpan.textContent = isBlank ? '' : getTileDisplayScore(letter);
 
                 tileDiv.appendChild(letterSpan);
                 tileDiv.appendChild(scoreSpan);
