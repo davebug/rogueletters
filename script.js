@@ -3875,9 +3875,8 @@ async function animateTileMovement(tiles, getTargetRect, options = {}) {
         targetRect: getTargetRect(tile, index)
     }));
 
-    // STEP 2: Clear selection state
+    // STEP 2: Clear selection state (only clear CSS classes, not the selectedTile variable)
     tiles.forEach(tile => tile.classList.remove('selected', 'selected-for-exchange'));
-    if (typeof selectedTile !== 'undefined') selectedTile = null;
 
     // STEP 3: Hide originals (no delay - was causing offset issues on mobile)
     tileData.forEach(({ tile }) => {
@@ -5407,13 +5406,6 @@ async function handleTileClick(e) {
     const isRackTile = parentCell?.classList.contains('rack-cell');
     const isBoardTile = parentCell?.classList.contains('board-cell') && !isRackTile; // board-cell but NOT rack-cell
 
-    console.log('Tile clicked:', {
-        isRackTile,
-        isBoardTile,
-        parentClasses: parentCell?.className,
-        tileText: tile.querySelector('.tile-letter')?.textContent
-    });
-
     if (isRackTile) {
         // Handle rack tile first since rack cells have both classes
         if (selectedTile) {
@@ -5425,11 +5417,8 @@ async function handleTileClick(e) {
             }
             // If the selected tile is from the rack, swap positions
             else if (!selectedTilePosition) {
-                console.log('Swapping tiles:', selectedTile, tile);
                 await swapTilesInRack(selectedTile, tile);
-                selectedTile.classList.remove('selected');
-                selectedTile = null;
-                window.selectedTile = null;
+                // Selection already cleared by swapTilesInRack
             }
             // If selected tile is from board, swap board tile with this rack tile
             else {
@@ -5593,8 +5582,10 @@ async function moveTileBetweenBoardPositions(fromPos, toCell) {
     toCell.classList.add('occupied', 'placed-this-turn');
     gameState.board[toRow][toCol] = tileData.letter;
 
-    // Clear selection
-    selectedTile.classList.remove('selected');
+    // Clear selection (check if selectedTile exists - animation may have cleared it)
+    if (selectedTile) {
+        selectedTile.classList.remove('selected');
+    }
     selectedTile = null;
     selectedTilePosition = null;
 
@@ -6245,7 +6236,13 @@ function validateTilePlacement() {
     return { valid: true, message: '', invalidTiles: [] };
 }
 
+// Counter to handle async race conditions in sidebar updates
+let sidebarRequestId = 0;
+
 function updatePotentialWordsSidebar() {
+    // Increment request ID to invalidate any pending async responses
+    const thisRequestId = ++sidebarRequestId;
+
     const potentialWordsDiv = document.getElementById('potential-words-list');
 
     // First check if tiles are in a valid straight line
@@ -6296,6 +6293,9 @@ function updatePotentialWordsSidebar() {
                             return response.json();
                         })
                         .then(data => {
+                            // Ignore stale response if a newer request was made
+                            if (thisRequestId !== sidebarRequestId) return;
+
                             let html = '';
                             let totalScore = 0;
                             let hasInvalidWords = false;
@@ -6339,6 +6339,9 @@ function updatePotentialWordsSidebar() {
                         })
                         .catch(error => {
                             clearTimeout(timeout);
+
+                            // Ignore stale response if a newer request was made
+                            if (thisRequestId !== sidebarRequestId) return;
 
                             // Retry if attempts remaining
                             if (attempt < maxRetries) {
