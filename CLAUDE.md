@@ -63,6 +63,42 @@ newEffect: {
 
 Tiles can have multiple effects - border goes to highest priority, all indicators show.
 
+## Sync from WikiLetters
+
+RogueLetters shares ~50% of its code with WikiLetters (core word logic, animations, URL encoding, validation). **Before making changes**, check if WikiLetters has updates that should be synced:
+
+```bash
+python3 .claude/skills/sync-from-letters/scripts/compare.py
+```
+
+This shows:
+- Recent WikiLetters commits that may need syncing (fixes, features)
+- Functions that exist in WikiLetters but not RogueLetters
+- Identical files that have drifted (validate_word.py, check_word.py, enable.txt)
+
+**To sync identical files:**
+```bash
+python3 .claude/skills/sync-from-letters/scripts/sync.py --dry-run  # Preview
+python3 .claude/skills/sync-from-letters/scripts/sync.py            # Apply
+```
+
+**What's shared (sync candidates):**
+- Word validation & scoring logic
+- Tile animations (swap, rack-to-board, etc.)
+- URL encoding/decoding (V3, V4)
+- Board utilities (getCellType, getMultiplierText)
+- Exchange system
+- Clipboard/share functionality
+
+**What's RogueLetters-only (don't sync):**
+- TILE_EFFECTS system
+- runState / runManager
+- Economy (coins, shop, earnings screens)
+- Target escalation
+- Boost system
+
+See `.claude/skills/sync-from-letters/references/sync-log.md` for sync history.
+
 ## Development
 
 - Cache-busting: Update version numbers in HTML when changing CSS/JS
