@@ -2,6 +2,8 @@
 
 A roguelike word puzzle game - "Balatro for Scrabble". Forked from WikiLetters but evolving independently with run-based progression, escalating targets, and (eventually) modifiers/upgrades.
 
+> **START OF SESSION**: Before doing any work, run `python3 .claude/skills/sync-from-letters/scripts/compare.py` to check for WikiLetters updates. See [Sync from WikiLetters](#sync-from-wikiletters) for details.
+
 ## Current State
 
 **Phase 2 Complete:** Economy system working
@@ -65,24 +67,30 @@ Tiles can have multiple effects - border goes to highest priority, all indicator
 
 ## Sync from WikiLetters
 
-RogueLetters shares ~50% of its code with WikiLetters (core word logic, animations, URL encoding, validation). **Before making changes**, check if WikiLetters has updates that should be synced:
+RogueLetters shares ~50% of its code with WikiLetters (core word logic, animations, URL encoding, validation).
+
+### When to Check
+**Run this at the START of every RogueLetters session**, before doing any other work:
 
 ```bash
 python3 .claude/skills/sync-from-letters/scripts/compare.py
 ```
 
-This shows:
-- Recent WikiLetters commits that may need syncing (fixes, features)
-- Functions that exist in WikiLetters but not RogueLetters
-- Identical files that have drifted (validate_word.py, check_word.py, enable.txt)
+### What to Do with Results
 
-**To sync identical files:**
-```bash
-python3 .claude/skills/sync-from-letters/scripts/sync.py --dry-run  # Preview
-python3 .claude/skills/sync-from-letters/scripts/sync.py            # Apply
-```
+1. **If fixes are listed** (🔧 FIXES section) - These are bug fixes in shared code. Sync them FIRST before starting any new work. Ask the user if unclear whether a fix applies.
 
-**What's shared (sync candidates):**
+2. **If identical files drifted** (📁 IDENTICAL FILES section shows ⚠️) - Run the sync script immediately:
+   ```bash
+   python3 .claude/skills/sync-from-letters/scripts/sync.py --dry-run  # Preview
+   python3 .claude/skills/sync-from-letters/scripts/sync.py            # Apply
+   ```
+
+3. **If features are listed** (✨ FEATURES section) - Mention these to the user. They may want them synced, or they may be WikiLetters-specific.
+
+4. **If all clear** (✅ No sync opportunities) - Proceed with the requested work.
+
+### What's Shared (sync these)
 - Word validation & scoring logic
 - Tile animations (swap, rack-to-board, etc.)
 - URL encoding/decoding (V3, V4)
@@ -90,7 +98,7 @@ python3 .claude/skills/sync-from-letters/scripts/sync.py            # Apply
 - Exchange system
 - Clipboard/share functionality
 
-**What's RogueLetters-only (don't sync):**
+### What's RogueLetters-Only (don't sync)
 - TILE_EFFECTS system
 - runState / runManager
 - Economy (coins, shop, earnings screens)
