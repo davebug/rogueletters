@@ -80,15 +80,20 @@ python3 .claude/skills/sync-from-letters/scripts/compare.py
 
 1. **If fixes are listed** (🔧 FIXES section) - These are bug fixes in shared code. Sync them FIRST before starting any new work. Ask the user if unclear whether a fix applies.
 
-2. **If identical files drifted** (📁 IDENTICAL FILES section shows ⚠️) - Run the sync script immediately:
+2. **If implementation differences found** (⚠️ IMPLEMENTATION DIFFERENCES section) - These are functions that exist in both codebases but have different code. Review which need syncing:
+   - If listed under "SHARED FUNCTIONS" - likely needs syncing from WikiLetters
+   - Compare the actual code to determine if the WikiLetters version has a fix RogueLetters needs
+   - Some differences are intentional (RogueLetters-specific modifications) - these are in the expected list
+
+3. **If identical files drifted** (📁 IDENTICAL FILES section shows ⚠️) - Run the sync script immediately:
    ```bash
    python3 .claude/skills/sync-from-letters/scripts/sync.py --dry-run  # Preview
    python3 .claude/skills/sync-from-letters/scripts/sync.py            # Apply
    ```
 
-3. **If features are listed** (✨ FEATURES section) - Mention these to the user. They may want them synced, or they may be WikiLetters-specific.
+4. **If features are listed** (✨ FEATURES section) - Mention these to the user. They may want them synced, or they may be WikiLetters-specific.
 
-4. **If all clear** (✅ No sync opportunities) - Proceed with the requested work.
+5. **If all clear** (✅ No sync opportunities) - Proceed with the requested work.
 
 ### What's Shared (sync these)
 - Word validation & scoring logic
