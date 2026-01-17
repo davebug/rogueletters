@@ -39162,9 +39162,7 @@ gownsman
 gownsmen
 gox
 goxes
-goyim
 goyish
-goys
 graal
 graals
 grab
@@ -40525,11 +40523,8 @@ gynoecium
 gynophore
 gyplure
 gyplures
-gypped
 gypper
 gyppers
-gypping
-gyps
 gypseian
 gypseous
 gypsied
@@ -47468,7 +47463,6 @@ jetty
 jettying
 jeu
 jeux
-jewed
 jewel
 jeweled
 jeweler
@@ -47486,8 +47480,6 @@ jewels
 jewelweed
 jewfish
 jewfishes
-jewing
-jews
 jezail
 jezails
 jezebel
@@ -103868,7 +103860,6 @@ wooziest
 woozily
 wooziness
 woozy
-wops
 word
 wordage
 wordages
@@ -104631,7 +104622,6 @@ yeuks
 yeuky
 yew
 yews
-yids
 yield
 yielded
 yielder
