@@ -301,7 +301,9 @@ function getTileDisplayScore(letter, bonus = 0) {
     const baseScore = TILE_SCORES[letter] || 0;
     const vowels = ['A', 'E', 'I', 'O', 'U'];
     const vowelBonus = hasRogue('vowelBonus') && vowels.includes(letter) ? 1 : 0;
-    return baseScore + bonus + vowelBonus;
+    // Add tile set upgrade bonus (applies to all tiles of that letter)
+    const tileSetBonus = (runState.tileSetUpgrades && runState.tileSetUpgrades[letter]) || 0;
+    return baseScore + bonus + vowelBonus + tileSetBonus;
 }
 
 // ============================================================================
@@ -1318,7 +1320,48 @@ const runManager = {
         // Update displays
         document.getElementById('shop-coins').textContent = runState.coins;
         this.renderTileSetUpgrade();
+
+        // Refresh all visible tile scores to show new values
+        this.refreshAllTileScores();
+
         this.saveRunState();
+    },
+
+    // Refresh all visible tile score displays (after tile set upgrade or rogue change)
+    refreshAllTileScores() {
+        // Update rack tiles
+        document.querySelectorAll('#rack .tile').forEach(tile => {
+            const letter = tile.dataset.letter;
+            const bonus = parseInt(tile.dataset.bonus) || 0;
+            const scoreEl = tile.querySelector('.tile-score');
+            if (scoreEl && letter && letter !== '_') {
+                scoreEl.textContent = getTileDisplayScore(letter, bonus);
+            }
+        });
+
+        // Update board tiles
+        document.querySelectorAll('.board-cell .tile').forEach(tile => {
+            const letter = tile.dataset.letter;
+            const bonus = parseInt(tile.dataset.bonus) || 0;
+            const scoreEl = tile.querySelector('.tile-score');
+            if (scoreEl && letter && letter !== '_') {
+                scoreEl.textContent = getTileDisplayScore(letter, bonus);
+            }
+        });
+
+        // Update shop tile displays if visible
+        for (let i = 0; i < 2; i++) {
+            const scoreEl = document.getElementById(`shop-tile-score-${i}`);
+            const letterEl = document.getElementById(`shop-tile-letter-${i}`);
+            if (scoreEl && letterEl) {
+                const letter = letterEl.textContent;
+                const tileDisplay = document.getElementById(`shop-tile-display-${i}`);
+                const bonus = tileDisplay?.dataset.bonus ? parseInt(tileDisplay.dataset.bonus) : 0;
+                if (letter && letter !== '?') {
+                    scoreEl.textContent = getTileDisplayScore(letter, bonus);
+                }
+            }
+        }
     },
 
     // Render the rogue section in the shop (3 rogue slots)
