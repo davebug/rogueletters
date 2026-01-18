@@ -325,10 +325,12 @@
     "id": "rl-22",
     "title": "Scoring Animation with Boost Breakdown",
     "type": "task",
-    "status": "open",
+    "status": "closed",
     "priority": "low",
     "description": "Show each boost's contribution individually during scoring animation (like Balatro's satisfying score buildup). Animation can speed up as more boosts are active. Adds to 'one more run' feel.",
     "created": "2026-01-17",
+    "closedAt": "2026-01-18",
+    "closedReason": "Implemented: calculateWordScoreBreakdown() returns base + rogue components, showScoreAnimation() displays animated overlay with pop-in effects. Each rogue triggers its slot animation when its bonus is shown. Animation speeds up with many components (like Balatro).",
     "labels": [
       "polish",
       "ui",

@@ -6688,6 +6688,297 @@ function calculateWordScore(positions) {
     return score;
 }
 
+/**
+ * Calculate word score with detailed breakdown for animation
+ * Returns: { baseScore, components: [{id, name, icon, points}], total }
+ */
+function calculateWordScoreBreakdown(positions) {
+    const breakdown = {
+        baseScore: 0,
+        components: [],  // Each rogue/bonus contribution
+        total: 0
+    };
+
+    let score = 0;
+    let wordMultiplier = 1;
+    let pinkMultiplier = 1;
+
+    // Track data for rogue effects
+    let wordLetters = [];
+    let buffedTileCount = 0;
+    let letterSquaresUsed = 0;
+
+    positions.forEach(({ row, col }) => {
+        const letter = gameState.board[row][col];
+        wordLetters.push(letter);
+
+        const placedTile = gameState.placedTiles.find(t => t.row === row && t.col === col);
+        const isBlank = placedTile?.isBlank ||
+            gameState.blankPositions?.some(b => b.row === row && b.col === col) || false;
+
+        let tileBonus = 0;
+        let isPinkTile = false;
+        let isBuffedTile = false;
+        if (placedTile?.bonus) {
+            tileBonus = placedTile.bonus;
+            isBuffedTile = true;
+        }
+        if (placedTile?.pinkTile) {
+            isPinkTile = true;
+        }
+
+        if (!placedTile) {
+            const cell = document.querySelector(`.board-cell[data-row="${row}"][data-col="${col}"]`);
+            const tileEl = cell?.querySelector('.tile');
+            if (tileEl?.dataset.bonus) {
+                tileBonus = parseInt(tileEl.dataset.bonus) || 0;
+                if (tileBonus > 0) isBuffedTile = true;
+            }
+            if (tileEl?.dataset.pinkTile === 'true') {
+                isPinkTile = true;
+            }
+        }
+
+        if (isBuffedTile) buffedTileCount++;
+        if (isPinkTile) pinkMultiplier *= 1.5;
+
+        let letterScore = isBlank ? 0 : (TILE_SCORES[letter] || 0) + tileBonus;
+
+        if (!isBlank && runState.tileSetUpgrades && runState.tileSetUpgrades[letter]) {
+            letterScore += runState.tileSetUpgrades[letter];
+        }
+
+        // Vowel bonus is applied to base score, track it separately
+        const vowels = ['A', 'E', 'I', 'O', 'U'];
+        if (!isBlank && hasRogue('vowelBonus') && vowels.includes(letter)) {
+            letterScore += 1;
+        }
+
+        const isNew = gameState.placedTiles.some(t => t.row === row && t.col === col);
+        if (isNew) {
+            const cellType = getCellType(row, col);
+            if (cellType === 'double-letter') {
+                letterScore *= 2;
+                letterSquaresUsed++;
+            } else if (cellType === 'triple-letter') {
+                letterScore *= 3;
+                letterSquaresUsed++;
+            } else if (cellType === 'double-word') {
+                wordMultiplier *= 2;
+            } else if (cellType === 'triple-word') {
+                wordMultiplier *= 3;
+            }
+        }
+
+        score += letterScore;
+    });
+
+    score *= wordMultiplier;
+    score = Math.floor(score * pinkMultiplier);
+    breakdown.baseScore = score;
+
+    // ========== ROGUE BONUSES (tracked separately) ==========
+
+    // Endless Power: +2 per word × current set
+    if (hasRogue('endlessPower') && runState.isRunMode) {
+        const bonus = runState.set * 2;
+        score += bonus;
+        breakdown.components.push({
+            id: 'endlessPower',
+            name: ROGUES.endlessPower.name,
+            icon: ROGUES.endlessPower.icon,
+            points: bonus
+        });
+    }
+
+    // Lone Ranger: +6 if word has exactly 1 vowel (including Y)
+    if (hasRogue('loneRanger')) {
+        const vowelsWithY = ['A', 'E', 'I', 'O', 'U', 'Y'];
+        const vowelCount = wordLetters.filter(l => vowelsWithY.includes(l)).length;
+        if (vowelCount === 1) {
+            score += 6;
+            breakdown.components.push({
+                id: 'loneRanger',
+                name: ROGUES.loneRanger.name,
+                icon: ROGUES.loneRanger.icon,
+                points: 6
+            });
+        }
+    }
+
+    // High Value: +1 per upgraded/buffed tile in word
+    if (hasRogue('highValue') && buffedTileCount > 0) {
+        score += buffedTileCount;
+        breakdown.components.push({
+            id: 'highValue',
+            name: ROGUES.highValue.name,
+            icon: ROGUES.highValue.icon,
+            points: buffedTileCount
+        });
+    }
+
+    // Wolf Pack: +3 per consecutive double letter pair
+    if (hasRogue('wolfPack') && wordLetters.length >= 2) {
+        let doublePairs = 0;
+        for (let i = 0; i < wordLetters.length - 1; i++) {
+            if (wordLetters[i] === wordLetters[i + 1]) {
+                doublePairs++;
+                i++;
+            }
+        }
+        if (doublePairs > 0) {
+            const bonus = doublePairs * 3;
+            score += bonus;
+            breakdown.components.push({
+                id: 'wolfPack',
+                name: ROGUES.wolfPack.name,
+                icon: ROGUES.wolfPack.icon,
+                points: bonus
+            });
+        }
+    }
+
+    // Worder: ×1.25 per DL/TL square used
+    if (hasRogue('worder') && letterSquaresUsed > 0) {
+        const worderMultiplier = Math.pow(1.25, letterSquaresUsed);
+        const beforeWorder = score;
+        score = Math.floor(score * worderMultiplier);
+        const bonus = score - beforeWorder;
+        if (bonus > 0) {
+            breakdown.components.push({
+                id: 'worder',
+                name: ROGUES.worder.name,
+                icon: ROGUES.worder.icon,
+                points: bonus,
+                isMultiplier: true,
+                multiplierValue: worderMultiplier.toFixed(2)
+            });
+        }
+    }
+
+    // All-Round Letter: +1 for first use of each letter this cycle
+    if (hasRogue('allRoundLetter') && runState.isRunMode) {
+        if (!runState.lettersPlayedThisCycle) {
+            runState.lettersPlayedThisCycle = new Set();
+        }
+        let newLetterBonus = 0;
+        wordLetters.forEach(letter => {
+            if (!runState.lettersPlayedThisCycle.has(letter)) {
+                newLetterBonus++;
+            }
+        });
+        if (newLetterBonus > 0) {
+            score += newLetterBonus;
+            breakdown.components.push({
+                id: 'allRoundLetter',
+                name: ROGUES.allRoundLetter.name,
+                icon: ROGUES.allRoundLetter.icon,
+                points: newLetterBonus
+            });
+        }
+    }
+
+    // Bingo bonus
+    const bingoThreshold = hasRogue('bingoWizard') ? 6 : 7;
+    if (gameState.placedTiles.length >= bingoThreshold) {
+        const placedInThisWord = positions.filter(pos =>
+            gameState.placedTiles.some(t => t.row === pos.row && t.col === pos.col)
+        ).length;
+
+        if (placedInThisWord >= bingoThreshold) {
+            score += 50;
+            breakdown.components.push({
+                id: hasRogue('bingoWizard') ? 'bingoWizard' : 'bingo',
+                name: hasRogue('bingoWizard') ? ROGUES.bingoWizard.name : 'Bingo!',
+                icon: hasRogue('bingoWizard') ? ROGUES.bingoWizard.icon : '🎯',
+                points: 50
+            });
+        }
+    }
+
+    breakdown.total = score;
+    return breakdown;
+}
+
+/**
+ * Show animated score breakdown overlay
+ */
+function showScoreAnimation(breakdown, callback) {
+    // Only show animation if there are components to show
+    if (breakdown.components.length === 0) {
+        if (callback) callback();
+        return;
+    }
+
+    // Create or get overlay
+    let overlay = document.getElementById('score-animation-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'score-animation-overlay';
+        overlay.className = 'score-animation-overlay';
+        document.body.appendChild(overlay);
+    }
+
+    // Build content
+    let html = '<div class="score-animation-content">';
+    html += `<div class="score-line score-base"><span class="score-label">Base</span><span class="score-value">${breakdown.baseScore}</span></div>`;
+
+    breakdown.components.forEach((comp, i) => {
+        const sign = comp.points >= 0 ? '+' : '';
+        const multiplierNote = comp.isMultiplier ? ` (×${comp.multiplierValue})` : '';
+        html += `<div class="score-line score-component" data-index="${i}" style="opacity: 0;">`;
+        html += `<span class="score-label">${comp.icon} ${comp.name}${multiplierNote}</span>`;
+        html += `<span class="score-value">${sign}${comp.points}</span>`;
+        html += '</div>';
+    });
+
+    html += `<div class="score-line score-total" style="opacity: 0;"><span class="score-label">Total</span><span class="score-value">${breakdown.total}</span></div>`;
+    html += '</div>';
+
+    overlay.innerHTML = html;
+    overlay.classList.remove('hidden');
+    overlay.classList.add('visible');
+
+    // Animate each component appearing
+    const components = overlay.querySelectorAll('.score-component');
+    const totalLine = overlay.querySelector('.score-total');
+
+    // Speed up animation if many components (like Balatro)
+    const baseDelay = breakdown.components.length > 3 ? 150 : 250;
+    const componentDelay = breakdown.components.length > 5 ? 100 : baseDelay;
+
+    let delay = 200; // Initial delay for base to be visible
+
+    components.forEach((comp, i) => {
+        setTimeout(() => {
+            comp.style.opacity = '1';
+            comp.classList.add('score-pop');
+            // Also trigger rogue slot animation
+            const rogueId = breakdown.components[i].id;
+            const slot = document.querySelector(`.rogue-slot[data-rogue-id="${rogueId}"]`);
+            if (slot) {
+                slot.classList.remove('triggered');
+                void slot.offsetWidth;
+                slot.classList.add('triggered');
+            }
+        }, delay);
+        delay += componentDelay;
+    });
+
+    // Show total after all components
+    setTimeout(() => {
+        totalLine.style.opacity = '1';
+        totalLine.classList.add('score-pop');
+    }, delay);
+
+    // Hide overlay and call callback
+    setTimeout(() => {
+        overlay.classList.remove('visible');
+        overlay.classList.add('hidden');
+        if (callback) callback();
+    }, delay + 600);
+}
+
 function displayWordPreview(words) {
     // Remove any existing preview element
     let preview = document.getElementById('word-preview');
@@ -7268,11 +7559,16 @@ function submitWord() {
             updateTargetProgress();
             runManager.updateRunUI();  // Update "X to go" display
 
-            // Animate triggered rogues for each word formed
+            // Calculate score breakdown for animation (before placedTiles is cleared)
             const formedWords = findFormedWords();
-            formedWords.forEach(word => {
-                runManager.animateTriggeredRogues(word.positions);
-            });
+            let mainWordBreakdown = null;
+            if (runState.isRunMode && formedWords.length > 0) {
+                // Use the longest formed word (usually the main word) for breakdown
+                const mainWord = formedWords.reduce((a, b) =>
+                    a.positions.length > b.positions.length ? a : b
+                );
+                mainWordBreakdown = calculateWordScoreBreakdown(mainWord.positions);
+            }
 
             // Award $1 for each unclaimed coin tile placed this turn
             let coinsEarned = 0;
@@ -7354,11 +7650,18 @@ function submitWord() {
             // Update UI including hiding recall button
             checkWordValidity();
 
-            // Move to next turn
-            nextTurn();
+            // Function to proceed to next turn
+            const proceedToNextTurn = () => {
+                nextTurn();
+                gameState.isSubmitting = false;
+            };
 
-            // Clear submission lock after successful submission
-            gameState.isSubmitting = false;
+            // Show score animation if there are rogue bonuses, then move to next turn
+            if (mainWordBreakdown && mainWordBreakdown.components.length > 0) {
+                showScoreAnimation(mainWordBreakdown, proceedToNextTurn);
+            } else {
+                proceedToNextTurn();
+            }
         } else {
             // Clear submission lock on validation failure
             gameState.isSubmitting = false;
