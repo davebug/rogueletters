@@ -280,11 +280,13 @@
     "id": "rl-19",
     "title": "End-of-Run Summary Screen",
     "type": "task",
-    "status": "open",
+    "status": "closed",
     "priority": "low",
     "parent": "rl-6",
     "description": "Detailed stats breakdown when run ends: words played, best word, longest word, coins earned total, sets/rounds completed, gems earned, new unlocks achieved.",
     "created": "2026-01-17",
+    "closedAt": "2026-01-18",
+    "closedReason": "Implemented: runStats tracking for words/best/longest/bingos/coins. Shows detailed summary on game over with set/round reached. Gems and unlocks deferred to Phase 4.",
     "labels": [
       "phase-4",
       "ui"
