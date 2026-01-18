@@ -286,6 +286,24 @@ main {
     font-weight: bold;
 }
 
+.bingo-tag {
+    display: inline-block;
+    background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+    color: #000;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+    animation: bingo-pulse 1s ease-in-out infinite;
+}
+
+@keyframes bingo-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
 .potential-words .total-score {
     margin-top: 10px;
     padding: 8px 12px;
@@ -835,6 +853,22 @@ main {
     font-weight: 700;
     color: var(--success-color);
     text-shadow: 0 0 2px rgba(0,0,0,0.5);
+}
+
+/* Exchange button grayed out when can't afford */
+.exchange-btn.cannot-afford {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.exchange-btn.cannot-afford:hover {
+    background: var(--board-square);
+    color: var(--text-color);
+    transform: none;
+}
+
+.exchange-btn.cannot-afford .exchange-cost {
+    color: var(--danger-color);
 }
 
 /* Exchange Modal - roguelike theme */
@@ -2755,11 +2789,11 @@ main {
 }
 
 /* ============================================================================
-   BOOST SYSTEM STYLES
+   ROGUES SYSTEM STYLES
    ============================================================================ */
 
-/* Boost Inventory (below rack during gameplay) */
-#boost-inventory {
+/* Rogue Inventory (below rack during gameplay) */
+#rogue-inventory {
     display: flex;
     justify-content: center;
     gap: 8px;
@@ -2767,12 +2801,12 @@ main {
     margin-top: 8px;
 }
 
-#boost-slots {
+#rogue-slots {
     display: flex;
     gap: 6px;
 }
 
-.boost-slot {
+.rogue-slot {
     width: 36px;
     height: 36px;
     border-radius: 8px;
@@ -2783,29 +2817,131 @@ main {
     transition: transform 0.15s, box-shadow 0.15s;
 }
 
-.boost-slot.empty {
+.rogue-slot.empty {
     background: rgba(255, 255, 255, 0.05);
     border: 2px dashed rgba(255, 255, 255, 0.2);
 }
 
-.boost-slot.filled {
+.rogue-slot.filled {
     background: linear-gradient(135deg, #3a2d5c 0%, #2a1f4c 100%);
     border: 2px solid var(--accent-color);
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.boost-slot.filled:hover {
+.rogue-slot.filled:hover {
     transform: scale(1.1);
     box-shadow: 0 0 12px rgba(220, 38, 38, 0.4);
 }
 
-.boost-slot-icon {
+.rogue-slot.triggered {
+    animation: rogue-trigger 0.6s ease-out;
+}
+
+@keyframes rogue-trigger {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    25% {
+        transform: scale(1.2);
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+        border-color: #ffd700;
+    }
+    50% {
+        transform: scale(1.15);
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        border-color: var(--accent-color);
+    }
+}
+
+.rogue-slot-icon {
     pointer-events: none;
 }
 
-/* Shop Boost Section */
-#shop-boost-section {
+/* Shop Tile Set Upgrade Section */
+.shop-upgrade-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.shop-upgrade-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #2d4a3a 0%, #1f3a2c 100%);
+    border: 2px solid var(--success-color);
+    border-radius: 12px;
+    padding: 12px 16px;
+    gap: 12px;
+}
+
+.shop-upgrade-card.cannot-afford {
+    opacity: 0.6;
+}
+
+.shop-upgrade-icon {
+    font-size: 28px;
+}
+
+.shop-upgrade-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.shop-upgrade-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0;
+}
+
+.shop-upgrade-desc {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.shop-upgrade-status {
+    font-size: 10px;
+    color: var(--success-color);
+    margin: 4px 0 0 0;
+}
+
+.shop-upgrade-btn {
+    font-size: 14px;
+    font-weight: 700;
+    color: #000;
+    background: var(--success-color);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.shop-upgrade-btn:hover {
+    background: #5eeb93;
+    transform: scale(1.05);
+}
+
+.shop-upgrade-btn:disabled,
+.shop-upgrade-btn.cannot-afford {
+    background: #555;
+    color: #888;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Shop Rogue Section */
+#shop-rogue-section {
     margin-top: 20px;
     padding-top: 16px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -2819,7 +2955,14 @@ main {
     letter-spacing: 1px;
 }
 
-.shop-boost-card {
+/* Container for 3 rogue cards in shop */
+.shop-rogue-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.shop-rogue-card {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -2830,38 +2973,64 @@ main {
     gap: 12px;
 }
 
-.shop-boost-card.hidden {
+.shop-rogue-card.hidden {
     display: none;
 }
 
-.boost-card-left {
+.shop-rogue-card.empty-slot {
+    justify-content: center;
+    border-style: dashed;
+    opacity: 0.5;
+    min-height: 52px;
+}
+
+.shop-rogue-card.empty-slot .empty-slot-text {
+    color: var(--text-secondary);
+    font-size: 20px;
+}
+
+.shop-rogue-card.purchased {
+    opacity: 0.6;
+}
+
+.shop-rogue-sold {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--success-color, #4ade80);
+    padding: 4px 10px;
+    background: rgba(74, 222, 128, 0.15);
+    border-radius: 4px;
+    letter-spacing: 1px;
+}
+
+.rogue-card-left {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
-.boost-icon {
+.rogue-icon {
     font-size: 28px;
 }
 
-.boost-info {
+.rogue-info {
     display: flex;
     flex-direction: column;
     gap: 2px;
 }
 
-.boost-name {
+.rogue-name {
     font-size: 16px;
     font-weight: 600;
     color: var(--text-primary);
 }
 
-.boost-desc {
+.rogue-desc {
     font-size: 12px;
     color: var(--text-secondary);
 }
 
-.shop-boost-buy-btn {
+.shop-rogue-buy-btn {
     background: var(--board-border);
     color: white;
     border: none;
@@ -2873,37 +3042,186 @@ main {
     transition: background 0.15s, color 0.15s, opacity 0.15s;
 }
 
-.shop-boost-buy-btn:hover:not(.cannot-afford):not(:disabled) {
+.shop-rogue-buy-btn:hover:not(.cannot-afford):not(:disabled) {
     background: #ffd700;
     color: #000;
 }
 
-.shop-boost-buy-btn.cannot-afford {
+.shop-rogue-buy-btn.cannot-afford {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
-.boost-inventory-status {
+.rogue-inventory-status {
     font-size: 12px;
     color: var(--text-secondary);
     margin: 8px 0 0 0;
     text-align: center;
 }
 
-/* Boost Details Modal */
-.boost-modal-content {
+/* Rogue Details Modal */
+.rogue-modal-content {
     max-width: 280px;
     text-align: center;
 }
 
-.boost-modal-icon {
+.rogue-modal-icon {
     font-size: 48px;
     margin-bottom: 8px;
 }
 
-.boost-modal-desc {
+.rogue-modal-desc {
     color: var(--text-secondary);
     margin: 8px 0 20px 0;
+}
+
+/* Rogue Discard Modal (when purchasing at max capacity) */
+.rogue-discard-modal-content {
+    max-width: 320px;
+    text-align: center;
+}
+
+.rogue-discard-prompt {
+    color: var(--text-secondary);
+    margin: 0 0 16px 0;
+    font-size: 14px;
+}
+
+.rogue-discard-new-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: linear-gradient(135deg, #3a2d5c 0%, #2a1f4c 100%);
+    border: 2px solid var(--success-color);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+}
+
+.rogue-discard-new-card .rogue-icon {
+    font-size: 28px;
+}
+
+.rogue-discard-new-card .rogue-info {
+    text-align: left;
+}
+
+.rogue-discard-slots {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.rogue-discard-slot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #3a2d5c 0%, #2a1f4c 100%);
+    border: 2px solid var(--accent-color);
+    border-radius: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s;
+}
+
+.rogue-discard-slot:hover {
+    border-color: #dc2626;
+    transform: scale(1.02);
+}
+
+.rogue-discard-slot .rogue-card-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rogue-discard-slot .rogue-icon {
+    font-size: 24px;
+}
+
+.rogue-discard-slot .rogue-name {
+    font-size: 14px;
+}
+
+.rogue-discard-slot .rogue-desc {
+    font-size: 11px;
+}
+
+.rogue-discard-slot .discard-label {
+    font-size: 11px;
+    color: #dc2626;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.rogue-discard-slot:hover .discard-label {
+    opacity: 1;
+}
+
+/* Top Deck Display (shows next 3 tiles) */
+#top-deck-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 6px 12px;
+    margin-top: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+}
+
+.top-deck-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+#top-deck-tiles {
+    display: flex;
+    gap: 4px;
+}
+
+.top-deck-tile {
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--tile-bg) 0%, #d4a574 100%);
+    color: var(--tile-text);
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.top-deck-letter {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.top-deck-count {
+    position: absolute;
+    bottom: 1px;
+    right: 2px;
+    font-size: 8px;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.6);
+}
+
+.top-deck-tile.blank {
+    background: linear-gradient(145deg, #f0e6d2 0%, #d4c4a8 100%);
+}
+
+.top-deck-tile.blank .top-deck-letter::after {
+    content: '?';
+    color: rgba(0, 0, 0, 0.3);
 }
 
 .btn-danger {

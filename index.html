@@ -13,7 +13,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui, viewport-fit=cover">
     <title>RogueLetters - A Daily Word Game</title>
-    <link rel="stylesheet" href="./styles.css?v=28.2">
+    <link rel="stylesheet" href="./styles.css?v=29.1">
     <meta name="description" content="Play RogueLetters - a daily word puzzle game. Build words on a letter-tile board to maximize your score!">
 
 
@@ -88,10 +88,18 @@
                         </button>
                     </div>
 
-                    <!-- Boost Inventory - shows owned boosts (roguelike mode) -->
-                    <div id="boost-inventory" class="hidden">
-                        <div id="boost-slots">
-                            <!-- Filled dynamically by renderBoostInventory() -->
+                    <!-- Rogue Inventory - shows owned rogues (roguelike mode) -->
+                    <div id="rogue-inventory" class="hidden">
+                        <div id="rogue-slots">
+                            <!-- Filled dynamically by renderRogueInventory() -->
+                        </div>
+                    </div>
+
+                    <!-- Top Deck - shows next 3 tiles (when Top Deck rogue active) -->
+                    <div id="top-deck-display" class="hidden">
+                        <span class="top-deck-label">Next:</span>
+                        <div id="top-deck-tiles">
+                            <!-- Filled dynamically -->
                         </div>
                     </div>
 
@@ -162,7 +170,7 @@
 				</div>
 			</div>
 		</div>
-		<p>&copy; 2025 RogueLetters | <a href="https://buymeacoffee.com/daver">Buy my kid jellybeans</a></p>
+		<p>&copy; <span id="copyright-year"></span> RogueLetters | <a href="https://buymeacoffee.com/daver">Buy my kid jellybeans</a></p>
 	</footer>
 
         <!-- Loading Overlay -->
@@ -409,20 +417,26 @@
 				</div>
 			</div>
 
-			<!-- Boost Section -->
-			<div id="shop-boost-section" class="hidden">
-				<h3 class="shop-section-header">Boosts</h3>
-				<div class="shop-boost-card" id="shop-boost-card">
-					<div class="boost-card-left">
-						<span class="boost-icon" id="shop-boost-icon"></span>
-						<div class="boost-info">
-							<span class="boost-name" id="shop-boost-name"></span>
-							<span class="boost-desc" id="shop-boost-desc"></span>
-						</div>
+			<!-- Tile Set Upgrade Section -->
+			<div id="shop-upgrade-section" class="shop-upgrade-section">
+				<div class="shop-upgrade-card" id="shop-upgrade-card">
+					<div class="shop-upgrade-icon">⬆️</div>
+					<div class="shop-upgrade-info">
+						<h4 class="shop-upgrade-title">Upgrade Tile Set</h4>
+						<p class="shop-upgrade-desc" id="shop-upgrade-desc">+1 to a random common letter</p>
+						<p class="shop-upgrade-status" id="shop-upgrade-status"></p>
 					</div>
-					<button class="shop-boost-buy-btn" id="shop-boost-buy">Buy $<span id="shop-boost-price">4</span></button>
+					<button class="shop-upgrade-btn" id="shop-upgrade-btn">$3</button>
 				</div>
-				<p class="boost-inventory-status" id="shop-boost-status"></p>
+			</div>
+
+			<!-- Rogue Section (3 slots) -->
+			<div id="shop-rogue-section" class="hidden">
+				<h3 class="shop-section-header">Rogues' Gallery</h3>
+				<div class="shop-rogue-cards" id="shop-rogue-cards">
+					<!-- Rogue cards are rendered dynamically by renderShopRogueSection() -->
+				</div>
+				<p class="rogue-inventory-status" id="shop-rogue-status"></p>
 			</div>
 
 			<p class="shop-pool-info">Your tile bag: <span id="shop-pool-count">100</span> tiles</p>
@@ -470,15 +484,33 @@
 		</div>
 	</div>
 
-	<!-- Boost Details Modal -->
-	<div id="boost-modal" class="modal" style="display: none;">
-		<div class="modal-content boost-modal-content">
+	<!-- Rogue Details Modal -->
+	<div id="rogue-modal" class="modal" style="display: none;">
+		<div class="modal-content rogue-modal-content">
 			<div class="popup-content">
-				<button id="boost-modal-close" class="popup-close-btn" aria-label="Close">×</button>
-				<div id="boost-modal-icon" class="boost-modal-icon"></div>
-				<h2 id="boost-modal-name"></h2>
-				<p id="boost-modal-description" class="boost-modal-desc"></p>
-				<button id="boost-discard-btn" class="btn btn-danger">Discard</button>
+				<button id="rogue-modal-close" class="popup-close-btn" aria-label="Close">×</button>
+				<div id="rogue-modal-icon" class="rogue-modal-icon"></div>
+				<h2 id="rogue-modal-name"></h2>
+				<p id="rogue-modal-description" class="rogue-modal-desc"></p>
+				<button id="rogue-discard-btn" class="btn btn-danger">Discard</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Rogue Discard Modal (when purchasing at max capacity) -->
+	<div id="rogue-discard-modal" class="modal" style="display: none;">
+		<div class="modal-content rogue-discard-modal-content">
+			<div class="popup-content">
+				<button id="rogue-discard-modal-close" class="popup-close-btn" aria-label="Close">×</button>
+				<h2>Rogues' Gallery Full</h2>
+				<p class="rogue-discard-prompt">Choose a rogue to discard to make room for:</p>
+				<div id="rogue-discard-new" class="rogue-discard-new-card">
+					<!-- Filled dynamically -->
+				</div>
+				<div id="rogue-discard-slots" class="rogue-discard-slots">
+					<!-- Filled dynamically with current rogues -->
+				</div>
+				<button id="rogue-discard-cancel" class="popup-btn popup-btn-secondary">Cancel</button>
 			</div>
 		</div>
 	</div>
@@ -486,6 +518,6 @@
     <!-- LZ-String compression library for shareable URLs -->
     <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 
-    <script src="./script.js?v=33.9"></script>
+    <script src="./script.js?v=35.0"></script>
 </body>
 </html>

@@ -156,66 +156,156 @@ function transferTileEffects(fromTile, toTile) {
 // ============================================================================
 
 // ============================================================================
-// BOOST SYSTEM
+// ROGUES SYSTEM
 // ============================================================================
 // Persistent modifiers (like Balatro's Jokers) that apply effects each round
-// Player can hold up to maxBoostSlots boosts, kept until discarded or run ends
+// Player can hold up to maxRogueSlots rogues, kept until discarded or run ends
 
-const BOOSTS = {
+const ROGUES = {
+    // Original rogues
     extraTurn: {
         id: 'extraTurn',
         name: 'Overtime',
         description: '+1 turn per round',
-        basePrice: 6,
+        rarity: 'uncommon',
         icon: '⏰',
     },
     extraRack: {
         id: 'extraRack',
         name: 'Big Pockets',
         description: '+1 rack capacity',
-        basePrice: 7,
+        rarity: 'uncommon',
         icon: '🎒',
     },
     basePayout: {
         id: 'basePayout',
         name: 'Salary Bump',
         description: '+$3 base payout',
-        basePrice: 4,
+        rarity: 'common',
         icon: '💵',
     },
     vowelBonus: {
         id: 'vowelBonus',
         name: 'Vowel Power',
         description: '+1 to all vowels',
-        basePrice: 10,
+        rarity: 'uncommon',
         icon: '🔤',
+    },
+    // Phase 3: Simple rogues
+    goldenDiamond: {
+        id: 'goldenDiamond',
+        name: 'Golden Diamond',
+        description: 'Earn $1 per 20% above target',
+        rarity: 'common',
+        icon: '💎',
+    },
+    endlessPower: {
+        id: 'endlessPower',
+        name: 'Endless Power',
+        description: '+2 per word × current set',
+        rarity: 'rare',
+        icon: '⚡',
+    },
+    loneRanger: {
+        id: 'loneRanger',
+        name: 'Lone Ranger',
+        description: '+6 if word has exactly 1 vowel',
+        rarity: 'common',
+        icon: '🤠',
+    },
+    highValue: {
+        id: 'highValue',
+        name: 'High Value',
+        description: '+1 per upgraded tile in word',
+        rarity: 'common',
+        icon: '💰',
+    },
+    wolfPack: {
+        id: 'wolfPack',
+        name: 'Wolf Pack',
+        description: '+3 per double letter pair',
+        rarity: 'common',
+        icon: '🐺',
+    },
+    // Phase 4: UI-modifying rogues
+    noDiscard: {
+        id: 'noDiscard',
+        name: 'No Discard',
+        description: 'Exchange → Pass (+2 turns)',
+        rarity: 'uncommon',
+        icon: '🚫',
+    },
+    bingoWizard: {
+        id: 'bingoWizard',
+        name: 'Bingo Wizard',
+        description: 'Bingo with 6 tiles (+50)',
+        rarity: 'uncommon',
+        icon: '🎱',
+    },
+    // Phase 5: Complex rogues (state or UI additions)
+    worder: {
+        id: 'worder',
+        name: 'Worder',
+        description: '×1.25 per letter square used',
+        rarity: 'rare',
+        icon: '📝',
+    },
+    allRoundLetter: {
+        id: 'allRoundLetter',
+        name: 'All-Round Letter',
+        description: '+1 for first use of each letter',
+        rarity: 'common',
+        icon: '🔄',
+    },
+    topDeck: {
+        id: 'topDeck',
+        name: 'Top Deck',
+        description: 'See next 3 tiles in bag',
+        rarity: 'common',
+        icon: '👁️',
+    },
+    // Trade-off rogues
+    heavyBackpack: {
+        id: 'heavyBackpack',
+        name: 'Heavy Backpack',
+        description: '+2 rack size, -1 turn per round',
+        rarity: 'uncommon',
+        icon: '🏋️',
     },
 };
 
-// Check if player has a specific boost
-function hasBoost(boostId) {
-    return runState.boosts && runState.boosts.includes(boostId);
+// Check if player has a specific rogue
+function hasRogue(rogueId) {
+    return runState.rogues && runState.rogues.includes(rogueId);
 }
 
-// Calculate boost price: base + $1 per owned boost
-function getBoostPrice(boostId) {
-    const boost = BOOSTS[boostId];
-    if (!boost) return 999;
-    const ownedCount = runState.boosts ? runState.boosts.length : 0;
-    return boost.basePrice + ownedCount;
+// Get current rack size based on rogues
+function getRackSize() {
+    let size = 7;
+    if (hasRogue('extraRack')) size += 1;
+    if (hasRogue('heavyBackpack')) size += 2;
+    return size;
 }
 
-// Get display score for a tile (includes vowel boost if active)
+// Calculate rogue price based on rarity: Common $4, Uncommon $5, Rare $6
+function getRoguePrice(rogueId) {
+    const rogue = ROGUES[rogueId];
+    if (!rogue) return 999;
+    const rarityPrices = { common: 4, uncommon: 5, rare: 6 };
+    return rarityPrices[rogue.rarity] || 5;
+}
+
+// Get display score for a tile (includes vowel rogue if active)
 function getTileDisplayScore(letter, bonus = 0) {
     if (!letter || letter === '_') return '';
     const baseScore = TILE_SCORES[letter] || 0;
     const vowels = ['A', 'E', 'I', 'O', 'U'];
-    const vowelBonus = hasBoost('vowelBonus') && vowels.includes(letter) ? 1 : 0;
+    const vowelBonus = hasRogue('vowelBonus') && vowels.includes(letter) ? 1 : 0;
     return baseScore + bonus + vowelBonus;
 }
 
 // ============================================================================
-// END BOOST SYSTEM
+// END ROGUES SYSTEM
 // ============================================================================
 
 // Game state
@@ -291,11 +381,15 @@ let runState = {
     shopTiles: null,        // The 2 tiles offered this visit, e.g. ['E', 'N']
     shopTileTypes: null,    // Type of each shop tile, e.g. ['buffed', 'coin']
     shopPurchased: null,    // Which tiles have been purchased, e.g. [false, true]
-    // Boosts (persistent Joker-like modifiers)
-    boosts: [],             // Array of boost IDs owned, e.g. ['extraTurn', 'vowelBonus']
-    maxBoostSlots: 5,       // Max boosts player can hold
-    shopBoost: null,        // Current boost offering (boost ID)
-    shopBoostPurchased: false  // Whether boost was purchased this shop visit
+    // Rogues (persistent Joker-like modifiers)
+    rogues: [],             // Array of rogue IDs owned, e.g. ['extraTurn', 'vowelBonus']
+    maxRogueSlots: 5,       // Max rogues player can hold
+    shopRogues: [null, null, null],        // 3 rogue offerings (rogue IDs)
+    shopRoguesPurchased: [false, false, false],  // Which rogues purchased this shop visit
+    pendingRoguePurchase: null,  // Rogue ID pending when at max rogues (needs discard first)
+    // Tile Set Upgrade system
+    tileSetUpgradeCount: 0,     // Number of times tile set has been upgraded
+    tileSetUpgrades: {}         // Map of letter -> bonus, e.g., {'E': 1, 'A': 1, 'T': 2}
 };
 
 // Helper to mark tiles as buffed/coin/pink when drawn from bag
@@ -387,16 +481,17 @@ function getTargetScore(set, round) {
 }
 
 // Calculate earnings for a completed round
-// Base: $3 (R1), $4 (R2), $5 (R3) + $1 per 25% above target
+// Base: $3 (R1), $4 (R2), $5 (R3) + $1 per 25% above target (20% with Golden Diamond)
 function calculateEarnings(score, target, roundInSet) {
     const baseAmount = [3, 4, 5][roundInSet - 1] || 3;
-    // Apply basePayout boost: +$3 to base payout
-    const salaryBumpBonus = hasBoost('basePayout') ? 3 : 0;
+    // Apply basePayout rogue: +$3 to base payout
+    const salaryBumpBonus = hasRogue('basePayout') ? 3 : 0;
     const extra = Math.max(0, score - target);
 
-    // $1 bonus for every 25% of target scored above target
-    // e.g., 40 target = $1 per 10 extra, 60 target = $1 per 15 extra
-    const bonusThreshold = Math.floor(target * 0.25);
+    // $1 bonus for every 25% of target scored above target (20% with Golden Diamond)
+    // e.g., 40 target = $1 per 10 extra (or $1 per 8 with Golden Diamond)
+    const bonusPercent = hasRogue('goldenDiamond') ? 0.20 : 0.25;
+    const bonusThreshold = Math.floor(target * bonusPercent);
     const extraBonus = bonusThreshold > 0 ? Math.floor(extra / bonusThreshold) : 0;
 
     return {
@@ -405,7 +500,8 @@ function calculateEarnings(score, target, roundInSet) {
         extraBonus: extraBonus,
         total: baseAmount + salaryBumpBonus + extraBonus,
         extraPoints: extra,
-        bonusThreshold: bonusThreshold
+        bonusThreshold: bonusThreshold,
+        goldenDiamondActive: hasRogue('goldenDiamond')
     };
 }
 
@@ -518,14 +614,18 @@ const runManager = {
         gameState.exchangeCount = 0;
         gameState.exchangeHistory = [];
 
-        // Apply boost effects
+        // Apply rogue effects
         // extraTurn: +1 turn per round
-        gameState.maxTurns = 5 + (hasBoost('extraTurn') ? 1 : 0);
-        // extraRack: +1 rack capacity (set initial tiles drawn accordingly)
-        gameState.totalTilesDrawn = hasBoost('extraRack') ? 8 : 7;
+        // noDiscard: +2 turns (compensates for no exchange)
+        // heavyBackpack: -1 turn per round
+        gameState.maxTurns = 5 + (hasRogue('extraTurn') ? 1 : 0) + (hasRogue('noDiscard') ? 2 : 0) - (hasRogue('heavyBackpack') ? 1 : 0);
+        // Rack size: base 7 + extraRack (+1) + heavyBackpack (+2)
+        gameState.totalTilesDrawn = getRackSize();
 
         // Generate new seed for this round (as string for consistency)
-        gameState.seed = String(runState.runSeed + runState.round);
+        // Include set number so each set/round combo gets a unique seed
+        const roundOffset = ((runState.set - 1) * runState.maxRounds) + runState.round;
+        gameState.seed = String(runState.runSeed + roundOffset);
         gameState.dateStr = formatSeedToDate(gameState.seed);
 
         // Reinitialize the game boards
@@ -578,9 +678,15 @@ const runManager = {
                     // Target not yet met
                     subtitle.innerHTML = `Score <span id="subtitle-target">${remaining}</span> in <span id="subtitle-turns">${turnsLeft}</span> turn${turnsLeft !== 1 ? 's' : ''} to advance`;
                 } else {
-                    // Target met - show extra message
+                    // Target met - show points, bonus $ earned, and points to next $
                     const extra = Math.abs(remaining);
-                    subtitle.innerHTML = `<span class="target-met">+${extra} extra</span> — keep playing for bonuses!`;
+                    // Calculate bonus using same formula as calculateEarnings
+                    const bonusPercent = hasRogue('goldenDiamond') ? 0.20 : 0.25;
+                    const bonusThreshold = Math.floor(runState.targetScore * bonusPercent);
+                    const bonusEarned = bonusThreshold > 0 ? Math.floor(extra / bonusThreshold) : 0;
+                    const pointsInCurrentDollar = extra % bonusThreshold;
+                    const pointsToNextDollar = bonusThreshold - pointsInCurrentDollar;
+                    subtitle.innerHTML = `<span class="target-met">+${extra} pts (+$${bonusEarned})</span> — ${pointsToNextDollar} to next $`;
                 }
             }
         }
@@ -729,7 +835,7 @@ const runManager = {
             extraBonusRow.style.display = earnings.extraBonus > 0 ? 'flex' : 'none';
         }
 
-        // Show/hide Salary Bump row based on whether player has the boost
+        // Show/hide Salary Bump row based on whether player has the rogue
         const salaryBumpRow = document.getElementById('earnings-salary-bump-row');
         if (salaryBumpRow) {
             salaryBumpRow.style.display = earnings.salaryBumpBonus > 0 ? 'flex' : 'none';
@@ -810,31 +916,35 @@ const runManager = {
         runState.shopPurchased = this.shopPurchased.slice();
     },
 
-    // Generate a random boost for shop (picks from unowned boosts)
-    generateShopBoost() {
-        // If player has max boosts, no boost available
-        if (runState.boosts.length >= runState.maxBoostSlots) {
-            runState.shopBoost = null;
-            runState.shopBoostPurchased = false;
+    // Generate 3 random rogues for shop (picks from unowned rogues)
+    generateShopRogues() {
+        // If player has max rogues, no rogues available
+        if (runState.rogues.length >= runState.maxRogueSlots) {
+            runState.shopRogues = [null, null, null];
+            runState.shopRoguesPurchased = [false, false, false];
             return;
         }
 
-        // Get list of unowned boosts
-        const ownedBoosts = runState.boosts || [];
-        const availableBoosts = Object.keys(BOOSTS).filter(id => !ownedBoosts.includes(id));
+        // Get list of unowned rogues
+        const ownedRogues = runState.rogues || [];
+        const availableRogues = Object.keys(ROGUES).filter(id => !ownedRogues.includes(id));
 
-        if (availableBoosts.length === 0) {
-            // Player owns all boosts
-            runState.shopBoost = null;
-            runState.shopBoostPurchased = false;
+        if (availableRogues.length === 0) {
+            // Player owns all rogues
+            runState.shopRogues = [null, null, null];
+            runState.shopRoguesPurchased = [false, false, false];
             return;
         }
 
-        // Pick a random boost
-        const randomIndex = Math.floor(Math.random() * availableBoosts.length);
-        runState.shopBoost = availableBoosts[randomIndex];
-        runState.shopBoostPurchased = false;
-        console.log('[Shop] Generated boost:', runState.shopBoost);
+        // Shuffle available rogues and pick up to 3
+        const shuffled = [...availableRogues].sort(() => Math.random() - 0.5);
+        runState.shopRogues = [
+            shuffled[0] || null,
+            shuffled[1] || null,
+            shuffled[2] || null
+        ];
+        runState.shopRoguesPurchased = [false, false, false];
+        console.log('[Shop] Generated rogues:', runState.shopRogues);
     },
 
     // Show the shop screen
@@ -850,9 +960,11 @@ const runManager = {
             this.generateShopTiles();
         }
 
-        // Generate boost offering if not already persisted
-        if (runState.shopBoost === null && !runState.shopBoostPurchased) {
-            this.generateShopBoost();
+        // Generate rogue offerings if not already persisted
+        const hasPersistedRogues = runState.shopRogues && runState.shopRogues.some(b => b !== null);
+        const allPurchased = runState.shopRoguesPurchased && runState.shopRoguesPurchased.every(p => p);
+        if (!hasPersistedRogues && !allPurchased) {
+            this.generateShopRogues();
         }
 
         // Track that we're showing the shop (survives refresh)
@@ -886,9 +998,9 @@ const runManager = {
             const option = document.getElementById(`shop-tile-${i}`);
             const tileDisplay = document.getElementById(`shop-tile-display-${i}`);
 
-            // Pricing: buffed = $2/$3, coin = $3/$4, pink = $4/$5
-            const addCost = isPinkTile ? 4 : (isCoinTile ? 3 : 2);
-            const replaceCost = isPinkTile ? 5 : (isCoinTile ? 4 : 3);
+            // Pricing: buffed = $1/$2, coin = $2/$3, pink = $3/$4
+            const addCost = isPinkTile ? 3 : (isCoinTile ? 2 : 1);
+            const replaceCost = isPinkTile ? 4 : (isCoinTile ? 3 : 2);
 
             // IMPORTANT: Reset classes FIRST before setting text content
             // The 'purchased' class sets width:0 and overflow:hidden which can prevent text rendering
@@ -987,97 +1099,293 @@ const runManager = {
             document.getElementById('shop-tile-1')?.classList.remove('no-transition');
         });
 
-        // Render boost section
-        this.renderShopBoostSection();
+        // Render tile set upgrade section
+        this.renderTileSetUpgrade();
+
+        // Render rogue section
+        this.renderShopRogueSection();
     },
 
-    // Render the boost section in the shop
-    renderShopBoostSection() {
-        const boostSection = document.getElementById('shop-boost-section');
-        const boostCard = document.getElementById('shop-boost-card');
-        const boostStatus = document.getElementById('shop-boost-status');
+    // Get tile set upgrade price (escalating: $3, $5, $8, $12, $17, ...)
+    getTileSetUpgradePrice() {
+        const count = runState.tileSetUpgradeCount || 0;
+        // Price formula: 3 + sum of 0,1,2,3... = 3 + (n*(n+1))/2
+        return 3 + Math.floor((count * (count + 1)) / 2);
+    },
 
-        if (!boostSection) return;
+    // Common letters that can be upgraded (high frequency letters)
+    COMMON_LETTERS: ['E', 'A', 'I', 'O', 'N', 'R', 'T', 'L', 'S', 'U'],
 
-        // Check if player has max boosts
-        if (runState.boosts.length >= runState.maxBoostSlots) {
-            boostSection.classList.remove('hidden');
-            boostCard.classList.add('hidden');
-            boostStatus.textContent = `Boost inventory full (${runState.boosts.length}/${runState.maxBoostSlots})`;
-            return;
-        }
+    // Render the tile set upgrade section
+    renderTileSetUpgrade() {
+        const card = document.getElementById('shop-upgrade-card');
+        const btn = document.getElementById('shop-upgrade-btn');
+        const status = document.getElementById('shop-upgrade-status');
+        const desc = document.getElementById('shop-upgrade-desc');
 
-        // Check if no boost available (all owned)
-        if (!runState.shopBoost) {
-            boostSection.classList.remove('hidden');
-            boostCard.classList.add('hidden');
-            boostStatus.textContent = 'No boosts available';
-            return;
-        }
+        if (!card || !btn) return;
 
-        // Check if boost already purchased this visit
-        if (runState.shopBoostPurchased) {
-            boostSection.classList.remove('hidden');
-            boostCard.classList.add('hidden');
-            boostStatus.textContent = 'Boost purchased!';
-            return;
-        }
+        const price = this.getTileSetUpgradePrice();
+        const count = runState.tileSetUpgradeCount || 0;
+        const canAfford = runState.coins >= price;
 
-        // Show the boost card
-        const boost = BOOSTS[runState.shopBoost];
-        if (!boost) {
-            boostSection.classList.add('hidden');
-            return;
-        }
-
-        boostSection.classList.remove('hidden');
-        boostCard.classList.remove('hidden');
-        boostStatus.textContent = `Owned: ${runState.boosts.length}/${runState.maxBoostSlots}`;
-
-        // Update boost card content
-        document.getElementById('shop-boost-icon').textContent = boost.icon;
-        document.getElementById('shop-boost-name').textContent = boost.name;
-        document.getElementById('shop-boost-desc').textContent = boost.description;
-
-        const price = getBoostPrice(runState.shopBoost);
-        document.getElementById('shop-boost-price').textContent = price;
-
-        const buyBtn = document.getElementById('shop-boost-buy');
-        if (runState.coins < price) {
-            buyBtn.classList.add('cannot-afford');
-            buyBtn.disabled = true;
+        // Update button
+        btn.textContent = `$${price}`;
+        btn.disabled = !canAfford;
+        if (canAfford) {
+            btn.classList.remove('cannot-afford');
+            card.classList.remove('cannot-afford');
         } else {
-            buyBtn.classList.remove('cannot-afford');
-            buyBtn.disabled = false;
+            btn.classList.add('cannot-afford');
+            card.classList.add('cannot-afford');
         }
+
+        // Update status
+        if (count > 0) {
+            const upgrades = Object.entries(runState.tileSetUpgrades || {})
+                .map(([letter, bonus]) => `${letter}+${bonus}`)
+                .join(', ');
+            status.textContent = `Upgrades (${count}): ${upgrades}`;
+        } else {
+            status.textContent = 'No upgrades yet';
+        }
+
+        // Update description
+        desc.textContent = '+1 to a random common letter';
     },
 
-    // Purchase the current shop boost
-    purchaseBoost() {
-        if (!runState.shopBoost || runState.shopBoostPurchased) return;
-        if (runState.boosts.length >= runState.maxBoostSlots) return;
-
-        const price = getBoostPrice(runState.shopBoost);
+    // Purchase a tile set upgrade
+    purchaseTileSetUpgrade() {
+        const price = this.getTileSetUpgradePrice();
         if (runState.coins < price) return;
 
-        // Deduct coins and add boost
-        runState.coins -= price;
-        runState.boosts.push(runState.shopBoost);
-        runState.shopBoostPurchased = true;
+        // Pick a random common letter
+        const letter = this.COMMON_LETTERS[Math.floor(Math.random() * this.COMMON_LETTERS.length)];
 
-        console.log('[Shop] Purchased boost:', runState.shopBoost, 'for $' + price);
+        // Apply upgrade
+        runState.coins -= price;
+        runState.tileSetUpgradeCount = (runState.tileSetUpgradeCount || 0) + 1;
+        if (!runState.tileSetUpgrades) runState.tileSetUpgrades = {};
+        runState.tileSetUpgrades[letter] = (runState.tileSetUpgrades[letter] || 0) + 1;
+
+        console.log(`[Shop] Tile upgrade: +1 to ${letter} (now +${runState.tileSetUpgrades[letter]}), cost $${price}`);
+
+        // Update displays
+        document.getElementById('shop-coins').textContent = runState.coins;
+        this.renderTileSetUpgrade();
+        this.saveRunState();
+    },
+
+    // Render the rogue section in the shop (3 rogue slots)
+    renderShopRogueSection() {
+        const rogueSection = document.getElementById('shop-rogue-section');
+        const rogueCardsContainer = document.getElementById('shop-rogue-cards');
+        const rogueStatus = document.getElementById('shop-rogue-status');
+
+        if (!rogueSection || !rogueCardsContainer) return;
+
+        rogueSection.classList.remove('hidden');
+
+        // Check if player has max rogues
+        if (runState.rogues.length >= runState.maxRogueSlots) {
+            rogueCardsContainer.innerHTML = '';
+            rogueStatus.textContent = `Rogue inventory full (${runState.rogues.length}/${runState.maxRogueSlots})`;
+            return;
+        }
+
+        // Check if no rogues available (all owned)
+        const hasAnyRogue = runState.shopRogues && runState.shopRogues.some(b => b !== null);
+        if (!hasAnyRogue) {
+            rogueCardsContainer.innerHTML = '';
+            rogueStatus.textContent = 'No rogues available';
+            return;
+        }
+
+        rogueStatus.textContent = `Owned: ${runState.rogues.length}/${runState.maxRogueSlots}`;
+
+        // Render 3 rogue cards
+        rogueCardsContainer.innerHTML = '';
+        for (let i = 0; i < 3; i++) {
+            const rogueId = runState.shopRogues[i];
+            const purchased = runState.shopRoguesPurchased[i];
+
+            // Create card element
+            const card = document.createElement('div');
+            card.className = 'shop-rogue-card';
+            card.dataset.index = i;
+
+            if (!rogueId) {
+                // Empty slot
+                card.classList.add('empty-slot');
+                card.innerHTML = '<span class="empty-slot-text">—</span>';
+            } else if (purchased) {
+                // Already purchased
+                card.classList.add('purchased');
+                const rogue = ROGUES[rogueId];
+                card.innerHTML = `
+                    <div class="rogue-card-left">
+                        <span class="rogue-icon">${rogue.icon}</span>
+                        <div class="rogue-info">
+                            <span class="rogue-name">${rogue.name}</span>
+                            <span class="rogue-desc">${rogue.description}</span>
+                        </div>
+                    </div>
+                    <span class="shop-rogue-sold">SOLD</span>
+                `;
+            } else {
+                // Available for purchase
+                const rogue = ROGUES[rogueId];
+                const price = getRoguePrice(rogueId);
+                const canAfford = runState.coins >= price;
+
+                card.innerHTML = `
+                    <div class="rogue-card-left">
+                        <span class="rogue-icon">${rogue.icon}</span>
+                        <div class="rogue-info">
+                            <span class="rogue-name">${rogue.name}</span>
+                            <span class="rogue-desc">${rogue.description}</span>
+                        </div>
+                    </div>
+                    <button class="shop-rogue-buy-btn ${canAfford ? '' : 'cannot-afford'}"
+                            data-index="${i}" ${canAfford ? '' : 'disabled'}>
+                        Buy $${price}
+                    </button>
+                `;
+
+                // Add click handler for buy button
+                const buyBtn = card.querySelector('.shop-rogue-buy-btn');
+                if (buyBtn) {
+                    buyBtn.addEventListener('click', () => this.purchaseRogue(i));
+                }
+            }
+
+            rogueCardsContainer.appendChild(card);
+        }
+    },
+
+    // Purchase a shop rogue by index (0, 1, or 2)
+    purchaseRogue(index) {
+        const rogueId = runState.shopRogues[index];
+        if (!rogueId || runState.shopRoguesPurchased[index]) return;
+
+        const price = getRoguePrice(rogueId);
+        if (runState.coins < price) return;
+
+        // If at max rogues, show discard modal instead of blocking
+        if (runState.rogues.length >= runState.maxRogueSlots) {
+            runState.pendingRoguePurchase = { rogueId, shopIndex: index, price };
+            this.saveRunState();
+            this.showRogueDiscardModal(rogueId);
+            return;
+        }
+
+        // Deduct coins and add rogue
+        runState.coins -= price;
+        runState.rogues.push(rogueId);
+        runState.shopRoguesPurchased[index] = true;
+
+        console.log('[Shop] Purchased rogue:', rogueId, 'for $' + price);
         this.saveRunState();
 
         // Update displays
         document.getElementById('shop-coins').textContent = runState.coins;
-        this.renderShopBoostSection();
-        this.renderBoostInventory();
+        this.renderShopRogueSection();
+        this.renderRogueInventory();
     },
 
-    // Render boost inventory display (below rack during gameplay)
-    renderBoostInventory() {
-        const container = document.getElementById('boost-inventory');
-        const slotsContainer = document.getElementById('boost-slots');
+    // Show discard modal when trying to purchase at max capacity
+    showRogueDiscardModal(newRogueId) {
+        const newRogue = ROGUES[newRogueId];
+        if (!newRogue) return;
+
+        const modal = document.getElementById('rogue-discard-modal');
+        if (!modal) return;
+
+        // Show the new rogue being purchased
+        const newRogueCard = document.getElementById('rogue-discard-new');
+        newRogueCard.innerHTML = `
+            <span class="rogue-icon">${newRogue.icon}</span>
+            <div class="rogue-info">
+                <span class="rogue-name">${newRogue.name}</span>
+                <span class="rogue-desc">${newRogue.description}</span>
+            </div>
+        `;
+
+        // Show current rogues as discard options
+        const slotsContainer = document.getElementById('rogue-discard-slots');
+        slotsContainer.innerHTML = '';
+
+        for (const ownedRogueId of runState.rogues) {
+            const rogue = ROGUES[ownedRogueId];
+            if (!rogue) continue;
+
+            const slot = document.createElement('div');
+            slot.className = 'rogue-discard-slot';
+            slot.dataset.rogueId = ownedRogueId;
+            slot.innerHTML = `
+                <div class="rogue-card-left">
+                    <span class="rogue-icon">${rogue.icon}</span>
+                    <div class="rogue-info">
+                        <span class="rogue-name">${rogue.name}</span>
+                        <span class="rogue-desc">${rogue.description}</span>
+                    </div>
+                </div>
+                <span class="discard-label">DISCARD</span>
+            `;
+
+            slot.addEventListener('click', () => {
+                this.completeRoguePurchaseWithDiscard(ownedRogueId);
+            });
+
+            slotsContainer.appendChild(slot);
+        }
+
+        modal.style.display = 'flex';
+    },
+
+    // Hide the discard modal
+    hideRogueDiscardModal() {
+        const modal = document.getElementById('rogue-discard-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        // Clear pending purchase if canceled
+        runState.pendingRoguePurchase = null;
+        this.saveRunState();
+    },
+
+    // Complete purchase after selecting a rogue to discard
+    completeRoguePurchaseWithDiscard(discardRogueId) {
+        const pending = runState.pendingRoguePurchase;
+        if (!pending) return;
+
+        // Remove the discarded rogue
+        const discardIndex = runState.rogues.indexOf(discardRogueId);
+        if (discardIndex === -1) return;
+        runState.rogues.splice(discardIndex, 1);
+
+        // Deduct coins and add new rogue
+        runState.coins -= pending.price;
+        runState.rogues.push(pending.rogueId);
+        runState.shopRoguesPurchased[pending.shopIndex] = true;
+
+        console.log('[Shop] Purchased rogue:', pending.rogueId, 'for $' + pending.price, '(discarded:', discardRogueId + ')');
+
+        // Clear pending and save
+        runState.pendingRoguePurchase = null;
+        this.saveRunState();
+
+        // Hide modal and update displays
+        this.hideRogueDiscardModal();
+        document.getElementById('shop-coins').textContent = runState.coins;
+        this.renderShopRogueSection();
+        this.renderRogueInventory();
+    },
+
+    // Render rogue inventory display (below rack during gameplay)
+    renderRogueInventory() {
+        const container = document.getElementById('rogue-inventory');
+        const slotsContainer = document.getElementById('rogue-slots');
         if (!container || !slotsContainer) return;
 
         // Only show in run mode
@@ -1091,65 +1399,195 @@ const runManager = {
 
         // Build slots HTML
         let html = '';
-        for (let i = 0; i < runState.maxBoostSlots; i++) {
-            const boostId = runState.boosts[i];
-            if (boostId && BOOSTS[boostId]) {
-                const boost = BOOSTS[boostId];
-                html += `<div class="boost-slot filled" data-boost-id="${boostId}" title="${boost.name}: ${boost.description}">
-                    <span class="boost-slot-icon">${boost.icon}</span>
+        for (let i = 0; i < runState.maxRogueSlots; i++) {
+            const rogueId = runState.rogues[i];
+            if (rogueId && ROGUES[rogueId]) {
+                const rogue = ROGUES[rogueId];
+                html += `<div class="rogue-slot filled" data-rogue-id="${rogueId}" title="${rogue.name}: ${rogue.description}">
+                    <span class="rogue-slot-icon">${rogue.icon}</span>
                 </div>`;
             } else {
-                html += `<div class="boost-slot empty"></div>`;
+                html += `<div class="rogue-slot empty"></div>`;
             }
         }
         slotsContainer.innerHTML = html;
 
         // Add click handlers for filled slots
-        slotsContainer.querySelectorAll('.boost-slot.filled').forEach(slot => {
+        slotsContainer.querySelectorAll('.rogue-slot.filled').forEach(slot => {
             slot.addEventListener('click', () => {
-                const boostId = slot.dataset.boostId;
-                if (boostId) this.showBoostDetails(boostId);
+                const rogueId = slot.dataset.rogueId;
+                if (rogueId) this.showRogueDetails(rogueId);
             });
         });
+
+        // Update Top Deck display if that rogue is active
+        this.renderTopDeck();
     },
 
-    // Show boost details modal
-    showBoostDetails(boostId) {
-        const boost = BOOSTS[boostId];
-        if (!boost) return;
+    // Show rogue details modal
+    showRogueDetails(rogueId) {
+        const rogue = ROGUES[rogueId];
+        if (!rogue) return;
 
-        const modal = document.getElementById('boost-modal');
+        const modal = document.getElementById('rogue-modal');
         if (!modal) return;
 
-        document.getElementById('boost-modal-icon').textContent = boost.icon;
-        document.getElementById('boost-modal-name').textContent = boost.name;
-        document.getElementById('boost-modal-description').textContent = boost.description;
+        document.getElementById('rogue-modal-icon').textContent = rogue.icon;
+        document.getElementById('rogue-modal-name').textContent = rogue.name;
+        document.getElementById('rogue-modal-description').textContent = rogue.description;
 
-        // Store current boost ID for discard button
-        modal.dataset.boostId = boostId;
+        // Store current rogue ID for discard button
+        modal.dataset.rogueId = rogueId;
 
         modal.style.display = 'flex';
     },
 
-    // Hide boost details modal
-    hideBoostModal() {
-        const modal = document.getElementById('boost-modal');
+    // Hide rogue details modal
+    hideRogueModal() {
+        const modal = document.getElementById('rogue-modal');
         if (modal) {
             modal.style.display = 'none';
         }
     },
 
-    // Discard a boost from inventory
-    discardBoost(boostId) {
-        const index = runState.boosts.indexOf(boostId);
+    // Discard a rogue from inventory
+    discardRogue(rogueId) {
+        const index = runState.rogues.indexOf(rogueId);
         if (index === -1) return;
 
-        runState.boosts.splice(index, 1);
-        console.log('[Boost] Discarded:', boostId);
+        runState.rogues.splice(index, 1);
+        console.log('[Rogue] Discarded:', rogueId);
         this.saveRunState();
 
-        this.hideBoostModal();
-        this.renderBoostInventory();
+        this.hideRogueModal();
+        this.renderRogueInventory();
+    },
+
+    // Animate rogues that triggered on the current word
+    animateTriggeredRogues(positions) {
+        if (!runState.isRunMode || runState.rogues.length === 0) return;
+
+        // Collect word data needed to check rogue triggers
+        const wordLetters = positions.map(({ row, col }) => gameState.board[row][col]);
+        const vowelsWithY = ['A', 'E', 'I', 'O', 'U', 'Y'];
+        const vowelCount = wordLetters.filter(l => vowelsWithY.includes(l)).length;
+
+        // Count buffed tiles
+        let buffedTileCount = 0;
+        positions.forEach(({ row, col }) => {
+            const placedTile = gameState.placedTiles.find(t => t.row === row && t.col === col);
+            if (placedTile?.bonus > 0) {
+                buffedTileCount++;
+            } else {
+                const cell = document.querySelector(`.board-cell[data-row="${row}"][data-col="${col}"]`);
+                const tileEl = cell?.querySelector('.tile');
+                if (tileEl?.dataset.bonus && parseInt(tileEl.dataset.bonus) > 0) {
+                    buffedTileCount++;
+                }
+            }
+        });
+
+        // Count double letter pairs
+        let doublePairs = 0;
+        for (let i = 0; i < wordLetters.length - 1; i++) {
+            if (wordLetters[i] === wordLetters[i + 1]) {
+                doublePairs++;
+                i++;
+            }
+        }
+
+        // Count DL/TL squares used
+        let letterSquaresUsed = 0;
+        positions.forEach(({ row, col }) => {
+            const isNew = gameState.placedTiles.some(t => t.row === row && t.col === col);
+            if (isNew) {
+                const cellType = getCellType(row, col);
+                if (cellType === 'double-letter' || cellType === 'triple-letter') {
+                    letterSquaresUsed++;
+                }
+            }
+        });
+
+        // Count new letters for All-Round Letter
+        let newLetterCount = 0;
+        if (runState.lettersPlayedThisCycle) {
+            wordLetters.forEach(letter => {
+                if (!runState.lettersPlayedThisCycle.has(letter)) {
+                    newLetterCount++;
+                }
+            });
+        }
+
+        // Check which rogues would trigger
+        const triggeredRogues = [];
+
+        // Check each possible rogue
+        if (hasRogue('vowelBonus')) triggeredRogues.push('vowelBonus'); // Always triggers if any vowels
+        if (hasRogue('endlessPower')) triggeredRogues.push('endlessPower'); // Always triggers
+        if (hasRogue('loneRanger') && vowelCount === 1) triggeredRogues.push('loneRanger');
+        if (hasRogue('highValue') && buffedTileCount > 0) triggeredRogues.push('highValue');
+        if (hasRogue('wolfPack') && doublePairs > 0) triggeredRogues.push('wolfPack');
+        if (hasRogue('worder') && letterSquaresUsed > 0) triggeredRogues.push('worder');
+        if (hasRogue('allRoundLetter') && newLetterCount > 0) triggeredRogues.push('allRoundLetter');
+
+        // Check bingo for bingoWizard
+        const rackSize = getRackSize();
+        // Bingo Wizard: always 6 tiles for bingo (not relative to rack size)
+        const bingoThreshold = hasRogue('bingoWizard') ? 6 : rackSize;
+        if (hasRogue('bingoWizard') && gameState.placedTiles.length >= bingoThreshold) {
+            triggeredRogues.push('bingoWizard');
+        }
+
+        // Animate the triggered rogue slots
+        triggeredRogues.forEach(rogueId => {
+            const slot = document.querySelector(`.rogue-slot[data-rogue-id="${rogueId}"]`);
+            if (slot) {
+                // Remove class first to allow re-triggering
+                slot.classList.remove('triggered');
+                // Force reflow
+                void slot.offsetWidth;
+                // Add class to trigger animation
+                slot.classList.add('triggered');
+            }
+        });
+    },
+
+    // Render Top Deck display (shows most likely next tiles from bag)
+    renderTopDeck() {
+        const container = document.getElementById('top-deck-display');
+        const tilesContainer = document.getElementById('top-deck-tiles');
+        if (!container || !tilesContainer) return;
+
+        // Only show if Top Deck rogue is active and in run mode
+        if (!hasRogue('topDeck') || !runState.isRunMode) {
+            container.classList.add('hidden');
+            return;
+        }
+
+        // Get remaining tiles in bag
+        const remaining = getRemainingTiles();
+
+        // Build array of [letter, count] and sort by count (most common first)
+        const tileEntries = Object.entries(remaining)
+            .filter(([letter, count]) => count > 0)
+            .sort((a, b) => b[1] - a[1]);
+
+        // Take top 3 most common tiles
+        const topTiles = tileEntries.slice(0, 3);
+
+        // Build display
+        let html = '';
+        topTiles.forEach(([letter, count]) => {
+            const displayLetter = letter === '_' ? '' : letter;
+            const isBlank = letter === '_';
+            html += `<div class="top-deck-tile${isBlank ? ' blank' : ''}" title="${count} remaining">
+                <span class="top-deck-letter">${displayLetter}</span>
+                <span class="top-deck-count">×${count}</span>
+            </div>`;
+        });
+
+        tilesContainer.innerHTML = html;
+        container.classList.remove('hidden');
     },
 
     // Purchase a tile via "Add" - adds to bag, costs $2/$3/$4 based on type
@@ -1157,7 +1595,8 @@ const runManager = {
         const tileType = this.shopTileTypes[index] || 'buffed';
         const isCoinTile = tileType === 'coin';
         const isPinkTile = tileType === 'pink';
-        const cost = isPinkTile ? 4 : (isCoinTile ? 3 : 2);
+        // Add costs: buffed = $1, coin = $2, pink = $3
+        const cost = isPinkTile ? 3 : (isCoinTile ? 2 : 1);
 
         if (runState.coins < cost || this.shopPurchased[index]) return;
 
@@ -1195,12 +1634,13 @@ const runManager = {
         });
     },
 
-    // Purchase a tile via "Replace" - costs $3/$4/$5 based on type, then pick a tile to remove
+    // Purchase a tile via "Replace" - costs $2/$3/$4 based on type, then pick a tile to remove
     purchaseTileReplace(index) {
         const tileType = this.shopTileTypes[index] || 'buffed';
         const isCoinTile = tileType === 'coin';
         const isPinkTile = tileType === 'pink';
-        const cost = isPinkTile ? 5 : (isCoinTile ? 4 : 3);
+        // Replace costs: buffed = $2, coin = $3, pink = $4
+        const cost = isPinkTile ? 4 : (isCoinTile ? 3 : 2);
 
         if (runState.coins < cost || this.shopPurchased[index]) return;
 
@@ -1401,11 +1841,18 @@ const runManager = {
             const otherAddBtn = document.getElementById(`shop-add-${otherIndex}`);
             const otherReplaceBtn = document.getElementById(`shop-replace-${otherIndex}`);
 
-            if (runState.coins < 2) {
+            // Get actual costs for the other tile based on its type
+            const otherType = this.shopTileTypes[otherIndex] || 'buffed';
+            const otherIsCoin = otherType === 'coin';
+            const otherIsPink = otherType === 'pink';
+            const otherAddCost = otherIsPink ? 3 : (otherIsCoin ? 2 : 1);
+            const otherReplaceCost = otherIsPink ? 4 : (otherIsCoin ? 3 : 2);
+
+            if (runState.coins < otherAddCost) {
                 otherAddBtn?.classList.add('cannot-afford');
                 if (otherAddBtn) otherAddBtn.title = 'Not enough coins';
             }
-            if (runState.coins < 3) {
+            if (runState.coins < otherReplaceCost) {
                 otherReplaceBtn?.classList.add('cannot-afford');
                 if (otherReplaceBtn) otherReplaceBtn.title = 'Not enough coins';
             }
@@ -1419,9 +1866,11 @@ const runManager = {
     continueFromShop() {
         this.hideAllRunPopups();
 
-        // Clear shop tiles - they're only valid for this shop visit
+        // Clear shop state - only valid for this shop visit
         runState.shopTiles = null;
         runState.shopPurchased = null;
+        runState.shopRogues = [null, null, null];
+        runState.shopRoguesPurchased = [false, false, false];
 
         if (runState.round >= runState.maxRounds) {
             // Completed all rounds in this set - show set complete screen
@@ -1479,6 +1928,8 @@ const runManager = {
         runState.pendingScore = null;
         runState.shopTiles = null;
         runState.shopPurchased = null;
+        runState.shopRogues = [null, null, null];
+        runState.shopRoguesPurchased = [false, false, false];
         this.saveRunState();
         this.nextSet();
     },
@@ -1520,7 +1971,12 @@ const runManager = {
 
     // Save run state to localStorage
     saveRunState() {
-        localStorage.setItem('rogueletters_run', JSON.stringify(runState));
+        // Convert Set to Array for JSON serialization
+        const stateToSave = { ...runState };
+        if (runState.lettersPlayedThisCycle instanceof Set) {
+            stateToSave.lettersPlayedThisCycle = Array.from(runState.lettersPlayedThisCycle);
+        }
+        localStorage.setItem('rogueletters_run', JSON.stringify(stateToSave));
     },
 
     // Load run state from localStorage
@@ -1528,6 +1984,10 @@ const runManager = {
         const saved = localStorage.getItem('rogueletters_run');
         if (saved) {
             const loaded = JSON.parse(saved);
+            // Convert Array back to Set
+            if (Array.isArray(loaded.lettersPlayedThisCycle)) {
+                loaded.lettersPlayedThisCycle = new Set(loaded.lettersPlayedThisCycle);
+            }
             Object.assign(runState, loaded);
         }
     },
@@ -1552,7 +2012,11 @@ const runManager = {
         runState.shopTiles = null;
         runState.shopPurchased = null;
         runState.shopTileTypes = null;
+        runState.shopRogues = [null, null, null];
+        runState.shopRoguesPurchased = [false, false, false];
         runState.coinTilesDrawn = {};
+        runState.tileSetUpgradeCount = 0;
+        runState.tileSetUpgrades = {};
     },
 
     // Clear run state from localStorage
@@ -1598,29 +2062,66 @@ function updateExchangeButtonVisibility() {
         return;
     }
 
-    // Hide if can't afford exchange
-    if (!canAffordExchange()) {
-        exchangeBtn.style.display = 'none';
+    // No Discard rogue: Exchange becomes free "Pass" button
+    if (hasRogue('noDiscard')) {
+        exchangeBtn.style.display = 'flex';
+        exchangeBtn.classList.remove('cannot-afford');
+        exchangeBtn.disabled = false;
+        if (recallBtn) recallBtn.style.display = 'none';
+        // Update button text to "Pass"
+        const btnText = exchangeBtn.querySelector('.exchange-btn-text');
+        if (btnText) btnText.textContent = 'Pass';
+        // Hide cost badge
+        const costBadge = exchangeBtn.querySelector('.exchange-cost');
+        if (costBadge) costBadge.style.display = 'none';
         return;
     }
 
-    // Show exchange button (hide recall since no tiles on board)
+    // Always show exchange button (hide recall since no tiles on board)
     exchangeBtn.style.display = 'flex';
     if (recallBtn) recallBtn.style.display = 'none';
+
+    // Ensure button text says "Exchange"
+    const btnText = exchangeBtn.querySelector('.exchange-btn-text');
+    if (btnText) btnText.textContent = 'Exchange';
 
     // Update cost badge
     const costBadge = exchangeBtn.querySelector('.exchange-cost');
     if (costBadge) {
+        costBadge.style.display = '';
         costBadge.textContent = `$${getExchangeCost()}`;
+    }
+
+    // Gray out if can't afford, but always show
+    if (!canAffordExchange()) {
+        exchangeBtn.classList.add('cannot-afford');
+        exchangeBtn.disabled = true;
+        exchangeBtn.title = 'Not enough coins';
+    } else {
+        exchangeBtn.classList.remove('cannot-afford');
+        exchangeBtn.disabled = false;
+        exchangeBtn.title = '';
     }
 }
 
 /**
- * Enter exchange mode - open the modal
+ * Enter exchange mode - open the modal (or pass turn if No Discard rogue active)
  */
 function enterExchangeMode() {
     if (gameState.isGameOver) return;
     if (gameState.placedTiles.length > 0) return;
+
+    // No Discard rogue: Just pass the turn (no exchange, no cost)
+    if (hasRogue('noDiscard')) {
+        console.log('[Pass] Passing turn (No Discard rogue)');
+        // Record a zero-score turn
+        gameState.turnScores.push(0);
+        gameState.currentTurn++;
+        updateTurnCounter();
+        checkEndOfTurn();
+        return;
+    }
+
     if (!canAffordExchange()) return;
 
     console.log('[Exchange] Entering exchange mode');
@@ -1778,7 +2279,7 @@ async function confirmExchange() {
         const removedLetters = runState.removedTiles || [];
 
         // Call backend to exchange tiles
-        const rackSize = hasBoost('extraRack') ? 8 : 7;
+        const rackSize = getRackSize();
         const params = new URLSearchParams({
             seed: gameState.seed,
             action: 'exchange',
@@ -1859,7 +2360,7 @@ async function confirmExchange() {
 
         // Re-render the rack with new tiles, animating them from the bag
         // Calculate how many tiles were kept (not exchanged)
-        const currentRackSize = hasBoost('extraRack') ? 8 : 7;
+        const currentRackSize = getRackSize();
         const keptTileCount = currentRackSize - tilesToExchange.length;
         await displayTilesAnimated(data.tiles, keptTileCount);
 
@@ -3249,6 +3750,10 @@ async function loadV3SharedGame(encodedParam, isSortedFormat = false) {
 
 // Initialize game on page load
 document.addEventListener('DOMContentLoaded', async () => {
+    // Set copyright year dynamically
+    const copyrightYear = document.getElementById('copyright-year');
+    if (copyrightYear) copyrightYear.textContent = new Date().getFullYear();
+
     // Proactively wait for LZ-String library to load (needed for share URLs)
     // This ensures it's ready by the time user finishes game and wants to share
     waitForLZString().then(loaded => {
@@ -3561,7 +4066,7 @@ function fetchGameData(seed) {
     const removedParam = runState.removedTiles?.length
         ? `&removed_tiles=${encodeURIComponent(JSON.stringify(runState.removedTiles))}`
         : '';
-    const rackSize = hasBoost('extraRack') ? 8 : 7;
+    const rackSize = getRackSize();
     fetch(`${API_BASE}/letters.py?seed=${seed}${purchasedParam}${removedParam}&rack_size=${rackSize}`)
         .then(response => {
             // Check HTTP status before parsing JSON
@@ -3738,8 +4243,8 @@ function createRackBoard() {
     const rackBoard = document.getElementById('tile-rack-board');
     rackBoard.innerHTML = '';
 
-    // Create a 1x7 or 1x8 rack board (8 with Big Pockets boost)
-    const rackSize = hasBoost('extraRack') ? 8 : 7;
+    // Create a 1x7 or 1x8 rack board (8 with Big Pockets rogue)
+    const rackSize = getRackSize();
     const row = 0;
     for (let col = 0; col < rackSize; col++) {
         const cell = document.createElement('div');
@@ -3779,6 +4284,11 @@ function displayTiles(tiles) {
             cell.appendChild(tile);
         }
     });
+
+    // Update Top Deck display if that rogue is active
+    if (typeof runManager !== 'undefined' && runManager.renderTopDeck) {
+        runManager.renderTopDeck();
+    }
 }
 
 function createTileElement(letter, index, isBlank = false, buffed = false, bonus = 0, coinTile = false) {
@@ -4569,25 +5079,35 @@ function setupEventListeners() {
     document.getElementById('shop-replace-1')?.addEventListener('click', () => {
         runManager.purchaseTileReplace(1);
     });
-
-    // Shop boost button
-    document.getElementById('shop-boost-buy')?.addEventListener('click', () => {
-        runManager.purchaseBoost();
+    document.getElementById('shop-upgrade-btn')?.addEventListener('click', () => {
+        runManager.purchaseTileSetUpgrade();
     });
 
-    // Boost modal buttons
-    document.getElementById('boost-modal-close')?.addEventListener('click', () => {
-        runManager.hideBoostModal();
+    // Rogue modal buttons
+    document.getElementById('rogue-modal-close')?.addEventListener('click', () => {
+        runManager.hideRogueModal();
     });
-    document.getElementById('boost-discard-btn')?.addEventListener('click', () => {
-        const modal = document.getElementById('boost-modal');
-        if (modal && modal.dataset.boostId) {
-            runManager.discardBoost(modal.dataset.boostId);
+    document.getElementById('rogue-discard-btn')?.addEventListener('click', () => {
+        const modal = document.getElementById('rogue-modal');
+        if (modal && modal.dataset.rogueId) {
+            runManager.discardRogue(modal.dataset.rogueId);
         }
     });
-    document.getElementById('boost-modal')?.addEventListener('click', (e) => {
+    document.getElementById('rogue-modal')?.addEventListener('click', (e) => {
         // Close when clicking outside the content
-        if (e.target.id === 'boost-modal') runManager.hideBoostModal();
+        if (e.target.id === 'rogue-modal') runManager.hideRogueModal();
+    });
+
+    // Rogue discard modal buttons (when purchasing at max capacity)
+    document.getElementById('rogue-discard-modal-close')?.addEventListener('click', () => {
+        runManager.hideRogueDiscardModal();
+    });
+    document.getElementById('rogue-discard-cancel')?.addEventListener('click', () => {
+        runManager.hideRogueDiscardModal();
+    });
+    document.getElementById('rogue-discard-modal')?.addEventListener('click', (e) => {
+        // Close when clicking outside the content
+        if (e.target.id === 'rogue-discard-modal') runManager.hideRogueDiscardModal();
     });
 
     // Bag viewer buttons
@@ -5549,7 +6069,10 @@ async function moveTileBetweenBoardPositions(fromPos, toCell) {
     const fromCell = document.querySelector(
         `.board-cell[data-row="${fromPos.row}"][data-col="${fromPos.col}"]`
     );
+    if (!fromCell) return;
+
     const tile = fromCell.querySelector('.tile');
+    if (!tile) return;
 
     // Animate tile flying to new position
     await animateTileBoardToBoard(tile, fromCell, toCell);
@@ -5996,8 +6519,14 @@ function calculateWordScore(positions) {
     let wordMultiplier = 1;
     let pinkMultiplier = 1;  // Multiplier from pink tiles (1.5× per pink tile)
 
+    // Track data for rogue effects
+    let wordLetters = [];    // For Lone Ranger (vowel count) and Wolf Pack (doubles)
+    let buffedTileCount = 0; // For High Value
+    let letterSquaresUsed = 0; // For Worder (DL/TL squares)
+
     positions.forEach(({ row, col }) => {
         const letter = gameState.board[row][col];
+        wordLetters.push(letter);
 
         // Check if this tile is a blank (blanks score 0 regardless of assigned letter)
         // Check both placedTiles (this turn) and blankPositions (previous turns)
@@ -6009,8 +6538,10 @@ function calculateWordScore(positions) {
         // Check placedTiles first (this turn), then DOM element (previous turns)
         let tileBonus = 0;
         let isPinkTile = false;
+        let isBuffedTile = false;
         if (placedTile?.bonus) {
             tileBonus = placedTile.bonus;
+            isBuffedTile = true;
         }
         if (placedTile?.pinkTile) {
             isPinkTile = true;
@@ -6022,10 +6553,16 @@ function calculateWordScore(positions) {
             const tileEl = cell?.querySelector('.tile');
             if (tileEl?.dataset.bonus) {
                 tileBonus = parseInt(tileEl.dataset.bonus) || 0;
+                if (tileBonus > 0) isBuffedTile = true;
             }
             if (tileEl?.dataset.pinkTile === 'true') {
                 isPinkTile = true;
             }
+        }
+
+        // Track buffed tiles for High Value rogue
+        if (isBuffedTile) {
+            buffedTileCount++;
         }
 
         // Apply pink tile multiplier (1.5× per pink tile in the word)
@@ -6036,9 +6573,14 @@ function calculateWordScore(positions) {
         // Calculate base letter score
         let letterScore = isBlank ? 0 : (TILE_SCORES[letter] || 0) + tileBonus;
 
-        // Apply vowelBonus boost: +1 to all vowels
+        // Apply tile set upgrades
+        if (!isBlank && runState.tileSetUpgrades && runState.tileSetUpgrades[letter]) {
+            letterScore += runState.tileSetUpgrades[letter];
+        }
+
+        // Apply vowelBonus rogue: +1 to all vowels
         const vowels = ['A', 'E', 'I', 'O', 'U'];
-        if (!isBlank && hasBoost('vowelBonus') && vowels.includes(letter)) {
+        if (!isBlank && hasRogue('vowelBonus') && vowels.includes(letter)) {
             letterScore += 1;
         }
 
@@ -6048,8 +6590,10 @@ function calculateWordScore(positions) {
             const cellType = getCellType(row, col);
             if (cellType === 'double-letter') {
                 letterScore *= 2;
+                letterSquaresUsed++; // Track for Worder
             } else if (cellType === 'triple-letter') {
                 letterScore *= 3;
+                letterSquaresUsed++; // Track for Worder
             } else if (cellType === 'double-word') {
                 wordMultiplier *= 2;
             } else if (cellType === 'triple-word') {
@@ -6066,15 +6610,76 @@ function calculateWordScore(positions) {
     // Apply pink tile multiplier last (1.5× per pink tile)
     score = Math.floor(score * pinkMultiplier);
 
+    // ========== ROGUE BONUSES ==========
+
+    // Endless Power: +2 per word × current set
+    if (hasRogue('endlessPower') && runState.isRunMode) {
+        score += runState.set * 2;
+    }
+
+    // Lone Ranger: +6 if word has exactly 1 vowel (including Y)
+    if (hasRogue('loneRanger')) {
+        const vowelsWithY = ['A', 'E', 'I', 'O', 'U', 'Y'];
+        const vowelCount = wordLetters.filter(l => vowelsWithY.includes(l)).length;
+        if (vowelCount === 1) {
+            score += 6;
+        }
+    }
+
+    // High Value: +1 per upgraded/buffed tile in word
+    if (hasRogue('highValue') && buffedTileCount > 0) {
+        score += buffedTileCount;
+    }
+
+    // Wolf Pack: +3 per consecutive double letter pair
+    if (hasRogue('wolfPack') && wordLetters.length >= 2) {
+        let doublePairs = 0;
+        for (let i = 0; i < wordLetters.length - 1; i++) {
+            if (wordLetters[i] === wordLetters[i + 1]) {
+                doublePairs++;
+                i++; // Skip next letter so "AAA" counts as 1 pair, not 2
+            }
+        }
+        score += doublePairs * 3;
+    }
+
+    // Worder: ×1.25 per DL/TL square used
+    if (hasRogue('worder') && letterSquaresUsed > 0) {
+        const worderMultiplier = Math.pow(1.25, letterSquaresUsed);
+        score = Math.floor(score * worderMultiplier);
+    }
+
+    // All-Round Letter: +1 for first use of each letter this cycle
+    if (hasRogue('allRoundLetter') && runState.isRunMode) {
+        // Initialize tracking if needed
+        if (!runState.lettersPlayedThisCycle) {
+            runState.lettersPlayedThisCycle = new Set();
+        }
+
+        let newLetterBonus = 0;
+        wordLetters.forEach(letter => {
+            if (!runState.lettersPlayedThisCycle.has(letter)) {
+                newLetterBonus++;
+                // Note: We don't add to the set here - that happens in submitWord
+            }
+        });
+        score += newLetterBonus;
+    }
+
+    // ========== END ROGUE BONUSES ==========
+
     // Add bingo bonus if all tiles used IN THIS SPECIFIC WORD (7 or 8 with Big Pockets)
-    const rackSize = hasBoost('extraRack') ? 8 : 7;
-    if (gameState.placedTiles.length === rackSize) {
-        // Check if all placed tiles are in this word
+    // Bingo Wizard: Bingo triggers with 1 fewer tile (6 or 7)
+    // Bingo: always 7 tiles (or 6 with Bingo Wizard) - not affected by Big Pockets
+    const bingoThreshold = hasRogue('bingoWizard') ? 6 : 7;
+
+    if (gameState.placedTiles.length >= bingoThreshold) {
+        // Check if enough placed tiles are in this word
         const placedInThisWord = positions.filter(pos =>
             gameState.placedTiles.some(t => t.row === pos.row && t.col === pos.col)
         ).length;
 
-        if (placedInThisWord === rackSize) {
+        if (placedInThisWord >= bingoThreshold) {
             score += 50;
         }
     }
@@ -6300,13 +6905,32 @@ function updatePotentialWordsSidebar() {
                             let totalScore = 0;
                             let hasInvalidWords = false;
 
+                            // Check if bingo applies to any word
+                            const rackSize = getRackSize();
+                            // Bingo Wizard: always 6 tiles for bingo (not relative to rack size)
+                            const bingoThreshold = hasRogue('bingoWizard') ? 6 : rackSize;
+
+                            // Sort words by score (smallest to largest)
+                            words.sort((a, b) => a.score - b.score);
+
                             words.forEach(word => {
                                 totalScore += word.score;
                                 const isValid = data.results ? data.results[word.word] : true;
                                 if (!isValid) hasInvalidWords = true;
 
+                                // Check if this word qualifies for bingo
+                                let bingoTag = '';
+                                if (gameState.placedTiles.length >= bingoThreshold) {
+                                    const placedInThisWord = word.positions.filter(pos =>
+                                        gameState.placedTiles.some(t => t.row === pos.row && t.col === pos.col)
+                                    ).length;
+                                    if (placedInThisWord >= bingoThreshold) {
+                                        bingoTag = '<span class="bingo-tag">BINGO +50</span>';
+                                    }
+                                }
+
                                 html += `<span class="word-item ${isValid ? '' : 'invalid-word'}">
-                                    <span class="word-text">${word.word}</span>
+                                    <span class="word-text">${word.word}${bingoTag}</span>
                                     <span class="word-score">${word.score}</span>
                                 </span>`;
                             });
@@ -6364,6 +6988,8 @@ function updatePotentialWordsSidebar() {
 
                             let html = '';
                             let totalScore = 0;
+                            // Sort words by score (smallest to largest)
+                            words.sort((a, b) => a.score - b.score);
                             words.forEach(word => {
                                 totalScore += word.score;
                                 html += `<span class="word-item unvalidated">
@@ -6641,6 +7267,12 @@ function submitWord() {
             updateTargetProgress();
             runManager.updateRunUI();  // Update "X to go" display
 
+            // Animate triggered rogues for each word formed
+            const formedWords = findFormedWords();
+            formedWords.forEach(word => {
+                runManager.animateTriggeredRogues(word.positions);
+            });
+
             // Award $1 for each unclaimed coin tile placed this turn
             let coinsEarned = 0;
             gameState.placedTiles.forEach(tile => {
@@ -6674,7 +7306,7 @@ function submitWord() {
             // No need to update totalTilesDrawn here - it's updated in nextTurn
 
             // Save turn to history
-            const rackSizeForBingo = hasBoost('extraRack') ? 8 : 7;
+            const rackSizeForBingo = getRackSize();
             gameState.turnHistory.push({
                 tiles: placedWord,
                 score: turnScore,
@@ -6691,6 +7323,23 @@ function submitWord() {
                     gameState.blankPositions.push({ row: tile.row, col: tile.col, letter: tile.letter });
                 }
             });
+
+            // All-Round Letter: Track letters played this cycle
+            if (hasRogue('allRoundLetter') && runState.isRunMode) {
+                if (!runState.lettersPlayedThisCycle) {
+                    runState.lettersPlayedThisCycle = new Set();
+                }
+                // Add all letters from placed tiles
+                placedWord.forEach(tile => {
+                    runState.lettersPlayedThisCycle.add(tile.letter);
+                });
+                // Reset cycle when 18+ unique letters used (refresh the bonus)
+                if (runState.lettersPlayedThisCycle.size >= 18) {
+                    console.log('[All-Round Letter] Cycle complete! Resetting letter tracking.');
+                    runState.lettersPlayedThisCycle = new Set();
+                }
+                runManager.saveRunState();
+            }
 
             // Clear placed tiles tracking
             document.querySelectorAll('.placed-this-turn').forEach(cell => {
@@ -6798,7 +7447,7 @@ function nextTurn() {
     // Get new tiles for next turn, passing current rack tiles and total tiles drawn
     // Extract just letters for server (rackTiles stores objects with buffed info)
     const rackLetters = gameState.rackTiles.map(t => typeof t === 'object' ? t.letter : t);
-    const rackSize = hasBoost('extraRack') ? 8 : 7;
+    const rackSize = getRackSize();
     const params = new URLSearchParams({
         seed: gameState.seed,
         turn: gameState.currentTurn,
@@ -8273,6 +8922,7 @@ function restoreBoard() {
                 const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
                 const tileDiv = document.createElement('div');
                 tileDiv.className = 'tile placed';
+                tileDiv.dataset.letter = letter;  // Required for swap operations
 
                 // Check if this position is a blank tile
                 const isBlank = gameState.blankPositions?.some(b => b.row === row && b.col === col) || false;
@@ -8330,6 +8980,8 @@ function restoreBoard() {
                     tile.dataset.coinClaimed = coinClaimed ? 'true' : 'false';
                     // Apply tile effects using centralized system
                     applyTileEffects(tile, { buffed, bonus: bonus || 0, coinTile });
+                    // Add click handler for tile interactions
+                    tile.addEventListener('click', handleTileClick);
                 }
             }
         });

@@ -1,0 +1,791 @@
+[
+  {
+    "id": "rl-1",
+    "title": "Phase 3: Shop Expansion",
+    "type": "epic",
+    "status": "closed",
+    "priority": "high",
+    "description": "Expand shop to 6-slot design: 2 tile choices + 1 tile set upgrade + 3 random boosts. Current shop (Phase 2.5) has 2 tiles + 1 boost. See spec: docs/plans/2026-01-17-rogueletters-spec.md",
+    "created": "2026-01-17",
+    "labels": [
+      "phase-3",
+      "feature"
+    ],
+    "closedAt": "2026-01-18",
+    "closedReason": "Implemented shop expansion with 3 rogues + tile set upgrade"
+  },
+  {
+    "id": "rl-2",
+    "title": "Shop UI Shell",
+    "type": "task",
+    "status": "closed",
+    "priority": "high",
+    "parent": "rl-1",
+    "description": "COMPLETE: Shop screen exists with tile cards, boost slot, skip button. Flow: Earnings \u2192 Shop \u2192 Next Round works.",
+    "created": "2026-01-17",
+    "closedAt": "2026-01-17",
+    "closedReason": "Already implemented in Phase 2.5",
+    "labels": [
+      "phase-3",
+      "ui"
+    ]
+  },
+  {
+    "id": "rl-3",
+    "title": "Shop Purchasing Mechanics",
+    "type": "task",
+    "status": "closed",
+    "priority": "high",
+    "parent": "rl-1",
+    "description": "COMPLETE: Can buy tiles (Add/Replace) and boosts. Coins deduct, items marked sold, boost pricing escalates.",
+    "created": "2026-01-17",
+    "closedAt": "2026-01-17",
+    "closedReason": "Already implemented in Phase 2.5",
+    "labels": [
+      "phase-3",
+      "logic"
+    ]
+  },
+  {
+    "id": "rl-4",
+    "title": "Expand Boost Pool",
+    "type": "task",
+    "status": "closed",
+    "priority": "medium",
+    "parent": "rl-1",
+    "description": "Add more boosts beyond current 4 (extraTurn, extraRack, basePayout, vowelBonus). Boosts have rarity tiers (common/uncommon/rare) affecting shop frequency. See rl-17 for unlock system.",
+    "created": "2026-01-17",
+    "labels": [
+      "phase-3",
+      "gameplay"
+    ],
+    "closedAt": "2026-01-18",
+    "closedReason": "Implemented rogues system with all 14 rogues"
+  },
+  {
+    "id": "rl-5",
+    "title": "Tile Set Upgrade System",
+    "type": "task",
+    "status": "closed",
+    "priority": "medium",
+    "parent": "rl-1",
+    "description": "Add 'Tile Set Upgrade' as always-available shop option. For Plastic set: +1 to random common letters. Unlimited purchases with exponentially escalating cost. Upgraded tiles show modified value with color/effect indicator. Coexists with 2 tile slots (6 total shop options).",
+    "created": "2026-01-17",
+    "labels": [
+      "phase-3",
+      "gameplay"
+    ],
+    "closedAt": "2026-01-18",
+    "closedReason": "Implemented shop expansion with 3 rogues + tile set upgrade"
+  },
+  {
+    "id": "rl-6",
+    "title": "Phase 4: Meta-Progression",
+    "type": "epic",
+    "status": "open",
+    "priority": "low",
+    "description": "Add gem currency, main menu, and permanent upgrades. Gems earned at set completion, spent in Gem Shop between runs. See docs/plans/2026-01-17-rogueletters-spec.md",
+    "created": "2026-01-17",
+    "labels": [
+      "phase-4",
+      "feature"
+    ],
+    "notes": "Depends on Phase 3 being mature."
+  },
+  {
+    "id": "rl-7",
+    "title": "Main Menu Screen",
+    "type": "task",
+    "status": "open",
+    "priority": "low",
+    "parent": "rl-6",
+    "description": "New entry point with gem counter, Start Run button, Gem Shop button. Shows on page load and after run ends. Track best run and total runs.",
+    "created": "2026-01-17",
+    "labels": [
+      "phase-4",
+      "ui"
+    ]
+  },
+  {
+    "id": "rl-8",
+    "title": "Gem Economy",
+    "type": "task",
+    "status": "open",
+    "priority": "low",
+    "parent": "rl-6",
+    "description": "Earn gems at set completion (1/2/3/4/5 for sets 1-5, +5 victory bonus). Full run = 20 gems. Persist in metaState (localStorage). Display on Set Complete screen.",
+    "created": "2026-01-17",
+    "labels": [
+      "phase-4",
+      "economy"
+    ]
+  },
+  {
+    "id": "rl-9",
+    "title": "Gem Shop",
+    "type": "task",
+    "status": "open",
+    "priority": "low",
+    "parent": "rl-6",
+    "blockedBy": [
+      "rl-7",
+      "rl-8"
+    ],
+    "description": "Grid of permanent upgrades purchasable with gems. Categories: Tile Sets, Starting Bonuses, Game Tweaks, Board Enhancements. Tiered upgrades require previous tier. Include 1-gem 'reset all upgrades' option to allow build experimentation.",
+    "created": "2026-01-17",
+    "labels": [
+      "phase-4",
+      "ui"
+    ]
+  },
+  {
+    "id": "rl-10",
+    "title": "Boss Rounds",
+    "type": "task",
+    "status": "open",
+    "priority": "low",
+    "description": "Round 3 of each set has negative modifier (boss). Boss is REVEALED at set start so player can prepare in shop. Examples: reduced rack, cursed letter, no bonus squares, word restrictions. Counter-boosts available in shop.",
+    "created": "2026-01-17",
+    "labels": [
+      "future",
+      "gameplay"
+    ],
+    "notes": "Significant complexity. Need to design specific bosses and test balance."
+  },
+  {
+    "id": "rl-11",
+    "title": "New Tile Effects",
+    "type": "task",
+    "status": "open",
+    "priority": "low",
+    "description": "Additional tile types beyond buffed/coin: Pink (1.5x word), Red (+3 off special), Blue (+1 letter mult), Purple (+2 disappears if not played), Black (+1 rack capacity). Coin tiles are PERMANENT (always pay out when played).",
+    "created": "2026-01-17",
+    "labels": [
+      "future",
+      "gameplay"
+    ],
+    "notes": "TILE_EFFECTS system exists and is extensible."
+  },
+  {
+    "id": "rl-12",
+    "title": "Tile Set Unlocks",
+    "type": "task",
+    "status": "open",
+    "priority": "low",
+    "parent": "rl-6",
+    "description": "Unlock tile sets with gems: Glass, Copper, Silver, Gold, Ivory, Onyx, Ruby, Emerald, Amethyst, Ghost, Glitch. Each set has DISTINCT PLAYSTYLE (not just cosmetic) with unique mechanics that change strategy.",
+    "created": "2026-01-17",
+    "labels": [
+      "phase-4",
+      "gameplay"
+    ],
+    "notes": "Very ambitious. Each set needs balancing. Ghost/Glitch have high-risk mechanics."
+  },
+  {
+    "id": "rl-13",
+    "title": "Review: Phase 3 Plan vs Current Shop",
+    "type": "task",
+    "status": "closed",
+    "priority": "high",
+    "description": "Reconcile docs/plans/2025-12-06-phase3-shop.md with current implementation.",
+    "created": "2026-01-17",
+    "closedAt": "2026-01-17",
+    "closedReason": "Resolved via spec interview. Shop is 6 slots: 2 tiles + 1 tile-set upgrade + 3 boosts. See docs/plans/2026-01-17-rogueletters-spec.md",
+    "labels": [
+      "planning"
+    ]
+  },
+  {
+    "id": "rl-14",
+    "title": "Bug: Shop boost button shows price instead of 'Buy'",
+    "type": "bug",
+    "status": "closed",
+    "priority": "medium",
+    "description": "The boost purchase button in the shop shows just a number (the price) instead of saying 'Buy' or 'Purchase'. Should be clearer that it's a buy action.",
+    "created": "2026-01-17",
+    "closedAt": "2026-01-17",
+    "closedReason": "Fixed in commit 0bdd1b4",
+    "labels": [
+      "bug",
+      "ui",
+      "shop"
+    ],
+    "reportedBy": "Finnegan"
+  },
+  {
+    "id": "rl-15",
+    "title": "Bug: Vowel boost +1 not shown on tile display",
+    "type": "bug",
+    "status": "closed",
+    "priority": "medium",
+    "description": "When vowelBonus boost is active, tiles score correctly with +1 for vowels, but the tile display doesn't show the +1 visually. Player can't see the bonus until they score.",
+    "created": "2026-01-17",
+    "closedAt": "2026-01-17",
+    "closedReason": "Fixed in commit 20c5cfe via getTileDisplayScore()",
+    "labels": [
+      "bug",
+      "ui",
+      "boost"
+    ],
+    "reportedBy": "Dave"
+  },
+  {
+    "id": "rl-16",
+    "title": "Exchange Cost Mechanic",
+    "type": "task",
+    "status": "closed",
+    "priority": "medium",
+    "parent": "rl-1",
+    "description": "Exchanging tiles costs coins equal to current set number (Set 1 = $1, Set 5 = $5). Adds resource tension that scales with progression. Exchange remains unlimited in quantity.",
+    "created": "2026-01-17",
+    "closedAt": "2026-01-17",
+    "closedReason": "Already implemented - getExchangeCost() returns set number, coins deducted on exchange",
+    "labels": [
+      "phase-3",
+      "gameplay"
+    ]
+  },
+  {
+    "id": "rl-17",
+    "title": "Boost Unlock System",
+    "type": "task",
+    "status": "open",
+    "priority": "low",
+    "description": "Many Rare and some Uncommon boosts require unlocking via achievement conditions (like Balatro joker unlocks). Examples: 'Play a 7-letter word', 'Score 500 in one turn', 'Win a run'. Progress tracking varies: simple ones accumulate across runs, impressive feats require single-run completion.",
+    "created": "2026-01-17",
+    "labels": [
+      "phase-4",
+      "gameplay"
+    ],
+    "notes": "Identified as cuttable for MVP - all boosts available from start if needed."
+  },
+  {
+    "id": "rl-18",
+    "title": "Boost Slot Limits",
+    "type": "task",
+    "status": "closed",
+    "priority": "medium",
+    "parent": "rl-1",
+    "description": "Player has maximum boost slots (count TBD). Boosts are permanent for run once purchased. When slots full, can swap a boost BACK TO POOL (not destroyed) to make room for new one.",
+    "created": "2026-01-17",
+    "labels": [
+      "phase-3",
+      "gameplay"
+    ],
+    "notes": "Need to decide: how many slots? 5? 8?",
+    "closedAt": "2026-01-18",
+    "closedReason": "Implemented with 5 rogue slots and discard modal in rogues system"
+  },
+  {
+    "id": "rl-19",
+    "title": "End-of-Run Summary Screen",
+    "type": "task",
+    "status": "open",
+    "priority": "low",
+    "parent": "rl-6",
+    "description": "Detailed stats breakdown when run ends: words played, best word, longest word, coins earned total, sets/rounds completed, gems earned, new unlocks achieved.",
+    "created": "2026-01-17",
+    "labels": [
+      "phase-4",
+      "ui"
+    ]
+  },
+  {
+    "id": "rl-20",
+    "title": "Victory Choice & Endless Mode",
+    "type": "task",
+    "status": "open",
+    "priority": "low",
+    "parent": "rl-6",
+    "description": "At Set 5 victory, player chooses: 'Retire victorious' (end run, collect gems) OR 'Continue for glory' (endless mode with escalating difficulty for high score chase).",
+    "created": "2026-01-17",
+    "labels": [
+      "phase-4",
+      "gameplay"
+    ],
+    "notes": "Need to design Set 6+ targets for endless mode."
+  },
+  {
+    "id": "rl-21",
+    "title": "Add 2 More Boost Slots to Shop",
+    "type": "task",
+    "status": "closed",
+    "priority": "high",
+    "parent": "rl-1",
+    "description": "Current shop shows 1 boost. Expand to show 3 random boosts per shop visit (slots 4-6 in the 6-slot design). Each drawn from pool based on rarity weighting.",
+    "created": "2026-01-17",
+    "closedAt": "2026-01-17",
+    "closedReason": "Implemented: shopBoosts array, generateShopBoosts(), renderShopBoostSection() with 3 cards",
+    "labels": [
+      "phase-3",
+      "ui"
+    ]
+  },
+  {
+    "id": "rl-22",
+    "title": "Scoring Animation with Boost Breakdown",
+    "type": "task",
+    "status": "open",
+    "priority": "low",
+    "description": "Show each boost's contribution individually during scoring animation (like Balatro's satisfying score buildup). Animation can speed up as more boosts are active. Adds to 'one more run' feel.",
+    "created": "2026-01-17",
+    "labels": [
+      "polish",
+      "ui",
+      "animation"
+    ]
+  },
+  {
+    "id": "rl-23",
+    "title": "Design Decision: Shop-Only Boost Swapping",
+    "type": "decision",
+    "status": "closed",
+    "priority": "medium",
+    "description": "Boosts can ONLY be swapped/discarded in the shop, not during gameplay. Rationale: (1) Simpler mental model - boosts locked in for the round, (2) Avoids edge cases like 'extra rack' boost removal mid-turn forcing tile discard, (3) Strategic decisions happen at natural break points. Unlike Balatro which allows selling jokers anytime, word game pacing benefits from shop-contained decisions.",
+    "created": "2026-01-18",
+    "closedAt": "2026-01-18",
+    "closedReason": "Design decision documented",
+    "labels": [
+      "design-decision",
+      "boost",
+      "shop"
+    ]
+  },
+  {
+    "id": "rl-24",
+    "title": "Balatro Gap Analysis Interview",
+    "type": "epic",
+    "status": "open",
+    "priority": "high",
+    "description": "Deep-dive interview process to fill gaps identified in Balatro analysis. Document: docs/plans/2026-01-18-balatro-analysis.md covers 8 areas. WORKFLOW: Read the analysis doc section, interview user using AskUserQuestion about gaps/suggestions/open questions, then create actionable child beads.",
+    "created": "2026-01-18",
+    "labels": [
+      "design",
+      "balatro",
+      "interview"
+    ],
+    "notes": "Interview prompt: 'Read docs/plans/2026-01-18-balatro-analysis.md section [N] and interview me in detail using AskUserQuestion - technical implementation, UI/UX, concerns, tradeoffs. Be in-depth with non-obvious questions. Continue until complete, then create beads from findings.'"
+  },
+  {
+    "id": "rl-25",
+    "title": "Interview: Combo Discovery & Synergy",
+    "type": "task",
+    "status": "open",
+    "priority": "high",
+    "parent": "rl-24",
+    "description": "Section 1 of Balatro analysis. GAP: Boosts are independent, no emergent combos. SUGGESTIONS: Synergy boosts, conditional triggers, multiplicative effects, copy/mirror boosts. OPEN QUESTIONS: How many synergies? Obvious or discoverable? Power ceiling?",
+    "created": "2026-01-18",
+    "labels": [
+      "design",
+      "balatro",
+      "boost",
+      "interview"
+    ]
+  },
+  {
+    "id": "rl-26",
+    "title": "Interview: Risk/Reward Tension",
+    "type": "task",
+    "status": "open",
+    "priority": "medium",
+    "parent": "rl-24",
+    "description": "Section 2 of Balatro analysis. GAP: Safe gameplay, no gambling moments. SUGGESTIONS: Blindfold boost, Double or Nothing, Skip Shop gamble, All-in turn, Glass tiles. OPEN QUESTIONS: How punishing? Opt-in or forced? Frequency per run?",
+    "created": "2026-01-18",
+    "labels": [
+      "design",
+      "balatro",
+      "risk",
+      "interview"
+    ]
+  },
+  {
+    "id": "rl-27",
+    "title": "Interview: Build Diversity",
+    "type": "task",
+    "status": "open",
+    "priority": "high",
+    "parent": "rl-24",
+    "description": "Section 3 of Balatro analysis. GAP: One strategy (make good words), every run plays similarly. SUGGESTIONS: Vowel Build, Length Build, Bonus Square Build, Economy Build, Placement Build, Letter Build, Blitz Build. OPEN QUESTIONS: How many archetypes? Mutually exclusive or combinable? How to guide discovery?",
+    "created": "2026-01-18",
+    "labels": [
+      "design",
+      "balatro",
+      "builds",
+      "interview"
+    ]
+  },
+  {
+    "id": "rl-28",
+    "title": "Interview: Scoring Drama",
+    "type": "task",
+    "status": "open",
+    "priority": "high",
+    "parent": "rl-24",
+    "description": "Section 4 of Balatro analysis. GAP: Score appears instantly, no buildup or drama. SUGGESTIONS: Animate boost contributions, speed up with more boosts, sound effects, screen shake. OPEN QUESTIONS: Animation duration? Skippable? Visual style? See also rl-22.",
+    "created": "2026-01-18",
+    "labels": [
+      "design",
+      "balatro",
+      "animation",
+      "interview"
+    ]
+  },
+  {
+    "id": "rl-29",
+    "title": "Interview: Meaningful Tile Identity",
+    "type": "task",
+    "status": "open",
+    "priority": "medium",
+    "parent": "rl-24",
+    "description": "Section 5 of Balatro analysis. GAP: Tiles are just letters with occasional +1 buff, no personality. SUGGESTIONS: Gold/Glass/Steel/Lucky/Mult/Retrigger/Polychrome/Foil tiles. OPEN QUESTIONS: How acquired? How many per run? Upgrade paths? See also rl-11.",
+    "created": "2026-01-18",
+    "labels": [
+      "design",
+      "balatro",
+      "tiles",
+      "interview"
+    ]
+  },
+  {
+    "id": "rl-30",
+    "title": "Interview: Boss Tension",
+    "type": "task",
+    "status": "open",
+    "priority": "medium",
+    "parent": "rl-24",
+    "description": "Section 6 of Balatro analysis. GAP: Boss rounds in spec but not implemented, no anticipation. SUGGESTIONS: Show boss at set start, specific boss effects (Vowel Tax, Short Fuse, Hoarder, etc.), counter-boosts in shop. OPEN QUESTIONS: Fixed or random bosses? Difficulty? Counter-boost availability? See also rl-10.",
+    "created": "2026-01-18",
+    "labels": [
+      "design",
+      "balatro",
+      "boss",
+      "interview"
+    ]
+  },
+  {
+    "id": "rl-31",
+    "title": "Interview: Discovery & Unlocks",
+    "type": "task",
+    "status": "open",
+    "priority": "low",
+    "parent": "rl-24",
+    "description": "Section 7 of Balatro analysis. GAP: All boosts available immediately, no discovery or long-term goals. SUGGESTIONS: Achievement-based unlock conditions, mid-run notifications, Gem Shop shows locked items. OPEN QUESTIONS: % locked at start? Progress persist across runs? Visibility of conditions? See also rl-17.",
+    "created": "2026-01-18",
+    "labels": [
+      "design",
+      "balatro",
+      "unlocks",
+      "interview"
+    ]
+  },
+  {
+    "id": "rl-32",
+    "title": "Interview: One More Run Loop",
+    "type": "task",
+    "status": "open",
+    "priority": "low",
+    "parent": "rl-24",
+    "description": "Section 8 of Balatro analysis. STATUS: Already good - run length is appropriate. SUGGESTIONS: Ensure variety through randomization, end-of-run summary (rl-19), endless mode, daily challenges. OPEN QUESTIONS: Optimal run length? Shorter/longer options? Ensuring run variety?",
+    "created": "2026-01-18",
+    "labels": [
+      "design",
+      "balatro",
+      "loop",
+      "interview"
+    ]
+  },
+  {
+    "id": "rl-33",
+    "title": "Boost Visual Identity & Personality",
+    "type": "task",
+    "status": "open",
+    "priority": "low",
+    "description": "DESIGN DIRECTION: Tiles are like Balatro cards (mild visual changes - colors, markings, borders for effects). Boosts are like jokers (more personality, unique identity). DON'T copy jokers exactly - should fit RogueLetters' roguelike word-game aesthetic. Boosts need distinctive art/icons, names with character, maybe animations. This is where personality and 'fun factor' live. Future polish task.",
+    "created": "2026-01-18",
+    "labels": [
+      "polish",
+      "visual",
+      "boost",
+      "future"
+    ],
+    "notes": "Tiles = subtle variations. Boosts = bold personality. Find a visual language that's uniquely RogueLetters. See also rl-34 for naming."
+  },
+  {
+    "id": "rl-34",
+    "title": "Rename Boosts to 'Rogues'",
+    "type": "task",
+    "status": "closed",
+    "priority": "medium",
+    "description": "APPROVED: Rename 'boosts' to 'Rogues' throughout the game. TERMINOLOGY: (1) 'Rogues' = the powerups (formerly boosts), (2) 'Rogues' Gallery' = the selected rogues currently in play (sidebar display). SYSTEM RULES: (1) Max 5 rogues at a time, (2) Must discard to buy new one (no refund), (3) Discarded rogues immediately return to pool, (4) Show all shop options - buying at max triggers discard prompt, (5) Keep 3 rogue offerings per shop, (6) No shop locking. UI: (1) Rogue card highlights in sidebar when triggered, (2) State shown in tooltip on tap/click, (3) Score breakdown order: smallest bonus first, largest last, (4) Turn modifiers always stack. NAMING: 'The [Title]' style, name + mechanics only (no flavor text). PRICING: Common $4, Uncommon $5, Rare $6.",
+    "created": "2026-01-18",
+    "labels": [
+      "approved",
+      "naming",
+      "ui",
+      "refactor"
+    ],
+    "notes": "Alternatives considered: Tricks, Gambits, Knacks, Hustles. 'Rogues' won for brand tie-in and character feel. Interview findings from rl-45 incorporated.",
+    "closedAt": "2026-01-18",
+    "closedReason": "Implemented rogues system with all 14 rogues"
+  },
+  {
+    "id": "rl-35",
+    "title": "New Boost: Lone Ranger",
+    "type": "task",
+    "status": "closed",
+    "priority": "medium",
+    "parent": "rl-4",
+    "description": "ROGUE: Lone Ranger - +6 points per word with exactly 1 vowel. RARITY: Common ($4). RULES: (1) Y counts as a vowel, (2) Blank tiles count as the letter they represent, (3) Triggers per qualifying word in multi-word plays (e.g., 3 one-vowel words = +18), (4) Applied after board multipliers but before multiplicative boosts. EXAMPLES: MYTH, LYNX, GLYPH, RHYTHM, CAT, STEP all qualify. SYNERGIES: No interaction with Vowel Power - both trigger independently (1-vowel word gets +6 Lone Ranger AND +1 Vowel Power). Rewards consonant-heavy tile management.",
+    "created": "2026-01-18",
+    "labels": [
+      "rogue",
+      "common",
+      "new-feature",
+      "gameplay"
+    ],
+    "closedAt": "2026-01-18",
+    "closedReason": "Implemented rogues system with all 14 rogues"
+  },
+  {
+    "id": "rl-36",
+    "title": "New Boost: Wolf Pack",
+    "type": "task",
+    "status": "closed",
+    "priority": "medium",
+    "parent": "rl-4",
+    "description": "ROGUE: Wolf Pack - +3 points per consecutive double letter pair in a word. RARITY: Common ($4). RULES: (1) Letters must be consecutive (BOOK's OO counts, POLO's O-O does not), (2) Triple+ letters count as non-overlapping pairs (AAA = 1 pair, AAAA = 2 pairs), (3) Triggers per qualifying word in multi-word plays, (4) Applied after board multipliers but before multiplicative boosts. UI: Highlight double letter pairs briefly during scoring animation. EXAMPLES: BOOK (+3), COFFEE (+6 for FF+EE), COMMITTEE (+9 for MM+TT+EE), BALLOON (+6 for LL+OO).",
+    "created": "2026-01-18",
+    "labels": [
+      "rogue",
+      "common",
+      "new-feature",
+      "gameplay"
+    ],
+    "closedAt": "2026-01-18",
+    "closedReason": "Implemented rogues system with all 14 rogues"
+  },
+  {
+    "id": "rl-37",
+    "title": "New Boost: High Value",
+    "type": "task",
+    "status": "closed",
+    "priority": "medium",
+    "parent": "rl-4",
+    "description": "ROGUE: High Value - +1 point per upgraded tile played in a word. RARITY: Common ($4). RULES: (1) Stacks with existing tile bonuses (buffed tile = +2 total: +1 from buff, +1 from this boost), (2) Multi-effect tiles count once (buffed+coin tile = +1, not +2), (3) Triggers per qualifying word in multi-word plays, (4) Applied after board multipliers but before multiplicative boosts. UI: Show separate line in score breakdown - 'Buffed: +1, High Value: +1' not combined. UPGRADED TILES: Buffed (+1 score), Coin (+$1), Pink (+1 mult). SYNERGY: Rewards shop investment, encourages tile collection.",
+    "created": "2026-01-18",
+    "labels": [
+      "rogue",
+      "common",
+      "new-feature",
+      "gameplay"
+    ],
+    "closedAt": "2026-01-18",
+    "closedReason": "Implemented rogues system with all 14 rogues"
+  },
+  {
+    "id": "rl-38",
+    "title": "New Boost: No Discard",
+    "type": "task",
+    "status": "closed",
+    "priority": "medium",
+    "parent": "rl-4",
+    "description": "ROGUE: No Discard - Cannot exchange letters, but +2 turns per round (5\u21927). RARITY: Uncommon ($5). RULES: (1) Exchange button becomes Pass button (skip turn without selecting tiles), (2) Pass icon replaces exchange icon with tooltip explaining No Discard is active, (3) Turn modifiers always stack with all rogues (No Discard + Extra Turn = 8 turns). UI: Modifies core UI element (exchange\u2192pass) - rogues can change buttons/controls. RISK/REWARD: Lose tile flexibility, gain more attempts. Rewards skilled players.",
+    "created": "2026-01-18",
+    "labels": [
+      "rogue",
+      "uncommon",
+      "new-feature",
+      "gameplay"
+    ],
+    "closedAt": "2026-01-18",
+    "closedReason": "Implemented rogues system with all 14 rogues"
+  },
+  {
+    "id": "rl-39",
+    "title": "New Boost: Top Deck",
+    "type": "task",
+    "status": "closed",
+    "priority": "medium",
+    "parent": "rl-4",
+    "description": "ROGUE: Top Deck - See the next 3 tiles that will be pulled from the bag. RARITY: Common ($4). UI: (1) Display near the bag, (2) Smaller than normal tiles, (3) Semi-transparent, (4) Display only - no interaction. BEHAVIOR: (1) Updates in real-time as bag state changes, (2) Recalculates immediately after exchange, (3) Shows fewer tiles if <3 remain in bag. TYPE: Information-only rogue - no direct scoring, enables strategic planning.",
+    "created": "2026-01-18",
+    "labels": [
+      "rogue",
+      "common",
+      "new-feature",
+      "gameplay",
+      "ui"
+    ],
+    "closedAt": "2026-01-18",
+    "closedReason": "Implemented rogues system with all 14 rogues"
+  },
+  {
+    "id": "rl-40",
+    "title": "New Boost: Bingo Wizard",
+    "type": "task",
+    "status": "closed",
+    "priority": "medium",
+    "parent": "rl-4",
+    "description": "ROGUE: Bingo Wizard - Bingos can be made with only 6 letters instead of 7. RARITY: Uncommon ($5). CURRENT SYSTEM: Bingo = +50 points for using all rack tiles. CHANGE NEEDED: Switch to fixed threshold model - bingo triggers at 7 tiles played (or 6 with this rogue), regardless of rack size. UI: (1) Show 'BINGO +50' in gold in potential words list before submission when 6+ tiles placed, (2) Confetti celebration after successful bingo submission. IMPLEMENTATION: Modify bingo check in calculateWordScore() lines 6106-6117 and turn history lines 6714-6718.",
+    "created": "2026-01-18",
+    "labels": [
+      "rogue",
+      "uncommon",
+      "new-feature",
+      "gameplay"
+    ],
+    "closedAt": "2026-01-18",
+    "closedReason": "Implemented rogues system with all 14 rogues"
+  },
+  {
+    "id": "rl-41",
+    "title": "New Boost: Worder",
+    "type": "task",
+    "status": "closed",
+    "priority": "medium",
+    "parent": "rl-4",
+    "description": "ROGUE: Worder - DL (2L) and TL (3L) squares also give 1.25\u00d7 word multiplier in addition to their letter multiplier. RARITY: Rare ($6). STACKING: Multiplicative. Multiple letter squares: 2 squares = 1.56\u00d7, 3 squares = 1.95\u00d7. Combines with word squares: DL+DW = 2.5\u00d7 word, TL+TW = 3.75\u00d7 word. UI: Show multiplier contribution in score breakdown (e.g., 'Worder: \u00d71.56'). IMPLEMENTATION: In calculateWordScore(), track letter squares hit by placed tiles, multiply wordMultiplier by 1.25 for each.",
+    "created": "2026-01-18",
+    "labels": [
+      "rogue",
+      "rare",
+      "new-feature",
+      "gameplay"
+    ],
+    "closedAt": "2026-01-18",
+    "closedReason": "Implemented rogues system with all 14 rogues"
+  },
+  {
+    "id": "rl-42",
+    "title": "New Boost: Golden Diamond",
+    "type": "task",
+    "status": "closed",
+    "priority": "medium",
+    "parent": "rl-4",
+    "description": "ROGUE: Golden Diamond - Extra bonus threshold reduced from 25% to 20% of round target. RARITY: Common ($4). CURRENT SYSTEM: +$1 per (target \u00d7 0.25) extra points. WITH ROGUE: +$1 per (target \u00d7 0.20) extra points. EXAMPLES: Target 40: 10\u21928 pts/$1, Target 100: 25\u219220 pts/$1. EFFECT: 25% easier to earn extra bonus coins. UI: Show benefit on earnings screen only (comparison of threshold with/without rogue). SYNERGY: Economy build - pairs with Salary Bump (intentional). Consider thematic rename (The Miser, The Banker, Golden Touch).",
+    "created": "2026-01-18",
+    "labels": [
+      "rogue",
+      "common",
+      "new-feature",
+      "economy"
+    ],
+    "closedAt": "2026-01-18",
+    "closedReason": "Implemented rogues system with all 14 rogues"
+  },
+  {
+    "id": "rl-43",
+    "title": "New Boost: All-Round Letter",
+    "type": "task",
+    "status": "closed",
+    "priority": "medium",
+    "parent": "rl-4",
+    "description": "ROGUE: All-Round Letter - +1 point first time you play each letter A-Z, refreshes when 18/26 letters played. RARITY: Common ($4). RULES: (1) Per unique letter in word - LETTER = +4 for L,E,T,R, (2) Duplicate letters in same word: only first counts, (3) Refresh at end of turn after hitting 18+, (4) Persists across rounds/sets within run (resets on new run), (5) Blanks count as the letter they represent. UI: Tooltip shows list of used letters (e.g., 'A,C,D,E,H...'). IMPLEMENTATION: Track Set<letter> in runState, check size >= 18 at turn end to reset.",
+    "created": "2026-01-18",
+    "labels": [
+      "rogue",
+      "common",
+      "new-feature",
+      "gameplay"
+    ],
+    "closedAt": "2026-01-18",
+    "closedReason": "Implemented rogues system with all 14 rogues"
+  },
+  {
+    "id": "rl-44",
+    "title": "New Boost: Endless Power",
+    "type": "task",
+    "status": "closed",
+    "priority": "medium",
+    "parent": "rl-4",
+    "description": "ROGUE: Endless Power - Earn +(set number \u00d7 2) points per word. Set 1=+2, Set 2=+4, Set 3=+6, Set 4=+8, Set 5=+10, continues scaling beyond. RARITY: Rare ($6). RULES: (1) Applies to every valid word created including perpendicular words, (2) Multi-word plays get bonus per word, (3) After board multipliers, before multiplicative boosts, (4) Retroactive - uses current set number not sets owned, (5) Keeps scaling beyond Set 5 for endless play. UI: Current scaling shown in tooltip only (e.g., 'Set 4: +8/word'). BALANCE: Weak early, strong late - matches difficulty scaling.",
+    "created": "2026-01-18",
+    "labels": [
+      "rogue",
+      "rare",
+      "new-feature",
+      "gameplay",
+      "scaling"
+    ],
+    "closedAt": "2026-01-18",
+    "closedReason": "Implemented rogues system with all 14 rogues"
+  },
+  {
+    "id": "rl-45",
+    "title": "Interview: New Rogues Deep Dive",
+    "type": "task",
+    "status": "closed",
+    "priority": "high",
+    "description": "INTERVIEW COMPLETE. KEY FINDINGS: SYSTEM: Max 5 rogues, discard to buy new (no refund), all available from Set 1, embrace broken combos. PRICING: Common $4, Uncommon $5, Rare $6. RARITY: Rare (Endless Power, Worder), Uncommon (No Discard, Bingo Wizard), Common (all others). UI: Card highlights on trigger, state in tooltip, breakdown smallest-to-largest, rogues can modify core UI. NAMING: 'The [Title]' style, no flavor text. SHOP: Keep 3 offerings, no locking. Individual beads updated with rarity, price, and UI details.",
+    "created": "2026-01-18",
+    "labels": [
+      "interview",
+      "rogues",
+      "design",
+      "completed"
+    ]
+  },
+  {
+    "id": "rl-46",
+    "title": "Shop Buy Buttons Not Grayed Out When Unaffordable",
+    "type": "bug",
+    "status": "closed",
+    "priority": "medium",
+    "description": "When you don't have enough money to buy something in the shop, the buy button should be grayed out and not clickable. The Replace button works correctly, but the other Buy and Add buttons do not gray out when unaffordable.",
+    "created": "2026-01-18",
+    "labels": [
+      "bug",
+      "shop",
+      "ui"
+    ],
+    "closedAt": "2026-01-18",
+    "closedReason": "Fixed cost mismatch between display ($1/$2/$3 for Add, $2/$3/$4 for Replace) and purchase functions (were charging $1 more). Also fixed updateShopAfterPurchase to use actual tile type costs."
+  },
+  {
+    "id": "rl-47",
+    "title": "Dynamic Copyright Year",
+    "type": "task",
+    "status": "closed",
+    "priority": "low",
+    "description": "Update the copyright line '© 2025 RogueLetters' to use the current year programmatically via JavaScript instead of hardcoded.",
+    "created": "2026-01-18",
+    "labels": [
+      "ui",
+      "enhancement"
+    ],
+    "closedAt": "2026-01-18",
+    "closedReason": "Added span with id='copyright-year' in HTML and JavaScript to populate with current year on DOMContentLoaded"
+  },
+  {
+    "id": "rl-48",
+    "title": "Show Bonus Earnings in Target-Met Status",
+    "type": "task",
+    "status": "closed",
+    "priority": "medium",
+    "description": "When target is met, the status text shows '+X extra — keep playing for bonuses!' but X is extra points. Change it to show the actual bonus coins earned so far (e.g., '+$2 bonus earned' based on $1 per 10 extra points formula).",
+    "created": "2026-01-18",
+    "labels": [
+      "ui",
+      "enhancement",
+      "economy"
+    ],
+    "closedAt": "2026-01-18",
+    "closedReason": "Enhanced: now shows '+X pts (+$Y) — Z to next $' with points extra, bonus earned, and points until next dollar"
+  },
+  {
+    "id": "rl-49",
+    "title": "New Rogue: Heavy Backpack",
+    "type": "task",
+    "status": "closed",
+    "priority": "medium",
+    "description": "ROGUE: Heavy Backpack - +2 rack size, -1 turn per round. A trade-off rogue that gives more tiles to work with (9 total) but fewer turns (4 instead of 5). Good for players who prefer building longer words over multiple small plays. RARITY: TBD. IMPLEMENTATION: Modify rack size calculation and maxTurns in resetForNewRound().",
+    "created": "2026-01-18",
+    "labels": [
+      "rogue",
+      "new-feature",
+      "gameplay"
+    ],
+    "closedAt": "2026-01-18",
+    "closedReason": "Implemented: Added heavyBackpack rogue (uncommon, 🏋️ icon), created getRackSize() helper function, updated maxTurns calculation. +2 rack size, -1 turn per round."
+  }
+]
