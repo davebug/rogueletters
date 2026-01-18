@@ -1228,15 +1228,25 @@ const runManager = {
         this.renderShopRogueSection();
     },
 
-    // Get tile set upgrade price (escalating: $3, $5, $8, $12, $17, ...)
+    // Get tile set upgrade price: $3, $4, $5, $7, $10, then +$3 each
     getTileSetUpgradePrice() {
         const count = runState.tileSetUpgradeCount || 0;
-        // Price formula: 3 + sum of 0,1,2,3... = 3 + (n*(n+1))/2
-        return 3 + Math.floor((count * (count + 1)) / 2);
+        const prices = [3, 4, 5, 7, 10]; // First 5 prices
+        if (count < prices.length) {
+            return prices[count];
+        }
+        // After 5th upgrade: $10 + $3 per additional upgrade
+        return 10 + (count - 4) * 3;
     },
 
-    // Common letters that can be upgraded (high frequency letters)
-    COMMON_LETTERS: ['E', 'A', 'I', 'O', 'N', 'R', 'T', 'L', 'S', 'U'],
+    // 1-point letters that can be upgraded (each can only be upgraded once)
+    ONE_POINT_LETTERS: ['E', 'A', 'I', 'O', 'N', 'R', 'T', 'L', 'S', 'U'],
+
+    // Get letters that haven't been upgraded yet
+    getUpgradeableLetters() {
+        const upgraded = Object.keys(runState.tileSetUpgrades || {});
+        return this.ONE_POINT_LETTERS.filter(letter => !upgraded.includes(letter));
+    },
 
     // Render the tile set upgrade section
     renderTileSetUpgrade() {
@@ -1247,50 +1257,63 @@ const runManager = {
 
         if (!card || !btn) return;
 
-        const price = this.getTileSetUpgradePrice();
+        const available = this.getUpgradeableLetters();
         const count = runState.tileSetUpgradeCount || 0;
-        const canAfford = runState.coins >= price;
+        const soldOut = available.length === 0;
 
-        // Update button
-        btn.textContent = `$${price}`;
-        btn.disabled = !canAfford;
-        if (canAfford) {
-            btn.classList.remove('cannot-afford');
-            card.classList.remove('cannot-afford');
-        } else {
+        if (soldOut) {
+            // All 1-point letters upgraded
+            btn.textContent = 'MAXED';
+            btn.disabled = true;
             btn.classList.add('cannot-afford');
-            card.classList.add('cannot-afford');
+            card.classList.add('sold-out');
+            desc.textContent = 'All 1-point tiles upgraded!';
+        } else {
+            const price = this.getTileSetUpgradePrice();
+            const canAfford = runState.coins >= price;
+
+            btn.textContent = `$${price}`;
+            btn.disabled = !canAfford;
+            card.classList.remove('sold-out');
+
+            if (canAfford) {
+                btn.classList.remove('cannot-afford');
+                card.classList.remove('cannot-afford');
+            } else {
+                btn.classList.add('cannot-afford');
+                card.classList.add('cannot-afford');
+            }
+
+            desc.textContent = `+1 to all of a random 1-pt letter (${available.length} left)`;
         }
 
-        // Update status
+        // Update status - show upgraded letters
         if (count > 0) {
-            const upgrades = Object.entries(runState.tileSetUpgrades || {})
-                .map(([letter, bonus]) => `${letter}+${bonus}`)
-                .join(', ');
-            status.textContent = `Upgrades (${count}): ${upgrades}`;
+            const upgradedLetters = Object.keys(runState.tileSetUpgrades || {}).sort().join(', ');
+            status.textContent = `Upgraded: ${upgradedLetters}`;
         } else {
             status.textContent = 'No upgrades yet';
         }
-
-        // Update description
-        desc.textContent = '+1 to a random common letter';
     },
 
     // Purchase a tile set upgrade
     purchaseTileSetUpgrade() {
+        const available = this.getUpgradeableLetters();
+        if (available.length === 0) return; // All upgraded
+
         const price = this.getTileSetUpgradePrice();
         if (runState.coins < price) return;
 
-        // Pick a random common letter
-        const letter = this.COMMON_LETTERS[Math.floor(Math.random() * this.COMMON_LETTERS.length)];
+        // Pick a random un-upgraded 1-point letter
+        const letter = available[Math.floor(Math.random() * available.length)];
 
-        // Apply upgrade
+        // Apply upgrade (each letter only gets +1, tracked as upgraded)
         runState.coins -= price;
         runState.tileSetUpgradeCount = (runState.tileSetUpgradeCount || 0) + 1;
         if (!runState.tileSetUpgrades) runState.tileSetUpgrades = {};
-        runState.tileSetUpgrades[letter] = (runState.tileSetUpgrades[letter] || 0) + 1;
+        runState.tileSetUpgrades[letter] = 1; // All tiles of this letter now +1
 
-        console.log(`[Shop] Tile upgrade: +1 to ${letter} (now +${runState.tileSetUpgrades[letter]}), cost $${price}`);
+        console.log(`[Shop] Tile upgrade: All ${letter}s now +1 (upgrade #${runState.tileSetUpgradeCount}), cost $${price}`);
 
         // Update displays
         document.getElementById('shop-coins').textContent = runState.coins;
