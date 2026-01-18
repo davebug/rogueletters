@@ -389,7 +389,16 @@ let runState = {
     pendingRoguePurchase: null,  // Rogue ID pending when at max rogues (needs discard first)
     // Tile Set Upgrade system
     tileSetUpgradeCount: 0,     // Number of times tile set has been upgraded
-    tileSetUpgrades: {}         // Map of letter -> bonus, e.g., {'E': 1, 'A': 1, 'T': 2}
+    tileSetUpgrades: {},        // Map of letter -> bonus, e.g., {'E': 1, 'A': 1, 'T': 2}
+    // Run statistics for end-of-run summary
+    runStats: {
+        wordsPlayed: 0,         // Total words submitted
+        bestWord: null,         // {word: 'EXAMPLE', score: 42}
+        longestWord: null,      // {word: 'EXAMPLE', length: 7}
+        totalCoinsEarned: 0,    // Total coins earned (not just current balance)
+        bingos: 0,              // Number of bingo bonuses
+        roguesTriggered: {}     // Count of each rogue trigger, e.g., {loneRanger: 5, wolfPack: 2}
+    }
 };
 
 // Helper to mark tiles as buffed/coin/pink when drawn from bag
@@ -731,26 +740,136 @@ const runManager = {
         this.clearRunState();
     },
 
-    // Show final game complete popup (win or lose)
+    // Track word stats for end-of-run summary
+    trackWordStats(formedWords, turnScore, breakdown) {
+        if (!runState.isRunMode || !runState.runStats) return;
+
+        const stats = runState.runStats;
+
+        // Get the main word (longest formed word)
+        if (formedWords.length > 0) {
+            const mainWord = formedWords.reduce((a, b) =>
+                a.positions.length > b.positions.length ? a : b
+            );
+            const wordText = mainWord.word;
+            const wordLength = wordText.length;
+
+            // Increment words played
+            stats.wordsPlayed++;
+
+            // Track best word (highest score)
+            if (!stats.bestWord || turnScore > stats.bestWord.score) {
+                stats.bestWord = { word: wordText, score: turnScore };
+            }
+
+            // Track longest word
+            if (!stats.longestWord || wordLength > stats.longestWord.length) {
+                stats.longestWord = { word: wordText, length: wordLength };
+            }
+        }
+
+        // Track bingos from breakdown
+        if (breakdown && breakdown.components) {
+            breakdown.components.forEach(comp => {
+                if (comp.id === 'bingo' || comp.id === 'bingoWizard') {
+                    stats.bingos++;
+                }
+                // Track rogue triggers (excluding bingo which isn't a rogue)
+                if (comp.id !== 'bingo' && ROGUES[comp.id]) {
+                    stats.roguesTriggered[comp.id] = (stats.roguesTriggered[comp.id] || 0) + 1;
+                }
+            });
+        }
+
+        this.saveRunState();
+    },
+
+    // Track coins earned for stats
+    trackCoinsEarned(amount) {
+        if (!runState.isRunMode || !runState.runStats) return;
+        runState.runStats.totalCoinsEarned += amount;
+        this.saveRunState();
+    },
+
+    // Show final game complete popup (win or lose) with detailed summary
     showGameComplete(isVictory) {
+        // Save values before resetting state
+        const finalScore = runState.totalScore;
+        const finalCoins = runState.coins;
+        const finalSet = runState.set;
+        const finalRound = runState.round;
+        const stats = runState.runStats || {};
+        const deficit = runState.targetScore - (gameState.score || 0);
+
+        // Build the summary HTML
         const popup = document.getElementById('game-popup');
         const title = document.getElementById('popup-title');
         const scoreLabel = document.getElementById('popup-score-label');
         const scoreValue = document.getElementById('popup-score-value');
 
-        // Save values before resetting state
-        const finalScore = runState.totalScore;
-        const finalCoins = runState.coins;
-
+        // Title based on victory/defeat
         if (isVictory) {
             title.textContent = '🎉 Victory!';
-            scoreLabel.innerHTML = `You completed all 5 sets!<br><span style="color: #4caf50;">Total earned: $${finalCoins}</span>`;
         } else {
             title.textContent = 'Game Over';
-            const deficit = runState.targetScore - (gameState.score || 0);
-            scoreLabel.textContent = `Needed ${deficit} more to advance`;
         }
 
+        // Build stats summary HTML
+        let summaryHtml = '';
+
+        if (isVictory) {
+            summaryHtml += `<div style="color: #4ade80; font-size: 16px; margin-bottom: 12px;">You completed all 5 sets!</div>`;
+        } else {
+            summaryHtml += `<div style="color: #ef4444; font-size: 16px; margin-bottom: 12px;">Needed ${deficit} more to advance</div>`;
+        }
+
+        // Progress reached
+        summaryHtml += `<div style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">`;
+        summaryHtml += `Reached Set ${finalSet} Round ${finalRound}`;
+        summaryHtml += `</div>`;
+
+        // Stats breakdown
+        summaryHtml += `<div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px; text-align: left;">`;
+
+        // Words played
+        summaryHtml += `<div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">`;
+        summaryHtml += `<span style="color: var(--text-muted);">Words Played</span>`;
+        summaryHtml += `<span style="color: var(--text-color); font-weight: bold;">${stats.wordsPlayed || 0}</span>`;
+        summaryHtml += `</div>`;
+
+        // Best word
+        if (stats.bestWord) {
+            summaryHtml += `<div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">`;
+            summaryHtml += `<span style="color: var(--text-muted);">Best Word</span>`;
+            summaryHtml += `<span style="color: #fbbf24; font-weight: bold;">${stats.bestWord.word} (${stats.bestWord.score} pts)</span>`;
+            summaryHtml += `</div>`;
+        }
+
+        // Longest word
+        if (stats.longestWord) {
+            summaryHtml += `<div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">`;
+            summaryHtml += `<span style="color: var(--text-muted);">Longest Word</span>`;
+            summaryHtml += `<span style="color: #60a5fa; font-weight: bold;">${stats.longestWord.word} (${stats.longestWord.length} letters)</span>`;
+            summaryHtml += `</div>`;
+        }
+
+        // Bingos
+        if (stats.bingos > 0) {
+            summaryHtml += `<div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">`;
+            summaryHtml += `<span style="color: var(--text-muted);">🎯 Bingos</span>`;
+            summaryHtml += `<span style="color: #a78bfa; font-weight: bold;">${stats.bingos}</span>`;
+            summaryHtml += `</div>`;
+        }
+
+        // Coins earned
+        summaryHtml += `<div style="display: flex; justify-content: space-between; padding: 4px 0;">`;
+        summaryHtml += `<span style="color: var(--text-muted);">Total Coins Earned</span>`;
+        summaryHtml += `<span style="color: #4ade80; font-weight: bold;">$${stats.totalCoinsEarned || finalCoins}</span>`;
+        summaryHtml += `</div>`;
+
+        summaryHtml += `</div>`;
+
+        scoreLabel.innerHTML = summaryHtml;
         scoreValue.textContent = finalScore;
 
         popup.classList.remove('hidden');
@@ -791,6 +910,8 @@ const runManager = {
             runState.lastEarnings = earnings;
             runState.pendingScreen = 'earnings';
             runState.pendingScore = score;
+            // Track coins earned for end-of-run summary
+            this.trackCoinsEarned(earnings.total);
             this.saveRunState();
         }
 
@@ -2018,6 +2139,14 @@ const runManager = {
         runState.coinTilesDrawn = {};
         runState.tileSetUpgradeCount = 0;
         runState.tileSetUpgrades = {};
+        runState.runStats = {
+            wordsPlayed: 0,
+            bestWord: null,
+            longestWord: null,
+            totalCoinsEarned: 0,
+            bingos: 0,
+            roguesTriggered: {}
+        };
     },
 
     // Clear run state from localStorage
@@ -7568,6 +7697,9 @@ function submitWord() {
                     a.positions.length > b.positions.length ? a : b
                 );
                 mainWordBreakdown = calculateWordScoreBreakdown(mainWord.positions);
+
+                // Track word stats for end-of-run summary
+                runManager.trackWordStats(formedWords, turnScore, mainWordBreakdown);
             }
 
             // Award $1 for each unclaimed coin tile placed this turn
