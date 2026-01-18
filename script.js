@@ -7097,10 +7097,11 @@ function calculateWordScoreBreakdown(positions) {
 
 /**
  * Show animated score breakdown overlay
+ * Always shows - fast (~500ms) for base only, longer with rogue bonuses
  */
 function showScoreAnimation(breakdown, callback) {
-    // Only show animation if there are components to show
-    if (breakdown.components.length === 0) {
+    // Skip animation if no breakdown (non-run mode)
+    if (!breakdown) {
         if (callback) callback();
         return;
     }
@@ -7114,64 +7115,83 @@ function showScoreAnimation(breakdown, callback) {
         document.body.appendChild(overlay);
     }
 
+    const hasComponents = breakdown.components.length > 0;
+
     // Build content
     let html = '<div class="score-animation-content">';
-    html += `<div class="score-line score-base"><span class="score-label">Base</span><span class="score-value">${breakdown.baseScore}</span></div>`;
 
-    breakdown.components.forEach((comp, i) => {
-        const sign = comp.points >= 0 ? '+' : '';
-        const multiplierNote = comp.isMultiplier ? ` (×${comp.multiplierValue})` : '';
-        html += `<div class="score-line score-component" data-index="${i}" style="opacity: 0;">`;
-        html += `<span class="score-label">${comp.icon} ${comp.name}${multiplierNote}</span>`;
-        html += `<span class="score-value">${sign}${comp.points}</span>`;
-        html += '</div>';
-    });
+    if (hasComponents) {
+        // Full breakdown with base + components + total
+        html += `<div class="score-line score-base"><span class="score-label">Base</span><span class="score-value">${breakdown.baseScore}</span></div>`;
 
-    html += `<div class="score-line score-total" style="opacity: 0;"><span class="score-label">Total</span><span class="score-value">${breakdown.total}</span></div>`;
+        breakdown.components.forEach((comp, i) => {
+            const sign = comp.points >= 0 ? '+' : '';
+            const multiplierNote = comp.isMultiplier ? ` (×${comp.multiplierValue})` : '';
+            html += `<div class="score-line score-component" data-index="${i}" style="opacity: 0;">`;
+            html += `<span class="score-label">${comp.icon} ${comp.name}${multiplierNote}</span>`;
+            html += `<span class="score-value">${sign}${comp.points}</span>`;
+            html += '</div>';
+        });
+
+        html += `<div class="score-line score-total" style="opacity: 0;"><span class="score-label">Total</span><span class="score-value">${breakdown.total}</span></div>`;
+    } else {
+        // Simple score flash - just show the total briefly
+        html += `<div class="score-line score-total-only"><span class="score-value score-flash">${breakdown.total}</span></div>`;
+    }
+
     html += '</div>';
 
     overlay.innerHTML = html;
     overlay.classList.remove('hidden');
     overlay.classList.add('visible');
 
-    // Animate each component appearing
-    const components = overlay.querySelectorAll('.score-component');
-    const totalLine = overlay.querySelector('.score-total');
+    if (hasComponents) {
+        // Full animation with components
+        const components = overlay.querySelectorAll('.score-component');
+        const totalLine = overlay.querySelector('.score-total');
 
-    // Speed up animation if many components (like Balatro)
-    const baseDelay = breakdown.components.length > 3 ? 150 : 250;
-    const componentDelay = breakdown.components.length > 5 ? 100 : baseDelay;
+        // Speed up animation if many components (like Balatro)
+        const baseDelay = breakdown.components.length > 3 ? 150 : 250;
+        const componentDelay = breakdown.components.length > 5 ? 100 : baseDelay;
 
-    let delay = 200; // Initial delay for base to be visible
+        let delay = 200; // Initial delay for base to be visible
 
-    components.forEach((comp, i) => {
+        components.forEach((comp, i) => {
+            setTimeout(() => {
+                comp.style.opacity = '1';
+                comp.classList.add('score-pop');
+                // Also trigger rogue slot animation
+                const rogueId = breakdown.components[i].id;
+                const slot = document.querySelector(`.rogue-slot[data-rogue-id="${rogueId}"]`);
+                if (slot) {
+                    slot.classList.remove('triggered');
+                    void slot.offsetWidth;
+                    slot.classList.add('triggered');
+                }
+            }, delay);
+            delay += componentDelay;
+        });
+
+        // Show total after all components
         setTimeout(() => {
-            comp.style.opacity = '1';
-            comp.classList.add('score-pop');
-            // Also trigger rogue slot animation
-            const rogueId = breakdown.components[i].id;
-            const slot = document.querySelector(`.rogue-slot[data-rogue-id="${rogueId}"]`);
-            if (slot) {
-                slot.classList.remove('triggered');
-                void slot.offsetWidth;
-                slot.classList.add('triggered');
-            }
+            totalLine.style.opacity = '1';
+            totalLine.classList.add('score-pop');
         }, delay);
-        delay += componentDelay;
-    });
 
-    // Show total after all components
-    setTimeout(() => {
-        totalLine.style.opacity = '1';
-        totalLine.classList.add('score-pop');
-    }, delay);
-
-    // Hide overlay and call callback
-    setTimeout(() => {
-        overlay.classList.remove('visible');
-        overlay.classList.add('hidden');
-        if (callback) callback();
-    }, delay + 600);
+        // Hide overlay and call callback
+        setTimeout(() => {
+            overlay.classList.remove('visible');
+            overlay.classList.add('hidden');
+            if (callback) callback();
+        }, delay + 600);
+    } else {
+        // Quick flash animation - ~500ms total
+        setTimeout(() => {
+            overlay.classList.remove('visible');
+            overlay.classList.add('hidden');
+            if (callback) callback();
+        }, 500);
+    }
 }
 
 function displayWordPreview(words) {
@@ -7854,12 +7874,8 @@ function submitWord() {
                 gameState.isSubmitting = false;
             };
 
-            // Show score animation if there are rogue bonuses, then move to next turn
-            if (mainWordBreakdown && mainWordBreakdown.components.length > 0) {
-                showScoreAnimation(mainWordBreakdown, proceedToNextTurn);
-            } else {
-                proceedToNextTurn();
-            }
+            // Show score animation, then move to next turn
+            showScoreAnimation(mainWordBreakdown, proceedToNextTurn);
         } else {
             // Clear submission lock on validation failure
             gameState.isSubmitting = false;

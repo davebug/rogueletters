@@ -3343,3 +3343,32 @@ main {
         opacity: 1;
     }
 }
+
+/* Simple score flash for words without rogue bonuses */
+.score-total-only {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 20px;
+}
+
+.score-total-only .score-flash {
+    font-size: 32px;
+    font-weight: bold;
+    color: var(--success-color);
+    animation: scoreFlash 0.4s ease-out;
+}
+
+@keyframes scoreFlash {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
