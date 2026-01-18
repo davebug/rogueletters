@@ -686,7 +686,8 @@ const runManager = {
                     const bonusEarned = bonusThreshold > 0 ? Math.floor(extra / bonusThreshold) : 0;
                     const pointsInCurrentDollar = extra % bonusThreshold;
                     const pointsToNextDollar = bonusThreshold - pointsInCurrentDollar;
-                    subtitle.innerHTML = `<span class="target-met">+${extra} pts (+$${bonusEarned})</span> — ${pointsToNextDollar} to next $`;
+                    const ptLabel = pointsToNextDollar === 1 ? 'pt' : 'pts';
+                    subtitle.innerHTML = `<span class="target-met">+${extra} pts extra (+$${bonusEarned})</span> — ${pointsToNextDollar} ${ptLabel} to next bonus $1`;
                 }
             }
         }
