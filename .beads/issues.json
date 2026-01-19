@@ -1284,7 +1284,7 @@
     "id": "rl-80",
     "title": "Verify coin display updates when buying in shop",
     "type": "bug",
-    "status": "open",
+    "status": "closed",
     "priority": 1,
     "description": "Check if the dollar amount in the header decrements in real-time as you buy things in the store. May need to call updateCoinDisplay() or similar after purchases.",
     "created": "2026-01-18T23:27:37.586037-06:00",
@@ -1292,7 +1292,7 @@
       "shop",
       "ui"
     ],
-    "closedAt": null,
-    "closedReason": null
+    "closedAt": "2026-01-18T23:33:01.112410-06:00",
+    "closedReason": "Fixed: Added updateCoinDisplay() calls after all shop purchases"
   }
 ]
