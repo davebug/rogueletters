@@ -762,11 +762,10 @@ const runManager = {
         createRackBoard();
         fetchGameData(gameState.seed);
 
-        // Reset UI
+        // Reset UI (updateRunUI also renders rogues)
         this.updateRunUI();
         updateTurnCounter();
         updateFooterSquares();  // Reset feedback circles for new round
-        this.renderRogueInventory();  // Re-render rogues for new round
 
         // Re-enable controls
         const submitBtn = document.getElementById('submit-word');
@@ -820,6 +819,9 @@ const runManager = {
                     subtitle.innerHTML = `<span class="target-met">+${extra} pts extra (+$${bonusEarned})</span> — ${pointsToNextDollar} ${ptLabel} to next bonus $1`;
                 }
             }
+
+            // Always ensure rogues are visible
+            this.renderRogueInventory();
         }
     },
 
@@ -4243,7 +4245,7 @@ async function initializeGame() {
     if (runState.isRunMode) {
         // Resume existing run - calculate seed from runSeed + round
         gameState.seed = String(runState.runSeed + runState.round);
-        runManager.updateRunUI();
+        runManager.updateRunUI();  // Also renders rogues
         // Continue to load game with the correct seed
     } else if (!hasSeedParam) {
         // Auto-start run mode - no popup needed
