@@ -5367,12 +5367,8 @@ function createRackBoard() {
         rackBoard.appendChild(cell);
     }
 
-    // Update CSS grid to accommodate extra cell if needed
-    if (rackSize === 8) {
-        rackBoard.style.gridTemplateColumns = 'repeat(8, 1fr)';
-    } else {
-        rackBoard.style.gridTemplateColumns = 'repeat(7, 1fr)';
-    }
+    // Update CSS grid to accommodate rack size dynamically
+    rackBoard.style.gridTemplateColumns = `repeat(${rackSize}, var(--actual-cell-size))`;
 }
 
 function displayTiles(tiles) {

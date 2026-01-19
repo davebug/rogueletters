@@ -339,10 +339,10 @@ def main():
     turn = int(form.getvalue('turn', 1))
     is_retry = form.getvalue('retry', 'false').lower() == 'true'
 
-    # Parse rack_size (default 7, can be 8 with Big Pockets boost)
+    # Parse rack_size (default 7, can be 8+ with rogues like Big Pockets, Heavy Backpack)
     rack_size = int(form.getvalue('rack_size', 7))
-    if rack_size < 7 or rack_size > 8:
-        rack_size = 7  # Clamp to valid range
+    if rack_size < 7 or rack_size > 10:
+        rack_size = 7  # Clamp to valid range (7-10)
 
     # Validate seed
     if not seed:

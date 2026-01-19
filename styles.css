@@ -646,13 +646,14 @@ main {
     position: relative;
 }
 
-/* Style the rack board - 1x7 grid (single row) */
+/* Style the rack board - dynamic grid (JS sets columns based on rack size) */
 #tile-rack-board {
-    grid-template-columns: repeat(7, var(--actual-cell-size));
+    grid-template-columns: repeat(7, var(--actual-cell-size)); /* Default, overridden by JS */
     grid-template-rows: var(--actual-cell-size);
     background: transparent;
     border: none;
     box-shadow: none;
+    max-width: 100%; /* Prevent overflow */
 }
 
 /* Hide borders on rack cells */
@@ -664,7 +665,7 @@ main {
 
 .tile-rack {
     display: grid;
-    grid-template-columns: repeat(7, var(--actual-cell-size));
+    grid-template-columns: repeat(auto-fit, var(--actual-cell-size)); /* Dynamic columns */
     grid-template-rows: var(--actual-cell-size);
     gap: 0;  /* Same as board - no gaps */
     grid-auto-flow: column;  /* Force items to flow horizontally */
