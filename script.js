@@ -49,7 +49,7 @@ const TILE_EFFECTS = {
 };
 
 // Rare tiles - letters that only appear once in the bag
-// These get +1 baseline bonus from the "plastic" tile set
+// These get +2 baseline bonus from the "plastic" tile set
 const RARE_TILES = ['J', 'K', 'Q', 'X', 'Z'];
 
 // Get active effects from tile data (works with current data model)
@@ -343,8 +343,8 @@ function getTileDisplayScore(letter, bonus = 0) {
     const vowelBonus = hasRogue('vowelBonus') && vowels.includes(letter) ? 1 : 0;
     // Add tile set upgrade bonus (applies to all tiles of that letter)
     const tileSetBonus = (runState.tileSetUpgrades && runState.tileSetUpgrades[letter]) || 0;
-    // Rare tiles (J, K, Q, X, Z) get +1 from "plastic" tile set baseline
-    const rareBonus = RARE_TILES.includes(letter) ? 1 : 0;
+    // Rare tiles (J, K, Q, X, Z) get +2 from "plastic" tile set baseline
+    const rareBonus = RARE_TILES.includes(letter) ? 2 : 0;
     return baseScore + bonus + vowelBonus + tileSetBonus + rareBonus;
 }
 
@@ -1483,6 +1483,12 @@ const runManager = {
                 replaceBtn?.classList.remove('cannot-afford');
                 if (replaceBtn) replaceBtn.title = '';
             }
+        }
+
+        // Update continue button text
+        const continueBtn = document.getElementById('shop-continue-btn');
+        if (continueBtn) {
+            continueBtn.textContent = `Start Round ${runState.round}, Set ${runState.set}`;
         }
 
         shopScreen.classList.remove('hidden');
@@ -7676,9 +7682,9 @@ function calculateWordScore(positions) {
             letterScore += runState.tileSetUpgrades[letter];
         }
 
-        // Apply rare tile bonus (+1 for J, K, Q, X, Z - "plastic" tile set baseline)
+        // Apply rare tile bonus (+2 for J, K, Q, X, Z - "plastic" tile set baseline)
         if (!isBlank && RARE_TILES.includes(letter)) {
-            letterScore += 1;
+            letterScore += 2;
         }
 
         // Apply vowelBonus rogue: +1 to all vowels
@@ -7885,9 +7891,9 @@ function calculateTurnScoreBreakdown(formedWords) {
                 baseLetterScore += runState.tileSetUpgrades[letter];
             }
 
-            // Rare tile bonus (+1 for J, K, Q, X, Z - "plastic" tile set baseline)
+            // Rare tile bonus (+2 for J, K, Q, X, Z - "plastic" tile set baseline)
             if (!isBlank && RARE_TILES.includes(letter)) {
-                baseLetterScore += 1;
+                baseLetterScore += 2;
             }
 
             // Vowel bonus
@@ -8179,9 +8185,9 @@ function calculateWordScoreBreakdown(positions) {
             baseLetterScore += runState.tileSetUpgrades[letter];
         }
 
-        // Rare tile bonus (+1 for J, K, Q, X, Z - "plastic" tile set baseline)
+        // Rare tile bonus (+2 for J, K, Q, X, Z - "plastic" tile set baseline)
         if (!isBlank && RARE_TILES.includes(letter)) {
-            baseLetterScore += 1;
+            baseLetterScore += 2;
         }
 
         // Vowel bonus is applied to base score
