@@ -1903,6 +1903,7 @@ const runManager = {
                 const rogue = ROGUES[rogueId];
                 html += `<div class="rogue-slot filled" data-rogue-id="${rogueId}" title="${rogue.name}: ${rogue.description}">
                     <span class="rogue-slot-icon">${rogue.icon}</span>
+                    <span class="rogue-slot-name">${rogue.name}</span>
                 </div>`;
             } else {
                 html += `<div class="rogue-slot empty"></div>`;
@@ -2038,6 +2039,7 @@ const runManager = {
             const purchased = runState.shopRoguesPurchased?.[i];
             const item = document.getElementById(`shop-rogue-${i}`);
             const iconEl = document.getElementById(`shop-rogue-icon-${i}`);
+            const nameEl = document.getElementById(`shop-rogue-name-${i}`);
             const priceEl = document.getElementById(`shop-rogue-price-${i}`);
 
             if (!item) continue;
@@ -2047,6 +2049,7 @@ const runManager = {
                 item.classList.add('empty-slot');
                 item.classList.remove('purchased', 'cannot-afford');
                 if (iconEl) iconEl.textContent = '—';
+                if (nameEl) nameEl.textContent = '';
                 if (priceEl) priceEl.textContent = '';
             } else if (purchased) {
                 // Purchased
@@ -2054,6 +2057,7 @@ const runManager = {
                 item.classList.remove('empty-slot', 'cannot-afford');
                 const rogue = ROGUES[rogueId];
                 if (iconEl) iconEl.textContent = rogue?.icon || '?';
+                if (nameEl) nameEl.textContent = rogue?.name || '';
                 if (priceEl) priceEl.textContent = '✓';
             } else {
                 // Available
@@ -2061,6 +2065,7 @@ const runManager = {
                 const rogue = ROGUES[rogueId];
                 const price = getRoguePrice(rogueId);
                 if (iconEl) iconEl.textContent = rogue?.icon || '?';
+                if (nameEl) nameEl.textContent = rogue?.name || '';
                 if (priceEl) priceEl.textContent = `$${price}`;
                 item.classList.toggle('cannot-afford', runState.coins < price);
             }
