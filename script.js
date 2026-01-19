@@ -171,6 +171,7 @@ const ROGUES = {
         id: 'extraTurn',
         name: 'Overtime',
         description: '+1 turn per round',
+        detail: 'You get 6 turns instead of 5. More chances to hit your target.',
         rarity: 'uncommon',
         icon: '⏰',
     },
@@ -178,6 +179,7 @@ const ROGUES = {
         id: 'extraRack',
         name: 'Big Pockets',
         description: '+1 rack capacity',
+        detail: 'Hold 8 tiles instead of 7. More letters means more word options.',
         rarity: 'uncommon',
         icon: '🎒',
     },
@@ -185,6 +187,7 @@ const ROGUES = {
         id: 'basePayout',
         name: 'Salary Bump',
         description: '+$3 base payout',
+        detail: 'Earn $3 more at the end of each round, regardless of score.',
         rarity: 'common',
         icon: '💵',
     },
@@ -192,6 +195,7 @@ const ROGUES = {
         id: 'vowelBonus',
         name: 'Vowel Power',
         description: '+1 to all vowels',
+        detail: 'A, E, I, O, U each score 1 extra point. Stacks with other bonuses.',
         rarity: 'uncommon',
         icon: '🔤',
     },
@@ -200,6 +204,7 @@ const ROGUES = {
         id: 'goldenDiamond',
         name: 'Golden Diamond',
         description: 'Earn $1 per 20% above target',
+        detail: 'Score 40% over target? Earn $2 extra. Great for high-scoring rounds.',
         rarity: 'common',
         icon: '💎',
     },
@@ -207,6 +212,7 @@ const ROGUES = {
         id: 'endlessPower',
         name: 'Endless Power',
         description: '+2 per word × current set',
+        detail: 'Each word scores +2 in Set 1, +4 in Set 2, +6 in Set 3, etc. Scales forever.',
         rarity: 'rare',
         icon: '⚡',
     },
@@ -214,6 +220,7 @@ const ROGUES = {
         id: 'loneRanger',
         name: 'Lone Ranger',
         description: '+6 if word has exactly 1 vowel',
+        detail: 'Words like SHY, HYMN, or RHYTHM trigger this. Y does not count as a vowel.',
         rarity: 'common',
         icon: '🤠',
     },
@@ -221,6 +228,7 @@ const ROGUES = {
         id: 'highValue',
         name: 'High Value',
         description: '+1 per upgraded tile in word',
+        detail: 'Buffed tiles (green border) and tiles from Tile Set Upgrades both count.',
         rarity: 'common',
         icon: '💰',
     },
@@ -228,6 +236,7 @@ const ROGUES = {
         id: 'wolfPack',
         name: 'Wolf Pack',
         description: '+3 per double letter pair',
+        detail: 'BEET gives +3 (EE). MISSISSIPPI gives +9 (SS, SS, PP). Letters must be adjacent.',
         rarity: 'common',
         icon: '🐺',
     },
@@ -236,6 +245,7 @@ const ROGUES = {
         id: 'noDiscard',
         name: 'No Discard',
         description: 'Exchange → Pass (+2 turns)',
+        detail: 'Can\'t swap tiles anymore, but you get 7 turns per round instead of 5.',
         rarity: 'uncommon',
         icon: '🚫',
     },
@@ -243,6 +253,7 @@ const ROGUES = {
         id: 'bingoWizard',
         name: 'Bingo Wizard',
         description: 'Bingo with 6 tiles (+50)',
+        detail: 'Use all 6+ tiles in one word for a 50-point bingo bonus (normally requires 7).',
         rarity: 'uncommon',
         icon: '🎱',
     },
@@ -251,6 +262,7 @@ const ROGUES = {
         id: 'worder',
         name: 'Worder',
         description: '×1.25 per letter square used',
+        detail: 'Hit a DL or TL square? Multiply your whole word by 1.25. Stacks per square.',
         rarity: 'rare',
         icon: '📝',
     },
@@ -258,6 +270,7 @@ const ROGUES = {
         id: 'allRoundLetter',
         name: 'All-Round Letter',
         description: '+1 for first use of each letter',
+        detail: 'First E in a round: +1. First T: +1. Resets every round. Use variety!',
         rarity: 'common',
         icon: '🔄',
     },
@@ -265,6 +278,7 @@ const ROGUES = {
         id: 'topDeck',
         name: 'Top Deck',
         description: 'See next 3 tiles in bag',
+        detail: 'Shows upcoming tiles at the top of your screen. Plan your plays ahead.',
         rarity: 'common',
         icon: '👁️',
     },
@@ -273,6 +287,7 @@ const ROGUES = {
         id: 'heavyBackpack',
         name: 'Heavy Backpack',
         description: '+2 rack size, -1 turn per round',
+        detail: 'Hold 9 tiles but only get 4 turns. High risk, high reward.',
         rarity: 'uncommon',
         icon: '🏋️',
     },
@@ -281,6 +296,7 @@ const ROGUES = {
         id: 'collector',
         name: 'The Collector',
         description: '×1.1 per rogue owned',
+        detail: 'Own 3 rogues? ×1.3 multiplier. Own 5? ×1.5. Gets stronger as you collect.',
         rarity: 'uncommon',
         icon: '🎭',
     },
@@ -288,6 +304,7 @@ const ROGUES = {
         id: 'minter',
         name: 'The Minter',
         description: '7th tile each round is +1 buffed',
+        detail: 'The 7th tile drawn each round becomes a buffed tile worth +1 point.',
         rarity: 'common',
         icon: '🪙',
     },
@@ -295,6 +312,7 @@ const ROGUES = {
         id: 'miser',
         name: 'The Miser',
         description: '+$2 for 1-3 tile turns',
+        detail: 'Play short words (1-3 tiles) to earn $2 each time. Saves money for the shop.',
         rarity: 'uncommon',
         icon: '🤑',
     },
@@ -302,6 +320,7 @@ const ROGUES = {
         id: 'closer',
         name: 'The Closer',
         description: '×2 on last turn of each round',
+        detail: 'Your final turn each round scores double. Save your best word for last!',
         rarity: 'rare',
         icon: '🎬',
     },
@@ -309,6 +328,7 @@ const ROGUES = {
         id: 'hoarder',
         name: 'The Hoarder',
         description: '+1 point per $1 at round start',
+        detail: 'Have $10 when the round starts? +10 points that round. Rewards saving coins.',
         rarity: 'uncommon',
         icon: '🐉',
     },
@@ -2070,21 +2090,26 @@ const runManager = {
 
         // Build description
         let desc = '';
+        let detail = '';
         if (isBlank) {
-            desc = 'A blank tile - can be any letter when played.';
+            desc = 'Can represent any letter when played. Scores 0 points but great for completing words.';
+            detail = 'Add: puts this blank in your bag. Replace: swaps out a random base tile.';
         } else if (isPinkTile) {
-            desc = `${tile} tile with ×1.5 word multiplier when played.`;
+            desc = `×1.5 word multiplier. Stacks with board multipliers (DW/TW) and other pink tiles.`;
+            detail = 'Add: increases bag size by 1. Replace: better odds of drawing this tile.';
         } else if (isCoinTile) {
-            desc = `${tile} tile that earns $1 when played.`;
+            desc = `Earn $1 when this tile is used in a scoring word. Same points as a regular ${tile}.`;
+            detail = 'Add: increases bag size by 1. Replace: better odds of drawing this tile.';
         } else {
-            desc = `${tile} tile with +1 bonus (${baseScore}→${displayScore} points).`;
+            desc = `Permanently worth ${displayScore} points instead of ${baseScore}. The bonus stays for the entire run.`;
+            detail = 'Add: increases bag size by 1. Replace: better odds of drawing this tile.';
         }
 
         bottomSheet.show({
             icon: isBlank ? '▢' : tile,
             title: isBlank ? 'Blank' : 'Tile',
             description: desc,
-            detail: 'Add to your bag, or replace a random base tile.',
+            detail: detail,
             actions: [
                 {
                     label: `Add $${addCost}`,
@@ -2124,8 +2149,8 @@ const runManager = {
         bottomSheet.show({
             icon: '⬆️',
             title: 'Upgrade Tile Set',
-            description: `Permanently +1 to a random common letter (${available.join(', ')}).`,
-            detail: `Current upgrades: ${upgradeList}`,
+            description: `Adds +1 point to ALL copies of a random common letter for the rest of this run.`,
+            detail: `Candidates: ${available.join(', ')}. Current: ${upgradeList}`,
             actions: [
                 {
                     label: `Buy $${price}`,
@@ -2167,7 +2192,7 @@ const runManager = {
         bottomSheet.show({
             icon: rogue.icon,
             title: rogue.name,
-            description: rogue.description,
+            description: rogue.detail || rogue.description,
             detail: atMaxRogues ? 'Inventory full - will replace a rogue' : '',
             actions: [
                 {
@@ -2192,7 +2217,7 @@ const runManager = {
         const options = {
             icon: rogue.icon,
             title: rogue.name,
-            description: rogue.description,
+            description: rogue.detail || rogue.description,
             actions: []
         };
 
