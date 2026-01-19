@@ -2171,25 +2171,31 @@ const runManager = {
         const rogue = ROGUES[rogueId];
         if (!rogue) return;
 
-        const modal = document.getElementById('rogue-modal');
-        if (!modal) return;
+        // Check if we're in shop context (can discard)
+        const inShopContext = document.getElementById('shop-screen')?.style.display !== 'none';
 
-        document.getElementById('rogue-modal-icon').textContent = rogue.icon;
-        document.getElementById('rogue-modal-name').textContent = rogue.name;
-        document.getElementById('rogue-modal-description').textContent = rogue.description;
+        const options = {
+            icon: rogue.icon,
+            title: rogue.name,
+            description: rogue.description,
+            actions: []
+        };
 
-        // Store current rogue ID for discard button
-        modal.dataset.rogueId = rogueId;
+        // Only show discard button in shop context
+        if (inShopContext) {
+            options.actions.push({
+                label: 'Discard',
+                class: 'bottom-sheet-btn-danger',
+                onClick: () => this.discardRogue(rogueId)
+            });
+        }
 
-        modal.style.display = 'flex';
+        bottomSheet.show(options);
     },
 
-    // Hide rogue details modal
+    // Hide rogue details modal (legacy - now uses bottom sheet)
     hideRogueModal() {
-        const modal = document.getElementById('rogue-modal');
-        if (modal) {
-            modal.style.display = 'none';
-        }
+        bottomSheet.hide();
     },
 
     // Discard a rogue from inventory

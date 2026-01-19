@@ -4129,6 +4129,15 @@ main {
     background: #5a5a6a;
 }
 
+.bottom-sheet-btn-danger {
+    background: var(--danger-color);
+    color: #fff;
+}
+
+.bottom-sheet-btn-danger:hover:not(:disabled) {
+    background: #ff5252;
+}
+
 .bottom-sheet-btn:disabled,
 .bottom-sheet-btn.cannot-afford {
     opacity: 0.5;
