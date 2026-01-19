@@ -954,10 +954,17 @@ const runManager = {
                     const bonusPercent = hasRogue('goldenDiamond') ? 0.20 : 0.25;
                     const bonusThreshold = Math.floor(runState.targetScore * bonusPercent);
                     const bonusEarned = bonusThreshold > 0 ? Math.floor(extra / bonusThreshold) : 0;
-                    const pointsInCurrentDollar = extra % bonusThreshold;
-                    const pointsToNextDollar = bonusThreshold - pointsInCurrentDollar;
-                    const ptLabel = pointsToNextDollar === 1 ? 'pt' : 'pts';
-                    subtitle.innerHTML = `<span class="target-met">+${extra} pts extra (+$${bonusEarned})</span> — ${pointsToNextDollar} ${ptLabel} to next bonus $1`;
+
+                    // Handle edge case where bonusThreshold is 0 (e.g., debug mode with target=1)
+                    if (bonusThreshold > 0) {
+                        const pointsInCurrentDollar = extra % bonusThreshold;
+                        const pointsToNextDollar = bonusThreshold - pointsInCurrentDollar;
+                        const ptLabel = pointsToNextDollar === 1 ? 'pt' : 'pts';
+                        subtitle.innerHTML = `<span class="target-met">+${extra} pts extra (+$${bonusEarned})</span> — ${pointsToNextDollar} ${ptLabel} to next bonus $1`;
+                    } else {
+                        // No bonus tracking when threshold is 0
+                        subtitle.innerHTML = `<span class="target-met">+${extra} pts extra (+$${bonusEarned})</span>`;
+                    }
                 }
             }
 
@@ -4852,6 +4859,14 @@ async function initializeGame() {
         runState.targetScore = getTargetScore(runState.set, runState.round);
 
         // Save and update UI
+        runManager.saveRunState();
+        runManager.updateRunUI();
+    }
+
+    // In debug mode, give $100 coins for easy testing (unless explicitly set via URL)
+    if (gameState.debugMode && !urlParams.has('coins')) {
+        runState.coins = 100;
+        console.log('[Debug] Debug mode coins set to $100');
         runManager.saveRunState();
         runManager.updateRunUI();
     }
