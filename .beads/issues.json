@@ -1124,5 +1124,15 @@
     "description": "Don't show the score preview on the submit button (e.g., 'Submit: 24 pts'). Just show 'Submit' so the scoring animation is more exciting - players don't know what they'll get until it totals up. Keep the submit button functional, just hide the score preview.",
     "created": "2026-01-18",
     "labels": ["ui", "polish", "scoring-animation"]
+  },
+  {
+    "id": "rl-78",
+    "title": "Bag viewer: show upgraded tile values",
+    "type": "bug",
+    "status": "open",
+    "priority": 1,
+    "description": "When viewing the tile bag, upgraded tiles should display their upgraded point value, not just the base letter value. If a tile has +1 or +2 from shop upgrades, show that in the bag viewer so players can see what's coming.",
+    "created": "2026-01-18",
+    "labels": ["ui", "bug", "bag-viewer"]
   }
 ]
