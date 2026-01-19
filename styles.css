@@ -208,6 +208,11 @@ footer {
     color: var(--text-muted);
 }
 
+/* Hide footer (including feedback circles) when full-screen overlays are visible */
+body:has(.full-screen:not(.hidden)) footer {
+    display: none;
+}
+
 footer p {
     margin: 0 0 2px 0; /* Position text 2px above bottom of page */
 }
@@ -3288,6 +3293,62 @@ main {
 
 .shop-continue-btn:hover {
     background: #5eeb93;
+}
+
+/* ============================================================================
+   RESPONSIVE SHOP SCALING
+   Scale up shop elements on larger viewports while maintaining minimum sizes
+   for iPhone SE (320px). Everything is vector so scales cleanly.
+   ============================================================================ */
+
+@media (min-width: 400px) {
+    .shop-item .shop-tile {
+        width: clamp(32px, 10vw, 52px);
+        height: clamp(32px, 10vw, 52px);
+    }
+
+    .shop-item .shop-tile .tile-letter {
+        font-size: clamp(18px, 5.5vw, 28px);
+    }
+
+    .shop-item .shop-tile .tile-score {
+        font-size: clamp(8px, 2.5vw, 12px);
+    }
+
+    .shop-item-label {
+        font-size: clamp(8px, 2.5vw, 12px);
+    }
+
+    .shop-upgrade-icon-box {
+        width: clamp(32px, 10vw, 52px);
+        height: clamp(32px, 10vw, 52px);
+        font-size: clamp(20px, 6vw, 32px);
+    }
+
+    .shop-tiles-row {
+        gap: clamp(16px, 5vw, 28px);
+        margin-bottom: clamp(16px, 4vw, 24px);
+    }
+
+    .shop-rogue-icon {
+        width: clamp(36px, 11vw, 58px);
+        height: clamp(36px, 11vw, 58px);
+        font-size: clamp(24px, 7vw, 36px);
+    }
+
+    .shop-rogue-price {
+        font-size: clamp(10px, 3vw, 14px);
+    }
+
+    .shop-rogues-row {
+        gap: clamp(16px, 5vw, 28px);
+        margin-bottom: clamp(16px, 4vw, 24px);
+    }
+
+    .shop-continue-btn {
+        padding: clamp(12px, 3vw, 16px) clamp(24px, 6vw, 32px);
+        font-size: clamp(14px, 4vw, 18px);
+    }
 }
 
 /* Rogue Details Modal */
