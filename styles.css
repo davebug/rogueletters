@@ -217,6 +217,33 @@ footer p {
     margin: 0 0 2px 0; /* Position text 2px above bottom of page */
 }
 
+/* Round/Set/Score in footer feedback row */
+#footer-run-status {
+    display: flex;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-left: 8px;
+}
+
+#footer-run-status .progress-sep {
+    margin: 0 4px;
+    opacity: 0.5;
+}
+
+#footer-score-progress {
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+#footer-score-progress.exceeded {
+    color: var(--success-color);
+}
+
+#footer-score-progress.danger {
+    color: var(--error-color);
+}
+
 /* Version tooltip on RogueLetters name */
 .version-tooltip {
     position: relative;

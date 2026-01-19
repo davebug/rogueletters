@@ -952,8 +952,8 @@ const runManager = {
         const subtitle = document.getElementById('subtitle');
 
         if (runState.isRunMode) {
-            if (progressRound) progressRound.textContent = `Round ${runState.round}`;
-            if (progressSet) progressSet.textContent = `Set ${runState.set}`;
+            if (progressRound) progressRound.textContent = `R${runState.round}`;
+            if (progressSet) progressSet.textContent = `S${runState.set}`;
 
             // Update coin display
             this.updateCoinDisplay();
@@ -1206,9 +1206,9 @@ const runManager = {
             this.saveRunState();
         }
 
-        // Update header to show "Round Complete"
+        // Update footer to show "Done"
         const progressRound = document.getElementById('progress-round');
-        if (progressRound) progressRound.textContent = 'Round Complete';
+        if (progressRound) progressRound.textContent = 'Done';
 
         // Hide game board, show earnings screen
         document.getElementById('game-container')?.classList.add('hidden');
@@ -2827,7 +2827,7 @@ const runManager = {
 
     // Clear run state from localStorage
     clearRunState() {
-        const container = document.getElementById('target-progress-container');
+        const container = document.getElementById('footer-run-status');
         if (container) container.classList.add('hidden');
         localStorage.removeItem('rogueletters_run');
     }
@@ -3218,9 +3218,8 @@ function handleExchangeTileClick(event) {
 function updateTargetProgress() {
     if (!runState.isRunMode) return;
 
-    const container = document.getElementById('target-progress-container');
-    const fill = document.getElementById('target-progress-fill');
-    const text = document.getElementById('target-progress-text');
+    const container = document.getElementById('footer-run-status');
+    const scoreProgress = document.getElementById('footer-score-progress');
 
     if (!container) return;
 
@@ -3228,17 +3227,20 @@ function updateTargetProgress() {
 
     const current = gameState.score || 0;
     const target = runState.targetScore;
-    const percentage = Math.min((current / target) * 100, 100);
 
-    fill.style.width = `${percentage}%`;
-    text.textContent = `${current}/${target}`;
+    if (scoreProgress) {
+        scoreProgress.textContent = `${current}/${target}`;
 
-    // Color based on progress
-    fill.classList.remove('exceeded', 'danger');
-    if (current >= target) {
-        fill.classList.add('exceeded');
-    } else if (percentage < 50 && gameState.currentTurn > 3) {
-        fill.classList.add('danger');
+        // Color based on progress
+        scoreProgress.classList.remove('exceeded', 'danger');
+        if (current >= target) {
+            scoreProgress.classList.add('exceeded');
+        } else {
+            const percentage = (current / target) * 100;
+            if (percentage < 50 && gameState.currentTurn > 3) {
+                scoreProgress.classList.add('danger');
+            }
+        }
     }
 }
 
