@@ -6156,27 +6156,49 @@ function initLetterGrid() {
 
 function showBlankLetterModal(cell, tile) {
     gameState.pendingBlankPlacement = { cell, tile };
-    const modal = document.getElementById('blank-letter-modal');
-    if (modal) {
-        modal.style.display = 'flex';
+
+    // Build letter grid HTML for bottom sheet
+    let buttonsHtml = '';
+    for (let i = 0; i < 26; i++) {
+        const letter = String.fromCharCode(65 + i);
+        buttonsHtml += `<button class="blank-letter-btn" data-letter="${letter}">${letter}</button>`;
     }
+
+    const html = `
+        <div class="blank-letter-sheet">
+            <h3 class="bottom-sheet-title">Select a letter</h3>
+            <div class="blank-letter-grid">
+                ${buttonsHtml}
+            </div>
+        </div>
+    `;
+
+    bottomSheet.show({
+        html: html,
+        onClose: () => {
+            // Clear pending placement on close
+            gameState.pendingBlankPlacement = null;
+            // Deselect tile if selection was cancelled
+            if (selectedTile) {
+                selectedTile.classList.remove('selected');
+                selectedTile = null;
+            }
+            selectedTilePosition = null;
+        }
+    });
+
+    // Setup click handlers for letter buttons
+    document.querySelectorAll('.blank-letter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const letter = btn.dataset.letter;
+            bottomSheet.hide();
+            handleBlankLetterSelection(letter);
+        });
+    });
 }
 
 function hideBlankLetterModal() {
-    const modal = document.getElementById('blank-letter-modal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-
-    // Clear pending placement
-    gameState.pendingBlankPlacement = null;
-
-    // Deselect tile if selection was cancelled
-    if (selectedTile) {
-        selectedTile.classList.remove('selected');
-        selectedTile = null;
-    }
-    selectedTilePosition = null;
+    bottomSheet.hide();
 }
 
 async function handleBlankLetterSelection(letter) {

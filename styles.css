@@ -4187,3 +4187,44 @@ main {
 .bottom-sheet-tile .tile-score {
     font-size: 11px;
 }
+
+/* Blank letter selector in bottom sheet */
+.blank-letter-sheet {
+    padding: 0;
+}
+
+.blank-letter-sheet .bottom-sheet-title {
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.blank-letter-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    max-width: 276px;
+    margin: 0 auto;
+}
+
+.blank-letter-btn {
+    width: 36px;
+    height: 36px;
+    background: var(--tile-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--tile-text);
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.blank-letter-btn:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+}
+
+.blank-letter-btn:active {
+    transform: scale(0.95);
+}
