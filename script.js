@@ -1437,6 +1437,7 @@ const runManager = {
 
         // Update displays
         document.getElementById('shop-coins').textContent = runState.coins;
+        this.updateCoinDisplay();  // Update header coin display
         this.renderTileSetUpgrade();
 
         // Refresh all visible tile scores to show new values
@@ -1595,6 +1596,7 @@ const runManager = {
 
         // Update displays
         document.getElementById('shop-coins').textContent = runState.coins;
+        this.updateCoinDisplay();  // Update header coin display
         this.renderShopRogueSection();
         this.renderRogueInventory();
     },
@@ -1684,6 +1686,7 @@ const runManager = {
         // Hide modal and update displays
         this.hideRogueDiscardModal();
         document.getElementById('shop-coins').textContent = runState.coins;
+        this.updateCoinDisplay();  // Update header coin display
         this.renderShopRogueSection();
         this.renderRogueInventory();
     },
@@ -2129,8 +2132,9 @@ const runManager = {
 
     // Update shop UI after a purchase
     updateShopAfterPurchase(index) {
-        // Update coin display
+        // Update coin displays (shop and header)
         document.getElementById('shop-coins').textContent = runState.coins;
+        this.updateCoinDisplay();
 
         // Update pool count (purchased - removed = net change)
         const netTiles = (runState.purchasedTiles?.length || 0) - (runState.removedTiles?.length || 0);
