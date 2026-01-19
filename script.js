@@ -2381,10 +2381,13 @@ function updateExchangeButtonVisibility() {
         exchangeBtn.style.display = 'flex';
         exchangeBtn.classList.remove('cannot-afford');
         exchangeBtn.disabled = false;
+        exchangeBtn.title = 'Pass turn';
         if (recallBtn) recallBtn.style.display = 'none';
-        // Update button text to "Pass"
-        const btnText = exchangeBtn.querySelector('.exchange-btn-text');
-        if (btnText) btnText.textContent = 'Pass';
+        // Switch to pass icon
+        const exchangeIcon = exchangeBtn.querySelector('.exchange-icon');
+        const passIcon = exchangeBtn.querySelector('.pass-icon');
+        if (exchangeIcon) exchangeIcon.style.display = 'none';
+        if (passIcon) passIcon.style.display = '';
         // Hide cost badge
         const costBadge = exchangeBtn.querySelector('.exchange-cost');
         if (costBadge) costBadge.style.display = 'none';
@@ -2393,7 +2396,13 @@ function updateExchangeButtonVisibility() {
 
     // Always show exchange button (hide recall since no tiles on board)
     exchangeBtn.style.display = 'flex';
+    exchangeBtn.title = 'Exchange tiles';
     if (recallBtn) recallBtn.style.display = 'none';
+    // Ensure exchange icon is shown (not pass icon)
+    const exchangeIcon = exchangeBtn.querySelector('.exchange-icon');
+    const passIcon = exchangeBtn.querySelector('.pass-icon');
+    if (exchangeIcon) exchangeIcon.style.display = '';
+    if (passIcon) passIcon.style.display = 'none';
 
     // Ensure button text says "Exchange"
     const btnText = exchangeBtn.querySelector('.exchange-btn-text');
@@ -2425,8 +2434,17 @@ function enterExchangeMode() {
     if (gameState.isGameOver) return;
     if (gameState.placedTiles.length > 0) return;
 
-    // No Discard rogue: Just pass the turn (no exchange, no cost)
+    // No Discard rogue: Pass the turn (no exchange, no cost) with confirmation
     if (hasRogue('noDiscard')) {
+        const turnsRemaining = gameState.maxTurns - gameState.currentTurn + 1;
+        const confirmMessage = turnsRemaining === 1
+            ? 'Pass your final turn? This will end the round.'
+            : `Pass this turn? (${turnsRemaining} turns remaining)`;
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
         console.log('[Pass] Passing turn (No Discard rogue)');
         // Record a zero-score turn
         gameState.turnScores.push(0);
