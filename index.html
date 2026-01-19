@@ -13,7 +13,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui, viewport-fit=cover">
     <title>RogueLetters - A Daily Word Game</title>
-    <link rel="stylesheet" href="./styles.css?v=30.2">
+    <link rel="stylesheet" href="./styles.css?v=32.4">
     <meta name="description" content="Play RogueLetters - a daily word puzzle game. Build words on a letter-tile board to maximize your score!">
 
 
@@ -24,10 +24,9 @@
 <body>
 	<header>
 	<h1>Rogue<span class="accent"><a href="/">Letters</a></span></h1>
-	<button id="start-over" class="header-icon-btn" title="Start a new game">
-		<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-			<path d="M1 4v6h6M23 20v-6h-6"/>
-			<path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+	<button id="settings-btn" class="header-icon-btn" title="Settings" onclick="openSettingsModal()">
+		<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+			<path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
 		</svg>
 	</button>
 	<!-- Game Progress Display -->
@@ -94,6 +93,7 @@
                             <!-- Filled dynamically by renderRogueInventory() -->
                         </div>
                     </div>
+
 
                     <!-- Top Deck - shows next 3 tiles (when Top Deck rogue active) -->
                     <div id="top-deck-display" class="hidden">
@@ -185,6 +185,43 @@
                 <h3>Error</h3>
                 <p id="error-message"></p>
                 <button id="close-error" class="btn btn-primary">OK</button>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="modal" style="display: none;">
+            <div class="modal-content settings-modal-content">
+                <button class="modal-close-btn" onclick="closeSettingsModal()">×</button>
+                <h3>Settings</h3>
+
+                <!-- Animation Speed -->
+                <div class="settings-section">
+                    <label class="settings-label">Animation Speed</label>
+                    <div class="settings-speed-slider">
+                        <div class="speed-track" onclick="handleSpeedTrackClick(event)">
+                            <div class="speed-thumb"></div>
+                            <div class="speed-tick" data-speed="0.5x" style="left: 0%"></div>
+                            <div class="speed-tick" data-speed="1x" style="left: 25%"></div>
+                            <div class="speed-tick" data-speed="2x" style="left: 50%"></div>
+                            <div class="speed-tick" data-speed="4x" style="left: 75%"></div>
+                            <div class="speed-tick" data-speed="skip" style="left: 100%"></div>
+                        </div>
+                        <div class="speed-labels">
+                            <span data-speed="0.5x" onclick="setAnimationSpeed('0.5x')">½×</span>
+                            <span data-speed="1x" onclick="setAnimationSpeed('1x')">1×</span>
+                            <span data-speed="2x" onclick="setAnimationSpeed('2x')">2×</span>
+                            <span data-speed="4x" onclick="setAnimationSpeed('4x')">4×</span>
+                            <span data-speed="skip" onclick="setAnimationSpeed('skip')">Skip</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Abandon Run -->
+                <div class="settings-section settings-danger-section">
+                    <label class="settings-label">Danger Zone</label>
+                    <button id="abandon-run-btn" class="btn btn-danger" onclick="confirmAbandonRun()">Abandon Run</button>
+                    <p class="settings-hint">Start over from Set 1, Round 1</p>
+                </div>
             </div>
         </div>
 
@@ -518,6 +555,6 @@
     <!-- LZ-String compression library for shareable URLs -->
     <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 
-    <script src="./script.js?v=38.2"></script>
+    <script src="./script.js?v=41.6"></script>
 </body>
 </html>
