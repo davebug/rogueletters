@@ -346,8 +346,9 @@ function getTileDisplayScore(letter, bonus = 0) {
 // END ROGUES SYSTEM
 // ============================================================================
 
-// Animation speed setting: '0.5x', '1x', '2x', '4x', 'skip'
+// Animation speed setting: '0.5x', '1x', '5x', '20x', 'skip'
 // Persisted in localStorage
+// Base speed (1x) is tuned for readability; multiplier applied to durations
 let animationSpeed = localStorage.getItem('animationSpeed') || '1x';
 
 function setAnimationSpeed(speed) {
@@ -357,12 +358,13 @@ function setAnimationSpeed(speed) {
 }
 
 function getAnimationSpeedMultiplier() {
+    // Returns duration multiplier: higher = slower animations
     switch (animationSpeed) {
-        case '0.5x': return 2;    // Slower
-        case '2x': return 0.5;
-        case '4x': return 0.25;
+        case '0.5x': return 4;     // Half speed (4x duration)
+        case '5x': return 0.4;    // 5x faster
+        case '20x': return 0.1;   // 20x faster
         case 'skip': return 0;
-        default: return 1; // '1x'
+        default: return 2;        // '1x' - base speed (2x original duration)
     }
 }
 
@@ -376,7 +378,7 @@ function updateAnimationSpeedUI() {
     // Position thumb on track (0%, 25%, 50%, 75%, 100% for 5 positions)
     const thumb = document.querySelector('.speed-thumb');
     if (thumb) {
-        const positions = { '0.5x': 0, '1x': 25, '2x': 50, '4x': 75, 'skip': 100 };
+        const positions = { '0.5x': 0, '1x': 25, '5x': 50, '20x': 75, 'skip': 100 };
         thumb.style.left = `${positions[animationSpeed] ?? 25}%`;
     }
 }
@@ -391,8 +393,8 @@ function handleSpeedTrackClick(event) {
     let speed;
     if (percent < 12.5) speed = '0.5x';
     else if (percent < 37.5) speed = '1x';
-    else if (percent < 62.5) speed = '2x';
-    else if (percent < 87.5) speed = '4x';
+    else if (percent < 62.5) speed = '5x';
+    else if (percent < 87.5) speed = '20x';
     else speed = 'skip';
 
     setAnimationSpeed(speed);
