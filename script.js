@@ -1469,17 +1469,26 @@ const runManager = {
 
         shopScreen.classList.remove('hidden');
 
-        // Re-enable transitions after a frame (allows instant reset to complete)
-        requestAnimationFrame(() => {
-            document.getElementById('shop-tile-0')?.classList.remove('no-transition');
-            document.getElementById('shop-tile-1')?.classList.remove('no-transition');
-        });
+        // Check if using compact layout
+        const isCompactLayout = document.querySelector('.shop-compact') !== null;
 
-        // Render tile set upgrade section
-        this.renderTileSetUpgrade();
+        if (isCompactLayout) {
+            // Use compact rendering
+            this.renderCompactShopTiles();
+            this.renderCompactShopRogues();
+        } else {
+            // Re-enable transitions after a frame (allows instant reset to complete)
+            requestAnimationFrame(() => {
+                document.getElementById('shop-tile-0')?.classList.remove('no-transition');
+                document.getElementById('shop-tile-1')?.classList.remove('no-transition');
+            });
 
-        // Render rogue section
-        this.renderShopRogueSection();
+            // Render tile set upgrade section
+            this.renderTileSetUpgrade();
+
+            // Render rogue section
+            this.renderShopRogueSection();
+        }
     },
 
     // Get tile set upgrade price: $3, $4, $5, $7, $10, then +$3 each
@@ -1552,6 +1561,7 @@ const runManager = {
 
     // Purchase a tile set upgrade
     purchaseTileSetUpgrade() {
+        bottomSheet.hide();  // Close bottom sheet if open
         const available = this.getUpgradeableLetters();
         if (available.length === 0) return; // All upgraded
 
@@ -1573,6 +1583,7 @@ const runManager = {
         document.getElementById('shop-coins').textContent = runState.coins;
         this.updateCoinDisplay();  // Update header coin display
         this.renderTileSetUpgrade();
+        this.renderCompactShopTiles();  // Update compact shop display
 
         // Refresh all visible tile scores to show new values
         this.refreshAllTileScores();
@@ -1706,6 +1717,7 @@ const runManager = {
 
     // Purchase a shop rogue by index (0, 1, or 2)
     purchaseRogue(index) {
+        bottomSheet.hide();  // Close bottom sheet if open
         const rogueId = runState.shopRogues[index];
         if (!rogueId || runState.shopRoguesPurchased[index]) return;
 
@@ -1732,6 +1744,7 @@ const runManager = {
         document.getElementById('shop-coins').textContent = runState.coins;
         this.updateCoinDisplay();  // Update header coin display
         this.renderShopRogueSection();
+        this.renderCompactShopRogues();  // Update compact shop display
         this.renderRogueInventory();
     },
 
@@ -1822,6 +1835,7 @@ const runManager = {
         document.getElementById('shop-coins').textContent = runState.coins;
         this.updateCoinDisplay();  // Update header coin display
         this.renderShopRogueSection();
+        this.renderCompactShopRogues();  // Update compact shop display
         this.renderRogueInventory();
     },
 
@@ -1865,6 +1879,291 @@ const runManager = {
 
         // Update Top Deck display if that rogue is active
         this.renderTopDeck();
+    },
+
+    // ========================================================================
+    // COMPACT SHOP LAYOUT (Bottom Sheet Interactions)
+    // ========================================================================
+
+    // Set up click handlers for compact shop items
+    setupCompactShopHandlers() {
+        // Tile items (2 tiles + upgrade)
+        for (let i = 0; i < 2; i++) {
+            const item = document.getElementById(`shop-tile-${i}`);
+            if (item) {
+                item.addEventListener('click', () => this.showTileBottomSheet(i));
+            }
+        }
+
+        // Upgrade item
+        const upgradeItem = document.getElementById('shop-upgrade-item');
+        if (upgradeItem) {
+            upgradeItem.addEventListener('click', () => this.showUpgradeBottomSheet());
+        }
+
+        // Rogue items
+        for (let i = 0; i < 3; i++) {
+            const item = document.getElementById(`shop-rogue-${i}`);
+            if (item) {
+                item.addEventListener('click', () => this.showRogueBottomSheet(i));
+            }
+        }
+
+        // Bag icon in shop
+        const bagBtn = document.getElementById('shop-bag-btn');
+        if (bagBtn) {
+            bagBtn.addEventListener('click', () => showBagViewer());
+        }
+    },
+
+    // Render compact shop tiles (2 tiles + upgrade)
+    renderCompactShopTiles() {
+        for (let i = 0; i < 2; i++) {
+            const tile = this.shopTiles[i];
+            const tileType = this.shopTileTypes[i] || 'buffed';
+            const purchased = this.shopPurchased[i];
+            const isBlank = tile === '_';
+            const isCoinTile = tileType === 'coin';
+            const isPinkTile = tileType === 'pink';
+            const isBuffedTile = tileType === 'buffed';
+            const baseScore = TILE_SCORES[tile] || 0;
+            const displayScore = isBlank ? 0 : (isBuffedTile ? baseScore + 1 : baseScore);
+
+            const item = document.getElementById(`shop-tile-${i}`);
+            const tileDisplay = document.getElementById(`shop-tile-display-${i}`);
+            const label = document.getElementById(`shop-buff-label-${i}`);
+
+            if (!item || !tileDisplay) continue;
+
+            // Reset and update tile display
+            tileDisplay.classList.remove('buffed-tile', 'coin-tile', 'pink-tile');
+            if (!isBlank) {
+                if (isPinkTile) tileDisplay.classList.add('pink-tile');
+                else if (isCoinTile) tileDisplay.classList.add('coin-tile');
+                else tileDisplay.classList.add('buffed-tile');
+            }
+
+            // Update tile content
+            let indicator = '';
+            if (isCoinTile) indicator = '<span class="tile-coin-indicator">$1</span>';
+            else if (isPinkTile) indicator = '<span class="tile-pink-indicator">×1.5</span>';
+
+            tileDisplay.innerHTML = `
+                <span class="tile-letter">${isBlank ? '' : tile}</span>
+                <span class="tile-score">${isBlank ? '' : displayScore}</span>
+                ${indicator}
+            `;
+
+            // Update label
+            if (label) {
+                if (isBlank) {
+                    label.textContent = 'Blank';
+                    label.style.color = 'var(--text-muted)';
+                } else if (isPinkTile) {
+                    label.textContent = '×1.5';
+                    label.style.color = '#ff69b4';
+                } else if (isCoinTile) {
+                    label.textContent = '$1';
+                    label.style.color = 'var(--success-color)';
+                } else {
+                    label.textContent = '+1';
+                    label.style.color = '#ffd700';
+                }
+            }
+
+            // Update purchased state
+            item.classList.toggle('purchased', purchased);
+
+            // Check affordability
+            const addCost = isPinkTile ? 3 : (isCoinTile ? 2 : 1);
+            item.classList.toggle('cannot-afford', !purchased && runState.coins < addCost);
+        }
+
+        // Update upgrade item
+        const upgradeItem = document.getElementById('shop-upgrade-item');
+        if (upgradeItem) {
+            const available = this.getUpgradeableLetters();
+            const soldOut = available.length === 0;
+            const price = this.getTileSetUpgradePrice();
+
+            upgradeItem.classList.toggle('purchased', soldOut);
+            upgradeItem.classList.toggle('cannot-afford', !soldOut && runState.coins < price);
+
+            const label = upgradeItem.querySelector('.shop-item-label');
+            if (label) {
+                label.textContent = soldOut ? 'Maxed' : 'Upgrade';
+            }
+        }
+    },
+
+    // Render compact shop rogues (3 icons)
+    renderCompactShopRogues() {
+        for (let i = 0; i < 3; i++) {
+            const rogueId = runState.shopRogues?.[i];
+            const purchased = runState.shopRoguesPurchased?.[i];
+            const item = document.getElementById(`shop-rogue-${i}`);
+            const iconEl = document.getElementById(`shop-rogue-icon-${i}`);
+            const priceEl = document.getElementById(`shop-rogue-price-${i}`);
+
+            if (!item) continue;
+
+            if (!rogueId) {
+                // Empty slot
+                item.classList.add('empty-slot');
+                item.classList.remove('purchased', 'cannot-afford');
+                if (iconEl) iconEl.textContent = '—';
+                if (priceEl) priceEl.textContent = '';
+            } else if (purchased) {
+                // Purchased
+                item.classList.add('purchased');
+                item.classList.remove('empty-slot', 'cannot-afford');
+                const rogue = ROGUES[rogueId];
+                if (iconEl) iconEl.textContent = rogue?.icon || '?';
+                if (priceEl) priceEl.textContent = '✓';
+            } else {
+                // Available
+                item.classList.remove('empty-slot', 'purchased');
+                const rogue = ROGUES[rogueId];
+                const price = getRoguePrice(rogueId);
+                if (iconEl) iconEl.textContent = rogue?.icon || '?';
+                if (priceEl) priceEl.textContent = `$${price}`;
+                item.classList.toggle('cannot-afford', runState.coins < price);
+            }
+        }
+    },
+
+    // Show bottom sheet for tile purchase
+    showTileBottomSheet(index) {
+        const tile = this.shopTiles[index];
+        const tileType = this.shopTileTypes[index] || 'buffed';
+        const purchased = this.shopPurchased[index];
+
+        if (purchased) return;
+
+        const isBlank = tile === '_';
+        const isCoinTile = tileType === 'coin';
+        const isPinkTile = tileType === 'pink';
+        const isBuffedTile = tileType === 'buffed';
+        const baseScore = TILE_SCORES[tile] || 0;
+        const displayScore = isBlank ? 0 : (isBuffedTile ? baseScore + 1 : baseScore);
+
+        // Pricing
+        const addCost = isPinkTile ? 3 : (isCoinTile ? 2 : 1);
+        const replaceCost = isPinkTile ? 4 : (isCoinTile ? 3 : 2);
+        const canAffordAdd = runState.coins >= addCost;
+        const canAffordReplace = runState.coins >= replaceCost;
+
+        // Build description
+        let desc = '';
+        if (isBlank) {
+            desc = 'A blank tile - can be any letter when played.';
+        } else if (isPinkTile) {
+            desc = `${tile} tile with ×1.5 word multiplier when played.`;
+        } else if (isCoinTile) {
+            desc = `${tile} tile that earns $1 when played.`;
+        } else {
+            desc = `${tile} tile with +1 bonus (${baseScore}→${displayScore} points).`;
+        }
+
+        bottomSheet.show({
+            icon: isBlank ? '▢' : tile,
+            title: isBlank ? 'Blank Tile' : `${tile} Tile`,
+            description: desc,
+            detail: 'Add to your bag, or replace a random base tile.',
+            actions: [
+                {
+                    label: `Add $${addCost}`,
+                    class: 'bottom-sheet-btn-primary',
+                    cannotAfford: !canAffordAdd,
+                    disabled: !canAffordAdd,
+                    onClick: () => this.purchaseTile(index, 'add')
+                },
+                {
+                    label: `Replace $${replaceCost}`,
+                    class: 'bottom-sheet-btn-secondary',
+                    cannotAfford: !canAffordReplace,
+                    disabled: !canAffordReplace,
+                    onClick: () => this.purchaseTile(index, 'replace')
+                }
+            ]
+        });
+    },
+
+    // Show bottom sheet for upgrade purchase
+    showUpgradeBottomSheet() {
+        const available = this.getUpgradeableLetters();
+        const soldOut = available.length === 0;
+
+        if (soldOut) return;
+
+        const price = this.getTileSetUpgradePrice();
+        const canAfford = runState.coins >= price;
+        const count = runState.tileSetUpgradeCount || 0;
+
+        // Show current upgrades
+        const upgrades = runState.tileSetUpgrades || {};
+        const upgradeList = Object.entries(upgrades)
+            .map(([letter, bonus]) => `${letter}(+${bonus})`)
+            .join(', ') || 'None yet';
+
+        bottomSheet.show({
+            icon: '⬆️',
+            title: 'Upgrade Tile Set',
+            description: `Permanently +1 to a random common letter (${available.join(', ')}).`,
+            detail: `Current upgrades: ${upgradeList}`,
+            actions: [
+                {
+                    label: `Buy $${price}`,
+                    class: 'bottom-sheet-btn-primary',
+                    cannotAfford: !canAfford,
+                    disabled: !canAfford,
+                    onClick: () => this.purchaseTileSetUpgrade()
+                }
+            ]
+        });
+    },
+
+    // Purchase tile via bottom sheet (wrapper for add/replace)
+    purchaseTile(index, mode) {
+        bottomSheet.hide();
+        if (mode === 'add') {
+            this.purchaseTileAdd(index);
+        } else {
+            this.purchaseTileReplace(index);
+        }
+        // Note: renderCompactShopTiles() is called in updateShopAfterPurchase()
+        // after the animation completes
+    },
+
+    // Show bottom sheet for rogue purchase
+    showRogueBottomSheet(index) {
+        const rogueId = runState.shopRogues?.[index];
+        const purchased = runState.shopRoguesPurchased?.[index];
+
+        if (!rogueId || purchased) return;
+
+        const rogue = ROGUES[rogueId];
+        if (!rogue) return;
+
+        const price = getRoguePrice(rogueId);
+        const canAfford = runState.coins >= price;
+        const atMaxRogues = runState.rogues.length >= runState.maxRogueSlots;
+
+        bottomSheet.show({
+            icon: rogue.icon,
+            title: rogue.name,
+            description: rogue.description,
+            detail: atMaxRogues ? 'Inventory full - will replace a rogue' : '',
+            actions: [
+                {
+                    label: `Buy $${price}`,
+                    class: 'bottom-sheet-btn-primary',
+                    cannotAfford: !canAfford,
+                    disabled: !canAfford,
+                    onClick: () => this.purchaseRogue(index)
+                }
+            ]
+        });
     },
 
     // Show rogue details modal
@@ -2304,6 +2603,9 @@ const runManager = {
 
         // Update header coin display too
         this.updateCoinDisplay();
+
+        // Update compact shop display
+        this.renderCompactShopTiles();
     },
 
     // Handle Continue button from shop screen
@@ -4260,6 +4562,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeGame();
     setupEventListeners();
     bottomSheet.init();
+    runManager.setupCompactShopHandlers();
 
     // Initialize animation speed UI from localStorage
     updateAnimationSpeedUI();

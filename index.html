@@ -427,61 +427,61 @@
 		</div>
 	</div>
 
-	<!-- Shop Screen (Full Page) -->
+	<!-- Shop Screen (Full Page - Compact Layout) -->
 	<div id="shop-screen" class="full-screen hidden">
-		<div class="full-screen-content">
-			<h2>Tile Shop</h2>
-			<p class="shop-bank">Bank: $<span id="shop-coins">0</span></p>
+		<div class="shop-compact">
+			<!-- Header: Coins + Bag Icon -->
+			<div class="shop-header">
+				<span class="shop-coins">$<span id="shop-coins">0</span></span>
+				<button id="shop-bag-btn" class="shop-bag-btn" title="View Tile Bag">
+					<svg width="18" height="18" viewBox="160 225 200 280" fill="currentColor">
+						<path d="M299.409 241.354c-5.28.12-10.21 2.415-16.937 9.594l-6.565 6.969-6.812-6.72c-7.387-7.28-13.216-9.29-19.125-9.03-5.908.26-12.855 3.367-20.625 9.656l-6.217 5.03-5.906-5.374c-8.9-8.052-16.485-10.439-23.75-10.064-5.288.274-10.775 2.266-16.25 5.75l40.966 73.69c15.454 9.451 47.034 13.006 68.75 2.062l39.594-73.344c-7.51-3.062-14.26-6.202-20.094-7.406-2.112-.437-4.07-.756-5.968-.813a20.81 20.81 0 0 0-1.06 0zm-89.97 96.188v.002c-18.035 12.742-32.516 34.717-38.125 66.904-5.435 31.196 3.129 52.266 18.283 66.625 15.155 14.36 37.902 21.736 61 21.436 23.1-.3 46.136-8.31 61.625-22.936 15.49-14.627 24.249-35.425 19.281-65.187-5.137-30.757-18.4-52.148-35.19-65.094-28.482 15.056-64.095 11.856-86.875-1.75z"/>
+					</svg>
+				</button>
+			</div>
 
-			<div class="shop-tiles">
-				<div class="shop-tile-option" id="shop-tile-0">
+			<!-- Tiles Row: 2 buffed tiles + upgrade (tap to buy) -->
+			<div class="shop-tiles-row">
+				<div class="shop-item" id="shop-tile-0" data-type="tile" data-index="0">
 					<div class="tile shop-tile" id="shop-tile-display-0">
 						<span class="tile-letter" id="shop-tile-letter-0">E</span>
 						<span class="tile-score" id="shop-tile-score-0">1</span>
 					</div>
-					<span class="shop-tile-buff-label" id="shop-buff-label-0">+1 value</span>
-					<div class="shop-buy-buttons">
-						<button class="shop-buy-btn shop-add-btn" id="shop-add-0">Add $2</button>
-						<button class="shop-buy-btn shop-replace-btn" id="shop-replace-0">Replace $3</button>
-					</div>
+					<span class="shop-item-label" id="shop-buff-label-0">+1</span>
 				</div>
-				<div class="shop-tile-option" id="shop-tile-1">
+				<div class="shop-item" id="shop-tile-1" data-type="tile" data-index="1">
 					<div class="tile shop-tile" id="shop-tile-display-1">
 						<span class="tile-letter" id="shop-tile-letter-1">S</span>
 						<span class="tile-score" id="shop-tile-score-1">1</span>
 					</div>
-					<span class="shop-tile-buff-label" id="shop-buff-label-1">+1 value</span>
-					<div class="shop-buy-buttons">
-						<button class="shop-buy-btn shop-add-btn" id="shop-add-1">Add $2</button>
-						<button class="shop-buy-btn shop-replace-btn" id="shop-replace-1">Replace $3</button>
-					</div>
+					<span class="shop-item-label" id="shop-buff-label-1">+1</span>
+				</div>
+				<div class="shop-item" id="shop-upgrade-item" data-type="upgrade">
+					<div class="shop-upgrade-icon-box">⬆️</div>
+					<span class="shop-item-label">Upgrade</span>
 				</div>
 			</div>
 
-			<!-- Tile Set Upgrade Section -->
-			<div id="shop-upgrade-section" class="shop-upgrade-section">
-				<div class="shop-upgrade-card" id="shop-upgrade-card">
-					<div class="shop-upgrade-icon">⬆️</div>
-					<div class="shop-upgrade-info">
-						<h4 class="shop-upgrade-title">Upgrade Tile Set</h4>
-						<p class="shop-upgrade-desc" id="shop-upgrade-desc">+1 to a random common letter</p>
-						<p class="shop-upgrade-status" id="shop-upgrade-status"></p>
-					</div>
-					<button class="shop-upgrade-btn" id="shop-upgrade-btn">$3</button>
+			<!-- Rogues Row: 3 icons with prices (tap to buy) -->
+			<div class="shop-rogues-row" id="shop-rogue-section">
+				<div class="shop-rogue-item" id="shop-rogue-0" data-type="rogue" data-index="0">
+					<div class="shop-rogue-icon" id="shop-rogue-icon-0">🎭</div>
+					<span class="shop-rogue-price" id="shop-rogue-price-0">$5</span>
+				</div>
+				<div class="shop-rogue-item" id="shop-rogue-1" data-type="rogue" data-index="1">
+					<div class="shop-rogue-icon" id="shop-rogue-icon-1">🎲</div>
+					<span class="shop-rogue-price" id="shop-rogue-price-1">$7</span>
+				</div>
+				<div class="shop-rogue-item" id="shop-rogue-2" data-type="rogue" data-index="2">
+					<div class="shop-rogue-icon" id="shop-rogue-icon-2">💰</div>
+					<span class="shop-rogue-price" id="shop-rogue-price-2">$4</span>
 				</div>
 			</div>
 
-			<!-- Rogue Section (3 slots) -->
-			<div id="shop-rogue-section" class="hidden">
-				<h3 class="shop-section-header">Rogues' Gallery</h3>
-				<div class="shop-rogue-cards" id="shop-rogue-cards">
-					<!-- Rogue cards are rendered dynamically by renderShopRogueSection() -->
-				</div>
-				<p class="rogue-inventory-status" id="shop-rogue-status"></p>
+			<!-- Fixed Bottom: Continue Button -->
+			<div class="shop-bottom-bar">
+				<button id="shop-continue-btn" class="shop-continue-btn">Continue</button>
 			</div>
-
-			<p class="shop-pool-info">Your tile bag: <span id="shop-pool-count">100</span> tiles</p>
-			<button id="shop-continue-btn" class="popup-btn popup-btn-primary">Continue</button>
 		</div>
 	</div>
 
@@ -571,6 +571,6 @@
     <!-- LZ-String compression library for shareable URLs -->
     <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 
-    <script src="./script.js?v=43.0"></script>
+    <script src="./script.js?v=43.1"></script>
 </body>
 </html>
