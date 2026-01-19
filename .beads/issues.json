@@ -1104,5 +1104,15 @@
     "description": "Target 40+ rogues at launch to support 7 archetypes: Length, Economy, Mult, Vowel, Small Word, Bonus Square, Hybrid. Currently have ~14 rogues. Need ~26 more covering all archetypes. Builds are emergent from RNG - players adapt to offerings.",
     "created": "2026-01-18",
     "labels": ["phase-3", "rogues", "balatro-gaps"]
+  },
+  {
+    "id": "rl-76",
+    "title": "Mobile layout: compact everything to fit without scrolling",
+    "type": "task",
+    "status": "open",
+    "priority": 1,
+    "description": "Test and fix visibility of all UI elements on mobile, especially the store. Need the most compact layout possible to squeeze everything on screen without scrolling.\n\nKey areas:\n- Store/shop screen layout\n- Game board + rack + controls\n- Earnings screen\n- Settings modal\n- Score displays and animations\n\nGoal: Everything visible and usable on mobile without any scrolling required.",
+    "created": "2026-01-18",
+    "labels": ["mobile", "ui", "polish"]
   }
 ]
