@@ -1781,25 +1781,25 @@ main {
 }
 
 /* Primary button - WikiLetters yellow */
-/* Base popup button styles */
+/* Base popup button styles - Compact */
 .popup-btn {
     display: inline-block;
-    padding: 12px 24px;
+    padding: 8px 16px;  /* Reduced from 12px 24px */
     border-radius: 4px;
-    font-size: 16px;
+    font-size: 14px;  /* Reduced from 16px */
     font-weight: 600;
     cursor: pointer;
     transition: all 0.15s ease;
-    margin-top: 10px;
+    margin-top: 8px;  /* Reduced from 10px */
 }
 
 .popup-btn-primary {
     background-color: var(--primary-color);
     color: var(--bg-color);
     border: 1px solid var(--primary-color);
-    padding: 10px 20px;
+    padding: 8px 16px;  /* Reduced from 10px 20px */
     border-radius: 4px;
-    font-size: 16px;
+    font-size: 14px;  /* Reduced from 16px */
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -1812,14 +1812,14 @@ main {
     box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
 }
 
-/* Secondary button */
+/* Secondary button - Compact */
 .popup-btn-secondary {
     background-color: var(--board-square);
     color: var(--text-color);
     border: 1px solid var(--board-border);
-    padding: 10px 20px;
+    padding: 8px 16px;  /* Reduced from 10px 20px */
     border-radius: 4px;
-    font-size: 14px;
+    font-size: 12px;  /* Reduced from 14px */
     font-weight: normal;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -2005,7 +2005,7 @@ main {
     display: none;
 }
 
-/* Run Popup Content */
+/* Run Popup Content - Compact */
 #round-complete-popup .popup-content,
 #run-failed-popup .popup-content,
 #run-victory-popup .popup-content,
@@ -2013,7 +2013,7 @@ main {
     background-color: var(--bg-secondary);
     border: 2px solid var(--board-border);
     border-radius: 8px;
-    padding: 20px 30px;
+    padding: 14px 16px;  /* Reduced from 20px 30px */
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
     max-width: 340px;
     width: 90%;
@@ -2021,32 +2021,32 @@ main {
     position: relative;
 }
 
-/* Run Popup Titles */
+/* Run Popup Titles - Compact */
 #round-complete-popup h2,
 #run-failed-popup h2,
 #run-victory-popup h2,
 #start-run-popup h2 {
     margin-top: 0;
-    margin-bottom: 12px;
+    margin-bottom: 8px;  /* Reduced from 12px */
     color: var(--text-color);
-    font-size: 24px;
+    font-size: 18px;  /* Reduced from 24px */
     font-weight: 600;
 }
 
-/* Run Popup Paragraph Text */
+/* Run Popup Paragraph Text - Compact */
 #round-complete-popup p,
 #run-failed-popup p,
 #run-victory-popup p,
 #start-run-popup p {
     color: var(--text-muted);
-    font-size: 15px;
-    margin: 10px 0;
+    font-size: 13px;  /* Reduced from 15px */
+    margin: 6px 0;  /* Reduced from 10px */
 }
 
-/* Round Result Display */
+/* Round Result Display - Compact */
 .round-result {
-    margin: 20px 0;
-    padding: 15px;
+    margin: 12px 0;  /* Reduced from 20px */
+    padding: 10px;   /* Reduced from 15px */
     background: rgba(0, 0, 0, 0.2);
     border-radius: 8px;
     border: 1px solid var(--board-border);
@@ -2176,7 +2176,7 @@ main {
     background-color: var(--bg-secondary);
     border: 2px solid var(--board-border);
     border-radius: 12px;
-    padding: 30px 40px;
+    padding: 16px 20px;  /* Reduced from 30px 40px */
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
     max-width: 400px;
     width: 90%;
@@ -2185,16 +2185,16 @@ main {
 
 .full-screen-content h2 {
     margin-top: 0;
-    margin-bottom: 20px;
+    margin-bottom: 12px;  /* Reduced from 20px */
     color: var(--text-color);
-    font-size: 28px;
+    font-size: 18px;  /* Reduced from 28px */
     font-weight: 600;
 }
 
 .full-screen-content h3 {
-    margin: 20px 0 10px;
+    margin: 12px 0 6px;  /* Reduced from 20px 0 10px */
     color: var(--text-color);
-    font-size: 18px;
+    font-size: 14px;  /* Reduced from 18px */
     font-weight: 600;
 }
 
@@ -2241,18 +2241,18 @@ main {
     margin: 10px 0 20px;
 }
 
-/* Earnings Breakdown */
+/* Earnings Breakdown - Compact */
 .earnings-breakdown {
-    margin: 20px 0;
-    padding: 20px;
+    margin: 12px 0;  /* Reduced from 20px */
+    padding: 12px;   /* Reduced from 20px */
     background: rgba(0, 0, 0, 0.3);
     border-radius: 8px;
     border: 1px solid var(--board-border);
 }
 
 .earnings-breakdown h3 {
-    margin: 0 0 15px;
-    font-size: 16px;
+    margin: 0 0 8px;  /* Reduced from 15px */
+    font-size: 12px;  /* Reduced from 16px */
     text-transform: uppercase;
     letter-spacing: 1px;
     color: var(--text-muted);
@@ -2261,8 +2261,8 @@ main {
 .earnings-row {
     display: flex;
     justify-content: space-between;
-    padding: 8px 0;
-    font-size: 16px;
+    padding: 5px 0;  /* Reduced from 8px */
+    font-size: 14px;  /* Reduced from 16px */
     color: var(--text-color);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -2272,29 +2272,29 @@ main {
 }
 
 .bonus-rate {
-    font-size: 12px;
+    font-size: 10px;  /* Reduced from 12px */
     color: var(--text-muted);
 }
 
 .earnings-row.earnings-total {
-    padding-top: 12px;
-    margin-top: 8px;
+    padding-top: 10px;  /* Reduced from 12px */
+    margin-top: 6px;  /* Reduced from 8px */
     border-top: 1px solid var(--board-border);
     font-weight: bold;
-    font-size: 18px;
+    font-size: 16px;  /* Reduced from 18px */
     color: #4caf50;
 }
 
 .earnings-row.earnings-boost-row {
     color: #ffd700;
-    font-size: 14px;
+    font-size: 12px;  /* Reduced from 14px */
 }
 
 .bank-update {
-    margin-top: 15px;
-    padding-top: 15px;
+    margin-top: 10px;  /* Reduced from 15px */
+    padding-top: 10px;  /* Reduced from 15px */
     border-top: 1px solid var(--board-border);
-    font-size: 18px;
+    font-size: 15px;  /* Reduced from 18px */
     color: var(--text-color);
 }
 
