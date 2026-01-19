@@ -3245,30 +3245,184 @@ let bagReplacementMode = false; // true when selecting a tile to remove for shop
 
 function showBagViewer() {
     bagReplacementMode = false;
-    const popup = document.getElementById('bag-viewer-popup');
-    if (!popup) return;
-
-    // Reset header text
-    const header = popup.querySelector('h2');
-    if (header) header.textContent = 'Tile Bag';
-
-    updateBagViewerGrid();
-    popup.style.display = 'flex';
+    showBagViewerBottomSheet('Tile Bag');
 }
 
 function showBagViewerForReplacement() {
     bagReplacementMode = true;
     bagViewMode = 'total'; // Show total bag when replacing
+    showBagViewerBottomSheet('Select tile to remove');
+}
 
-    const popup = document.getElementById('bag-viewer-popup');
-    if (!popup) return;
+function showBagViewerBottomSheet(title) {
+    // Build bag viewer HTML for bottom sheet
+    const html = `
+        <div class="bag-viewer-sheet">
+            <h3 class="bottom-sheet-title">${title}</h3>
+            <div class="bag-summary">
+                <span id="bag-remaining-sheet">0</span> / <span id="bag-total-sheet">100</span> tiles remaining
+            </div>
+            <div class="bag-toggle" style="${bagReplacementMode ? 'display:none' : ''}">
+                <button id="bag-toggle-remaining-sheet" class="bag-toggle-btn ${bagViewMode === 'remaining' ? 'active' : ''}">Remaining</button>
+                <button id="bag-toggle-total-sheet" class="bag-toggle-btn ${bagViewMode === 'total' ? 'active' : ''}">Total</button>
+            </div>
+            <div id="bag-tiles-grid-sheet" class="bag-tiles-grid ${bagReplacementMode ? 'replacement-mode' : ''}"></div>
+        </div>
+    `;
 
-    // Update header to indicate selection mode
-    const header = popup.querySelector('h2');
-    if (header) header.textContent = 'Select tile to remove';
+    bottomSheet.show({
+        html: html,
+        onClose: () => {
+            // Cancel any pending replacement
+            if (bagReplacementMode) {
+                runManager.pendingReplacementTileIndex = null;
+                bagReplacementMode = false;
+            }
+        }
+    });
 
-    updateBagViewerGrid();
-    popup.style.display = 'flex';
+    // Setup toggle handlers
+    document.getElementById('bag-toggle-remaining-sheet')?.addEventListener('click', () => {
+        bagViewMode = 'remaining';
+        document.getElementById('bag-toggle-remaining-sheet')?.classList.add('active');
+        document.getElementById('bag-toggle-total-sheet')?.classList.remove('active');
+        updateBagViewerGridSheet();
+    });
+    document.getElementById('bag-toggle-total-sheet')?.addEventListener('click', () => {
+        bagViewMode = 'total';
+        document.getElementById('bag-toggle-remaining-sheet')?.classList.remove('active');
+        document.getElementById('bag-toggle-total-sheet')?.classList.add('active');
+        updateBagViewerGridSheet();
+    });
+
+    // Populate the grid
+    updateBagViewerGridSheet();
+}
+
+function updateBagViewerGridSheet() {
+    // Get elements from bottom sheet
+    const grid = document.getElementById('bag-tiles-grid-sheet');
+    const remainingEl = document.getElementById('bag-remaining-sheet');
+    const totalEl = document.getElementById('bag-total-sheet');
+    if (!grid) return;
+
+    // Calculate views
+    const remaining = calculateRemainingTiles();
+
+    // Build total distribution
+    const totalTiles = {};
+    for (const [letter, count] of Object.entries(TILE_DISTRIBUTION)) {
+        totalTiles[letter] = count;
+    }
+    for (const tile of (runState.purchasedTiles || [])) {
+        const letter = typeof tile === 'object' ? tile.letter : tile;
+        totalTiles[letter] = (totalTiles[letter] || 0) + 1;
+    }
+    for (const tile of (runState.removedTiles || [])) {
+        totalTiles[tile] = Math.max(0, (totalTiles[tile] || 0) - 1);
+    }
+
+    // Calculate totals
+    let totalRemaining = 0;
+    const netTileChange = (runState.purchasedTiles?.length || 0) - (runState.removedTiles?.length || 0);
+    let totalBag = 100 + netTileChange;
+    for (const letter of Object.keys(TILE_DISTRIBUTION)) {
+        totalRemaining += remaining[letter] || 0;
+    }
+
+    // Update summary
+    if (remainingEl) remainingEl.textContent = totalRemaining;
+    if (totalEl) totalEl.textContent = totalBag;
+
+    // Choose which counts to display
+    const displayCounts = bagViewMode === 'remaining' ? remaining : totalTiles;
+
+    // Clear grid
+    grid.innerHTML = '';
+
+    // Calculate buffed/coin tiles remaining
+    const buffedRemaining = {};
+    const coinRemaining = {};
+    const buffedBonusValues = {};
+    for (const tile of (runState.purchasedTiles || [])) {
+        const letter = typeof tile === 'object' ? tile.letter : tile;
+        const isCoinTile = typeof tile === 'object' && tile.coinTile;
+        const bonus = typeof tile === 'object' ? (tile.bonus || 1) : 1;
+        if (isCoinTile) {
+            coinRemaining[letter] = (coinRemaining[letter] || 0) + 1;
+        } else {
+            buffedRemaining[letter] = (buffedRemaining[letter] || 0) + 1;
+            buffedBonusValues[letter] = Math.max(buffedBonusValues[letter] || 0, bonus);
+        }
+    }
+    for (const [letter, count] of Object.entries(runState.buffedTilesDrawn || {})) {
+        buffedRemaining[letter] = Math.max(0, (buffedRemaining[letter] || 0) - count);
+    }
+    for (const [letter, count] of Object.entries(runState.coinTilesDrawn || {})) {
+        coinRemaining[letter] = Math.max(0, (coinRemaining[letter] || 0) - count);
+    }
+
+    // Calculate totals for Total view
+    const buffedTotal = {};
+    const coinTotal = {};
+    for (const tile of (runState.purchasedTiles || [])) {
+        const letter = typeof tile === 'object' ? tile.letter : tile;
+        const isCoinTile = typeof tile === 'object' && tile.coinTile;
+        if (isCoinTile) {
+            coinTotal[letter] = (coinTotal[letter] || 0) + 1;
+        } else {
+            buffedTotal[letter] = (buffedTotal[letter] || 0) + 1;
+        }
+    }
+
+    // Create mini tiles
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_'.split('');
+    for (const letter of letters) {
+        const count = displayCounts[letter] || 0;
+        const score = TILE_SCORES[letter] || 0;
+        const buffedCount = bagViewMode === 'remaining' ? (buffedRemaining[letter] || 0) : (buffedTotal[letter] || 0);
+        const coinCount = bagViewMode === 'remaining' ? (coinRemaining[letter] || 0) : (coinTotal[letter] || 0);
+
+        for (let i = 0; i < count; i++) {
+            const tile = document.createElement('div');
+            tile.className = 'bag-mini-tile';
+
+            const isCoinTile = i < coinCount;
+            const isBuffed = !isCoinTile && i < (coinCount + buffedCount);
+
+            if (isCoinTile) tile.classList.add('coin-tile');
+            else if (isBuffed) tile.classList.add('buffed-tile');
+
+            if (bagReplacementMode) {
+                tile.classList.add('selectable');
+                tile.addEventListener('click', () => {
+                    bottomSheet.hide();
+                    runManager.completeReplacement(letter);
+                });
+            }
+
+            const letterSpan = document.createElement('span');
+            letterSpan.className = 'bag-mini-tile-letter';
+            letterSpan.textContent = letter === '_' ? '' : letter;
+
+            const scoreSpan = document.createElement('span');
+            scoreSpan.className = 'bag-mini-tile-score';
+            const tileBonus = isBuffed ? (buffedBonusValues[letter] || 1) : 0;
+            scoreSpan.textContent = getTileDisplayScore(letter, tileBonus);
+
+            tile.appendChild(letterSpan);
+            tile.appendChild(scoreSpan);
+
+            if (isCoinTile) {
+                const coinIndicator = document.createElement('span');
+                coinIndicator.className = 'bag-coin-indicator';
+                coinIndicator.textContent = '$1';
+                tile.appendChild(coinIndicator);
+            }
+
+            grid.appendChild(tile);
+        }
+    }
 }
 
 function updateBagViewerGrid() {
@@ -3429,8 +3583,8 @@ function hideBagViewer() {
         runManager.pendingReplacementTileIndex = null;
         bagReplacementMode = false;
     }
-    const popup = document.getElementById('bag-viewer-popup');
-    if (popup) popup.style.display = 'none';
+    // Close bottom sheet (the onClose callback will also handle cleanup)
+    bottomSheet.hide();
 }
 
 function calculateRemainingTiles() {

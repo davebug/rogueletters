@@ -2637,9 +2637,30 @@ main {
     border-bottom: 1px solid var(--border);
 }
 
-.bag-summary #bag-remaining {
+.bag-summary #bag-remaining,
+.bag-summary #bag-remaining-sheet {
     color: var(--accent);
     font-weight: bold;
+}
+
+/* Bag viewer in bottom sheet */
+.bag-viewer-sheet {
+    padding: 0;
+}
+
+.bag-viewer-sheet .bottom-sheet-title {
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+
+.bag-viewer-sheet .bag-summary {
+    margin-bottom: 0.75rem;
+}
+
+.bag-viewer-sheet .bag-tiles-grid {
+    max-height: 40vh;
+    overflow-y: auto;
+    padding: 4px;
 }
 
 .bag-toggle {
