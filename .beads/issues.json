@@ -770,7 +770,7 @@
     "type": "task",
     "status": "closed",
     "priority": "low",
-    "description": "Update the copyright line '© 2025 RogueLetters' to use the current year programmatically via JavaScript instead of hardcoded.",
+    "description": "Update the copyright line '\u00a9 2025 RogueLetters' to use the current year programmatically via JavaScript instead of hardcoded.",
     "created": "2026-01-18",
     "labels": [
       "ui",
@@ -785,7 +785,7 @@
     "type": "task",
     "status": "closed",
     "priority": "medium",
-    "description": "When target is met, the status text shows '+X extra — keep playing for bonuses!' but X is extra points. Change it to show the actual bonus coins earned so far (e.g., '+$2 bonus earned' based on $1 per 10 extra points formula).",
+    "description": "When target is met, the status text shows '+X extra \u2014 keep playing for bonuses!' but X is extra points. Change it to show the actual bonus coins earned so far (e.g., '+$2 bonus earned' based on $1 per 10 extra points formula).",
     "created": "2026-01-18",
     "labels": [
       "ui",
@@ -793,7 +793,7 @@
       "economy"
     ],
     "closedAt": "2026-01-18",
-    "closedReason": "Enhanced: now shows '+X pts (+$Y) — Z to next $' with points extra, bonus earned, and points until next dollar"
+    "closedReason": "Enhanced: now shows '+X pts (+$Y) \u2014 Z to next $' with points extra, bonus earned, and points until next dollar"
   },
   {
     "id": "rl-49",
@@ -809,7 +809,7 @@
       "gameplay"
     ],
     "closedAt": "2026-01-18",
-    "closedReason": "Implemented: Added heavyBackpack rogue (uncommon, 🏋️ icon), created getRackSize() helper function, updated maxTurns calculation. +2 rack size, -1 turn per round."
+    "closedReason": "Implemented: Added heavyBackpack rogue (uncommon, \ud83c\udfcb\ufe0f icon), created getRackSize() helper function, updated maxTurns calculation. +2 rack size, -1 turn per round."
   },
   {
     "id": "rl-50",
@@ -865,7 +865,12 @@
     "priority": 1,
     "description": "Add rogues that interact with each other for emergent combos. Synergies are HIDDEN (discovered through play, not tooltips). Goal: 10x+ power ceiling through multiplicative stacking. See docs/plans/2026-01-18-balatro-gaps-spec.md",
     "created": "2026-01-18",
-    "labels": ["phase-3", "rogues", "synergy", "balatro-gaps"]
+    "labels": [
+      "phase-3",
+      "rogues",
+      "synergy",
+      "balatro-gaps"
+    ]
   },
   {
     "id": "rl-54",
@@ -876,62 +881,105 @@
     "parent": "rl-53",
     "description": "ROGUE: The Echo - Doubles another rogue's effect. Player chooses which rogue to echo at START OF EACH ROUND (defaults to previous choice). RARITY: Rare. UI: Round-start prompt to select target rogue. Pure enabler - does nothing without other rogues.",
     "created": "2026-01-18",
-    "labels": ["rogue", "rare", "synergy", "enabler"]
+    "labels": [
+      "rogue",
+      "rare",
+      "synergy",
+      "enabler"
+    ]
   },
   {
     "id": "rl-55",
     "title": "New Rogue: The Collector",
     "type": "task",
-    "status": "open",
+    "status": "closed",
     "priority": 2,
     "parent": "rl-53",
-    "description": "ROGUE: The Collector - ×1.1 multiplier per rogue owned (×1.5 at max 5 rogues). RARITY: Uncommon. Rewards having many rogues. Pure enabler for mult stacking builds.",
+    "description": "ROGUE: The Collector - \u00d71.1 multiplier per rogue owned (\u00d71.5 at max 5 rogues). RARITY: Uncommon. Rewards having many rogues. Pure enabler for mult stacking builds.",
     "created": "2026-01-18",
-    "labels": ["rogue", "uncommon", "synergy", "multiplier"]
+    "labels": [
+      "rogue",
+      "uncommon",
+      "synergy",
+      "multiplier"
+    ],
+    "closedAt": "2026-01-19T05:25:22.840753Z",
+    "closedReason": "Implemented: The Collector (\u00d71.1 per rogue owned)"
   },
   {
     "id": "rl-56",
     "title": "New Rogue: The Minter",
     "type": "task",
-    "status": "open",
+    "status": "closed",
     "priority": 2,
     "parent": "rl-53",
     "description": "ROGUE: The Minter - Your 7th rack tile is always created with +1 buff. RARITY: Common. Guarantees at least 1 buffed tile per turn. SYNERGY: Combos with High Value (+1 per buffed tile).",
     "created": "2026-01-18",
-    "labels": ["rogue", "common", "synergy", "buff"]
+    "labels": [
+      "rogue",
+      "common",
+      "synergy",
+      "buff"
+    ],
+    "closedAt": "2026-01-19T05:25:22.840753Z",
+    "closedReason": "Implemented: The Minter (7th tile each round is +1 buffed)"
   },
   {
     "id": "rl-57",
     "title": "New Rogue: The Miser",
     "type": "task",
-    "status": "open",
+    "status": "closed",
     "priority": 2,
     "parent": "rl-53",
     "description": "ROGUE: The Miser - +$2 for each turn you use 1, 2, or 3 tiles. RARITY: Uncommon. Contrarian rogue - rewards small plays economically. SYNERGY: Combos with Lone Ranger for small-word build.",
     "created": "2026-01-18",
-    "labels": ["rogue", "uncommon", "synergy", "economy", "contrarian"]
+    "labels": [
+      "rogue",
+      "uncommon",
+      "synergy",
+      "economy",
+      "contrarian"
+    ],
+    "closedAt": "2026-01-19T05:25:22.840753Z",
+    "closedReason": "Implemented: The Miser (+$2 for 1-3 tile turns)"
   },
   {
     "id": "rl-58",
     "title": "New Rogue: The Opener",
     "type": "task",
-    "status": "open",
+    "status": "closed",
     "priority": 2,
     "parent": "rl-53",
-    "description": "ROGUE: The Opener - ×2 multiplier on Turn 1 of each round. RARITY: Rare. Timing-based conditional. Rewards saving best word for round start.",
+    "description": "ROGUE: The Opener - \u00d72 multiplier on Turn 1 of each round. RARITY: Rare. Timing-based conditional. Rewards saving best word for round start.",
     "created": "2026-01-18",
-    "labels": ["rogue", "rare", "synergy", "timing", "multiplier"]
+    "labels": [
+      "rogue",
+      "rare",
+      "synergy",
+      "timing",
+      "multiplier"
+    ],
+    "closedAt": "2026-01-19T05:25:22.840753Z",
+    "closedReason": "Implemented as The Closer (\u00d72 on last turn instead of first turn)"
   },
   {
     "id": "rl-59",
     "title": "New Rogue: The Hoarder",
     "type": "task",
-    "status": "open",
+    "status": "closed",
     "priority": 2,
     "parent": "rl-53",
     "description": "ROGUE: The Hoarder - Start each round with 1 point per $1 owned. RARITY: Uncommon. State-based conditional. Creates tension between spending coins in shop vs keeping them for point buffer. Intentional design - hard choices.",
     "created": "2026-01-18",
-    "labels": ["rogue", "uncommon", "synergy", "economy", "state-based"]
+    "labels": [
+      "rogue",
+      "uncommon",
+      "synergy",
+      "economy",
+      "state-based"
+    ],
+    "closedAt": "2026-01-19T05:25:22.840753Z",
+    "closedReason": "Implemented: The Hoarder (+1 point per $1 at round start)"
   },
   {
     "id": "rl-60",
@@ -941,7 +989,12 @@
     "priority": 1,
     "description": "Add 4-5 multiplier rogues to enable 10x+ power through stacking. Multipliers animate in sequence during scoring (like Balatro). Creates 'Mult Stacking' archetype. See docs/plans/2026-01-18-balatro-gaps-spec.md",
     "created": "2026-01-18",
-    "labels": ["phase-3", "rogues", "multiplier", "balatro-gaps"]
+    "labels": [
+      "phase-3",
+      "rogues",
+      "multiplier",
+      "balatro-gaps"
+    ]
   },
   {
     "id": "rl-61",
@@ -950,9 +1003,14 @@
     "status": "open",
     "priority": 2,
     "parent": "rl-60",
-    "description": "ROGUE: [Name TBD] - ×1.1 per letter in word (×1.7 for 7-letter word). RARITY: Uncommon. Synergizes with Length build. Rewards long words multiplicatively.",
+    "description": "ROGUE: [Name TBD] - \u00d71.1 per letter in word (\u00d71.7 for 7-letter word). RARITY: Uncommon. Synergizes with Length build. Rewards long words multiplicatively.",
     "created": "2026-01-18",
-    "labels": ["rogue", "uncommon", "multiplier", "length-build"]
+    "labels": [
+      "rogue",
+      "uncommon",
+      "multiplier",
+      "length-build"
+    ]
   },
   {
     "id": "rl-62",
@@ -961,9 +1019,14 @@
     "status": "open",
     "priority": 2,
     "parent": "rl-60",
-    "description": "ROGUE: [Name TBD] - ×1.2 per bonus square used (DL/TL/DW/TW). RARITY: Uncommon. Synergizes with Bonus Square build. Rewards strategic board placement.",
+    "description": "ROGUE: [Name TBD] - \u00d71.2 per bonus square used (DL/TL/DW/TW). RARITY: Uncommon. Synergizes with Bonus Square build. Rewards strategic board placement.",
     "created": "2026-01-18",
-    "labels": ["rogue", "uncommon", "multiplier", "bonus-square-build"]
+    "labels": [
+      "rogue",
+      "uncommon",
+      "multiplier",
+      "bonus-square-build"
+    ]
   },
   {
     "id": "rl-63",
@@ -972,9 +1035,14 @@
     "status": "open",
     "priority": 2,
     "parent": "rl-60",
-    "description": "ROGUE: [Name TBD] - ×1.15 per vowel in word. RARITY: Uncommon. Synergizes with Vowel build. Also needs flat bonus vowel rogues (+N per vowel).",
+    "description": "ROGUE: [Name TBD] - \u00d71.15 per vowel in word. RARITY: Uncommon. Synergizes with Vowel build. Also needs flat bonus vowel rogues (+N per vowel).",
     "created": "2026-01-18",
-    "labels": ["rogue", "uncommon", "multiplier", "vowel-build"]
+    "labels": [
+      "rogue",
+      "uncommon",
+      "multiplier",
+      "vowel-build"
+    ]
   },
   {
     "id": "rl-64",
@@ -983,9 +1051,14 @@
     "status": "open",
     "priority": 2,
     "parent": "rl-60",
-    "description": "ROGUE: [Name TBD] - ×1.15 per consonant in word. RARITY: Uncommon. Alternative to Vowel build. Mutually exclusive strategy choice.",
+    "description": "ROGUE: [Name TBD] - \u00d71.15 per consonant in word. RARITY: Uncommon. Alternative to Vowel build. Mutually exclusive strategy choice.",
     "created": "2026-01-18",
-    "labels": ["rogue", "uncommon", "multiplier", "consonant-build"]
+    "labels": [
+      "rogue",
+      "uncommon",
+      "multiplier",
+      "consonant-build"
+    ]
   },
   {
     "id": "rl-65",
@@ -993,9 +1066,14 @@
     "type": "feature",
     "status": "open",
     "priority": 2,
-    "description": "Add edition variants for rogues (~5% spawn rate). EDITIONS: Negative (no slot count), Shadowy (+×mult), Gilded (+coins), Corrupted (2× power, can't discard). Any rogue can appear as any edition. Roguelike-themed visual styling. See docs/plans/2026-01-18-balatro-gaps-spec.md",
+    "description": "Add edition variants for rogues (~5% spawn rate). EDITIONS: Negative (no slot count), Shadowy (+\u00d7mult), Gilded (+coins), Corrupted (2\u00d7 power, can't discard). Any rogue can appear as any edition. Roguelike-themed visual styling. See docs/plans/2026-01-18-balatro-gaps-spec.md",
     "created": "2026-01-18",
-    "labels": ["phase-3", "rogues", "editions", "balatro-gaps"]
+    "labels": [
+      "phase-3",
+      "rogues",
+      "editions",
+      "balatro-gaps"
+    ]
   },
   {
     "id": "rl-66",
@@ -1005,7 +1083,11 @@
     "priority": 2,
     "description": "Round 3 of each set has boss effect. Boss REVEALED at Set start (R1-R2 are prep). 15-20 bosses in pool, some late-game only. Letter restrictions + mechanic restrictions. One rogue disables all bosses. Some rogues allow reroll (once per Set max). See docs/plans/2026-01-18-balatro-gaps-spec.md",
     "created": "2026-01-18",
-    "labels": ["phase-3", "boss", "balatro-gaps"],
+    "labels": [
+      "phase-3",
+      "boss",
+      "balatro-gaps"
+    ],
     "notes": "Supersedes rl-10 with detailed design from interview."
   },
   {
@@ -1017,7 +1099,10 @@
     "parent": "rl-66",
     "description": "BOSS: The Anchor - One tile is always selected (can't unselect). Must use in exchange or word play. Like Balatro's Cerulean blind.",
     "created": "2026-01-18",
-    "labels": ["boss", "mechanic-restriction"]
+    "labels": [
+      "boss",
+      "mechanic-restriction"
+    ]
   },
   {
     "id": "rl-68",
@@ -1028,7 +1113,10 @@
     "parent": "rl-66",
     "description": "BOSS: The Mumbler - Vowels contribute 0 points (but still form valid words). Countered by consonant-heavy play.",
     "created": "2026-01-18",
-    "labels": ["boss", "letter-restriction"]
+    "labels": [
+      "boss",
+      "letter-restriction"
+    ]
   },
   {
     "id": "rl-69",
@@ -1039,7 +1127,10 @@
     "parent": "rl-66",
     "description": "BOSS: The Editor - Max 4 tiles placed per turn. Limits both word length AND multi-tile plays.",
     "created": "2026-01-18",
-    "labels": ["boss", "mechanic-restriction"]
+    "labels": [
+      "boss",
+      "mechanic-restriction"
+    ]
   },
   {
     "id": "rl-70",
@@ -1049,7 +1140,12 @@
     "priority": 3,
     "description": "25% chance for shops to have 'Gambler' section. Strategic bets with concrete tradeoffs: 'Lose one turn next round, +$5 if you win', 'Can't buy anything this Set, +$15 if you beat Set'. See docs/plans/2026-01-18-balatro-gaps-spec.md",
     "created": "2026-01-18",
-    "labels": ["phase-3", "shop", "risk-reward", "balatro-gaps"]
+    "labels": [
+      "phase-3",
+      "shop",
+      "risk-reward",
+      "balatro-gaps"
+    ]
   },
   {
     "id": "rl-71",
@@ -1059,7 +1155,11 @@
     "priority": 3,
     "description": "Any tile can become 'Lucky' via rogue or shop purchase. Lucky tiles have chance for big bonus when played. Risk/reward mechanic for tiles.",
     "created": "2026-01-18",
-    "labels": ["tiles", "risk-reward", "enhancement"]
+    "labels": [
+      "tiles",
+      "risk-reward",
+      "enhancement"
+    ]
   },
   {
     "id": "rl-72",
@@ -1070,7 +1170,11 @@
     "parent": "rl-6",
     "description": "14 tile sets with distinct mechanics. Passive effect + purchasable buff per set. Chosen at run start (locked in). Unlocked via gems. Plastic is starter. SETS: Plastic, Wood, Stone, Glass, Copper, Silver, Gold, Ivory, Onyx, Ruby, Emerald, Amethyst, Ghost, Glitch. See docs/plans/2026-01-18-balatro-gaps-spec.md",
     "created": "2026-01-18",
-    "labels": ["phase-4", "tile-sets", "balatro-gaps"],
+    "labels": [
+      "phase-4",
+      "tile-sets",
+      "balatro-gaps"
+    ],
     "notes": "Supersedes rl-12 with detailed design from interview."
   },
   {
@@ -1082,7 +1186,12 @@
     "parent": "rl-6",
     "description": "~33% rogues available at start, rest unlock via achievements (some via gems). Easy achievements visible, hard ones have hints only. Mid-run unlocks show notification but available next run. Prestige unlocks for extreme achievements. See docs/plans/2026-01-18-balatro-gaps-spec.md",
     "created": "2026-01-18",
-    "labels": ["phase-4", "unlocks", "achievements", "balatro-gaps"],
+    "labels": [
+      "phase-4",
+      "unlocks",
+      "achievements",
+      "balatro-gaps"
+    ],
     "notes": "Supersedes rl-17 with detailed design from interview."
   },
   {
@@ -1093,7 +1202,11 @@
     "priority": 3,
     "description": "Some rogues cost $1/round to maintain. Risk/reward mechanic - powerful effects but ongoing cost. Can go broke and lose the rogue.",
     "created": "2026-01-18",
-    "labels": ["rogues", "risk-reward", "economy"]
+    "labels": [
+      "rogues",
+      "risk-reward",
+      "economy"
+    ]
   },
   {
     "id": "rl-75",
@@ -1103,7 +1216,11 @@
     "priority": 2,
     "description": "Target 40+ rogues at launch to support 7 archetypes: Length, Economy, Mult, Vowel, Small Word, Bonus Square, Hybrid. Currently have ~14 rogues. Need ~26 more covering all archetypes. Builds are emergent from RNG - players adapt to offerings.",
     "created": "2026-01-18",
-    "labels": ["phase-3", "rogues", "balatro-gaps"]
+    "labels": [
+      "phase-3",
+      "rogues",
+      "balatro-gaps"
+    ]
   },
   {
     "id": "rl-76",
@@ -1113,7 +1230,11 @@
     "priority": 1,
     "description": "Test and fix visibility of all UI elements on mobile, especially the store. Need the most compact layout possible to squeeze everything on screen without scrolling.\n\nKey areas:\n- Store/shop screen layout\n- Game board + rack + controls\n- Earnings screen\n- Settings modal\n- Score displays and animations\n\nGoal: Everything visible and usable on mobile without any scrolling required.",
     "created": "2026-01-18",
-    "labels": ["mobile", "ui", "polish"]
+    "labels": [
+      "mobile",
+      "ui",
+      "polish"
+    ]
   },
   {
     "id": "rl-77",
@@ -1123,7 +1244,11 @@
     "priority": 2,
     "description": "Don't show the score preview on the submit button (e.g., 'Submit: 24 pts'). Just show 'Submit' so the scoring animation is more exciting - players don't know what they'll get until it totals up. Keep the submit button functional, just hide the score preview.",
     "created": "2026-01-18",
-    "labels": ["ui", "polish", "scoring-animation"]
+    "labels": [
+      "ui",
+      "polish",
+      "scoring-animation"
+    ]
   },
   {
     "id": "rl-78",
@@ -1135,7 +1260,11 @@
     "created": "2026-01-18",
     "closedAt": "2026-01-18",
     "closedReason": "Fixed - bag viewer now uses getTileDisplayScore() which includes tile set upgrades, buffed tile bonuses, and vowel rogue bonus",
-    "labels": ["ui", "bug", "bag-viewer"]
+    "labels": [
+      "ui",
+      "bug",
+      "bag-viewer"
+    ]
   },
   {
     "id": "rl-79",
@@ -1145,6 +1274,10 @@
     "priority": 1,
     "description": "The Plastic tile set's starting passive should give +2 points to the 5 'rare' letters - K, J, X, Q, Z. These are the letters that only have 1 tile in the bag. Currently may be implemented as +1 to different letters.",
     "created": "2026-01-18",
-    "labels": ["tile-sets", "balance", "plastic"]
+    "labels": [
+      "tile-sets",
+      "balance",
+      "plastic"
+    ]
   }
 ]
