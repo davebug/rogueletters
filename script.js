@@ -733,6 +733,10 @@ function markBuffedTiles(tiles) {
 
 // Helper to get target score for a given set and round
 function getTargetScore(set, round) {
+    // In debug mode, target is always 1 for fast testing
+    if (gameState.debugMode) {
+        return 1;
+    }
     // Use the last set's targets for sets beyond what's defined
     const setIndex = Math.min(set - 1, runState.setTargets.length - 1);
     const targets = runState.setTargets[setIndex];
@@ -2747,6 +2751,8 @@ const runManager = {
                 loaded.lettersPlayedThisCycle = new Set(loaded.lettersPlayedThisCycle);
             }
             Object.assign(runState, loaded);
+            // Recalculate target (in case debug mode changes it)
+            runState.targetScore = getTargetScore(runState.set, runState.round);
         }
     },
 
@@ -4736,6 +4742,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // Check for debug mode in URL BEFORE initializing game
+    // This ensures debugMode is set when getTargetScore() is called during init
+    const urlParamsEarly = new URLSearchParams(window.location.search);
+    if (urlParamsEarly.get('debug') === '2') {
+        gameState.debugMode = true;
+        console.log('[Debug] Debug mode pre-enabled from URL');
+    }
+
     initializeGame();
     setupEventListeners();
     bottomSheet.init();
@@ -4753,18 +4767,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     // DEBUG MODE DISABLED IN PRODUCTION
     // Debug mode: ?debug=1 shows controls, ?debug=2 auto-enables skip validation
+    // In debug mode: word validation skipped, target score is always 1
     if (urlParams.get('debug') === '1' || urlParams.get('debug') === '2') {
         document.getElementById('debug-controls').style.display = 'block';
         const debugToggle = document.getElementById('debug-mode-toggle');
         debugToggle.addEventListener('change', (e) => {
             gameState.debugMode = e.target.checked;
-            console.log('Debug mode:', gameState.debugMode ? 'ON (skipping word validation)' : 'OFF');
+            // Update target score when toggling debug mode
+            runState.targetScore = getTargetScore(runState.set, runState.round);
+            runManager.updateRunUI();
+            console.log('Debug mode:', gameState.debugMode ? 'ON (target=1, skip validation)' : 'OFF');
         });
         // Auto-enable debug mode if ?debug=2
         if (urlParams.get('debug') === '2') {
             debugToggle.checked = true;
             gameState.debugMode = true;
-            console.log('Debug mode: AUTO-ENABLED (skipping word validation)');
+            // Set target to 1 for fast testing
+            runState.targetScore = 1;
+            runManager.updateRunUI();
+            console.log('Debug mode: AUTO-ENABLED (target=1, skip validation)');
         }
     }
 
@@ -4946,6 +4967,12 @@ async function initializeGame() {
         restoreBoard();
         restoreTileRack();
         updateUI();
+
+        // In debug mode, override target to 1 (after state restore)
+        if (gameState.debugMode) {
+            runState.targetScore = 1;
+            runManager.updateRunUI();
+        }
 
         // Update subtitle with high score if conditions met (regardless of completion status)
         await updateSubtitleWithHighScore();
@@ -11142,7 +11169,10 @@ function loadGameState() {
                     }
                 }
 
+                // Preserve debugMode (set from URL params before load)
+                const preserveDebugMode = gameState.debugMode;
                 gameState = { ...gameState, ...parsedState };
+                gameState.debugMode = preserveDebugMode;
                 return true;
             }
         }
