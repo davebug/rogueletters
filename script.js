@@ -421,6 +421,137 @@ function confirmAbandonRun() {
     startOver(); // Reuses existing start over logic with confirmation
 }
 
+// ============================================================================
+// BOTTOM SHEET COMPONENT
+// Reusable slide-up sheet for contextual interactions
+// ============================================================================
+
+const bottomSheet = {
+    element: null,
+    backdrop: null,
+    container: null,
+    content: null,
+    closeBtn: null,
+    isOpen: false,
+    onClose: null, // Callback when sheet closes
+
+    init() {
+        this.element = document.getElementById('bottom-sheet');
+        if (!this.element) return;
+
+        this.backdrop = this.element.querySelector('.bottom-sheet-backdrop');
+        this.container = this.element.querySelector('.bottom-sheet-container');
+        this.content = this.element.querySelector('.bottom-sheet-content');
+        this.closeBtn = this.element.querySelector('.bottom-sheet-close');
+
+        // Close on backdrop tap
+        this.backdrop?.addEventListener('click', () => this.hide());
+
+        // Close on X button
+        this.closeBtn?.addEventListener('click', () => this.hide());
+    },
+
+    /**
+     * Show the bottom sheet with custom content
+     * @param {Object} options - Configuration options
+     * @param {string} options.icon - Emoji/icon to display (optional)
+     * @param {string} options.title - Header title
+     * @param {string} options.description - Main description text
+     * @param {string} options.detail - Secondary detail text (optional)
+     * @param {string} options.html - Custom HTML content (overrides other content options)
+     * @param {Array} options.actions - Array of button configs [{label, class, onClick, disabled}]
+     * @param {Function} options.onClose - Callback when sheet closes
+     */
+    show(options = {}) {
+        if (!this.element || !this.content) return;
+
+        this.onClose = options.onClose || null;
+
+        // Build content HTML
+        let html = '';
+
+        if (options.html) {
+            // Use custom HTML directly
+            html = options.html;
+        } else {
+            // Build standard layout
+            if (options.icon || options.title) {
+                html += '<div class="bottom-sheet-header">';
+                if (options.icon) {
+                    html += `<span class="bottom-sheet-icon">${options.icon}</span>`;
+                }
+                if (options.title) {
+                    html += `<h3 class="bottom-sheet-title">${options.title}</h3>`;
+                }
+                html += '</div>';
+            }
+
+            if (options.description) {
+                html += `<p class="bottom-sheet-desc">${options.description}</p>`;
+            }
+
+            if (options.detail) {
+                html += `<p class="bottom-sheet-detail">${options.detail}</p>`;
+            }
+
+            if (options.actions && options.actions.length > 0) {
+                html += '<div class="bottom-sheet-actions">';
+                options.actions.forEach((action, index) => {
+                    const btnClass = action.class || 'bottom-sheet-btn-primary';
+                    const disabled = action.disabled ? 'disabled' : '';
+                    const cannotAfford = action.cannotAfford ? 'cannot-afford' : '';
+                    html += `<button class="bottom-sheet-btn ${btnClass} ${cannotAfford}" data-action-index="${index}" ${disabled}>${action.label}</button>`;
+                });
+                html += '</div>';
+            }
+        }
+
+        this.content.innerHTML = html;
+
+        // Attach action handlers
+        if (options.actions) {
+            this.content.querySelectorAll('[data-action-index]').forEach(btn => {
+                const index = parseInt(btn.dataset.actionIndex);
+                const action = options.actions[index];
+                if (action && action.onClick) {
+                    btn.addEventListener('click', () => {
+                        action.onClick();
+                        if (action.closeOnClick !== false) {
+                            this.hide();
+                        }
+                    });
+                }
+            });
+        }
+
+        // Show the sheet
+        this.element.classList.remove('hidden');
+        // Trigger reflow for animation
+        this.element.offsetHeight;
+        this.element.classList.add('visible');
+        this.isOpen = true;
+    },
+
+    hide() {
+        if (!this.element || !this.isOpen) return;
+
+        this.element.classList.remove('visible');
+        this.isOpen = false;
+
+        // Wait for animation before hiding
+        setTimeout(() => {
+            if (!this.isOpen) {
+                this.element.classList.add('hidden');
+                this.content.innerHTML = '';
+                if (this.onClose) {
+                    this.onClose();
+                    this.onClose = null;
+                }
+            }
+        }, 150);
+    }
+};
+
 // Game state
 let gameState = {
     board: [],
@@ -4128,6 +4259,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     initializeGame();
     setupEventListeners();
+    bottomSheet.init();
 
     // Initialize animation speed UI from localStorage
     updateAnimationSpeedUI();
