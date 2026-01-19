@@ -4752,17 +4752,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Check for debug mode in URL
     const urlParams = new URLSearchParams(window.location.search);
     // DEBUG MODE DISABLED IN PRODUCTION
-    // Uncomment below to enable debug mode for local development
-    /*
-    if (urlParams.get('debug') === '1') {
+    // Debug mode: ?debug=1 shows controls, ?debug=2 auto-enables skip validation
+    if (urlParams.get('debug') === '1' || urlParams.get('debug') === '2') {
         document.getElementById('debug-controls').style.display = 'block';
         const debugToggle = document.getElementById('debug-mode-toggle');
         debugToggle.addEventListener('change', (e) => {
             gameState.debugMode = e.target.checked;
-            console.log('Debug mode:', gameState.debugMode ? 'ON' : 'OFF');
+            console.log('Debug mode:', gameState.debugMode ? 'ON (skipping word validation)' : 'OFF');
         });
+        // Auto-enable debug mode if ?debug=2
+        if (urlParams.get('debug') === '2') {
+            debugToggle.checked = true;
+            gameState.debugMode = true;
+            console.log('Debug mode: AUTO-ENABLED (skipping word validation)');
+        }
     }
-    */
 
     // Check for test_popup parameter to test different scores
     const testScore = urlParams.get('test_popup');
