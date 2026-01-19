@@ -1365,9 +1365,10 @@ const runManager = {
         // Update coin display
         document.getElementById('shop-coins').textContent = runState.coins;
 
-        // Update pool count
+        // Update pool count (element may not exist in compact layout)
         const poolCount = 100 + (runState.purchasedTiles?.length || 0);
-        document.getElementById('shop-pool-count').textContent = poolCount;
+        const poolCountEl = document.getElementById('shop-pool-count');
+        if (poolCountEl) poolCountEl.textContent = poolCount;
 
         // Update tile displays
         for (let i = 0; i < 2; i++) {
