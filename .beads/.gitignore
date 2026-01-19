@@ -1,0 +1,10 @@
+# Beads database files (local only)
+beads.db
+beads.db-shm
+beads.db-wal
+daemon.pid
+daemon-error
+*.base.jsonl
+*.base.meta.json
+*.left.jsonl
+*.left.meta.json
