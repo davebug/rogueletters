@@ -1136,5 +1136,15 @@
     "closedAt": "2026-01-18",
     "closedReason": "Fixed - bag viewer now uses getTileDisplayScore() which includes tile set upgrades, buffed tile bonuses, and vowel rogue bonus",
     "labels": ["ui", "bug", "bag-viewer"]
+  },
+  {
+    "id": "rl-79",
+    "title": "Plastic tile set: +2 to rare letters (K, J, X, Q, Z)",
+    "type": "task",
+    "status": "open",
+    "priority": 1,
+    "description": "The Plastic tile set's starting passive should give +2 points to the 5 'rare' letters - K, J, X, Q, Z. These are the letters that only have 1 tile in the bag. Currently may be implemented as +1 to different letters.",
+    "created": "2026-01-18",
+    "labels": ["tile-sets", "balance", "plastic"]
   }
 ]
