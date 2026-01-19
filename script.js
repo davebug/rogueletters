@@ -2076,7 +2076,7 @@ const runManager = {
 
         bottomSheet.show({
             icon: isBlank ? '▢' : tile,
-            title: isBlank ? 'Blank Tile' : `${tile} Tile`,
+            title: isBlank ? 'Blank' : 'Tile',
             description: desc,
             detail: 'Add to your bag, or replace a random base tile.',
             actions: [
