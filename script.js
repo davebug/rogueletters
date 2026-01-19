@@ -955,6 +955,11 @@ const runManager = {
             if (progressRound) progressRound.textContent = `R${runState.round}`;
             if (progressSet) progressSet.textContent = `S${runState.set}`;
 
+            // Show footer run status and update score/target
+            const footerStatus = document.getElementById('footer-run-status');
+            if (footerStatus) footerStatus.classList.remove('hidden');
+            updateTargetProgress();
+
             // Update coin display
             this.updateCoinDisplay();
 
@@ -990,6 +995,10 @@ const runManager = {
 
             // Always ensure rogues are visible
             this.renderRogueInventory();
+        } else {
+            // Hide footer run status when not in run mode
+            const footerStatus = document.getElementById('footer-run-status');
+            if (footerStatus) footerStatus.classList.add('hidden');
         }
     },
 
@@ -11099,10 +11108,13 @@ function updateFooterSquares() {
         }
     });
 
-    // Update total score and show/hide the display
+    // Update total score display (only show in non-run mode)
     const totalScoreDisplay = document.querySelector('.total-score-display');
     if (totalScoreDisplay) {
-        if (gameState.score > 0) {
+        if (runState.isRunMode) {
+            // Hide in run mode - score shown in footer-run-status instead
+            totalScoreDisplay.style.display = 'none';
+        } else if (gameState.score > 0) {
             // Show total score display with fade in
             if (totalScoreDisplay.style.display === 'none') {
                 totalScoreDisplay.style.display = 'flex';
