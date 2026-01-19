@@ -294,10 +294,10 @@ const ROGUES = {
         rarity: 'uncommon',
         icon: '🤑',
     },
-    opener: {
-        id: 'opener',
-        name: 'The Opener',
-        description: '×2 on Turn 1 of each round',
+    closer: {
+        id: 'closer',
+        name: 'The Closer',
+        description: '×2 on last turn of each round',
         rarity: 'rare',
         icon: '🎬',
     },
@@ -7321,15 +7321,15 @@ function calculateTurnScoreBreakdown(formedWords) {
 
     // ========== TURN-LEVEL MULTIPLIER ROGUES ==========
 
-    // The Opener: ×2 on Turn 1 of each round
-    if (hasRogue('opener') && gameState.currentTurn === 1) {
-        const beforeOpener = turnTotal;
+    // The Closer: ×2 on last turn of each round
+    if (hasRogue('closer') && gameState.currentTurn === gameState.maxTurns) {
+        const beforeCloser = turnTotal;
         turnTotal = Math.floor(turnTotal * 2);
-        const bonus = turnTotal - beforeOpener;
+        const bonus = turnTotal - beforeCloser;
         breakdown.turnComponents.push({
-            id: 'opener',
-            name: ROGUES.opener.name,
-            icon: ROGUES.opener.icon,
+            id: 'closer',
+            name: ROGUES.closer.name,
+            icon: ROGUES.closer.icon,
             points: bonus,
             isMultiplier: true,
             multiplierValue: '2.00'
