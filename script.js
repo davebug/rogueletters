@@ -766,6 +766,7 @@ const runManager = {
         this.updateRunUI();
         updateTurnCounter();
         updateFooterSquares();  // Reset feedback circles for new round
+        this.renderRogueInventory();  // Re-render rogues for new round
 
         // Re-enable controls
         const submitBtn = document.getElementById('submit-word');
