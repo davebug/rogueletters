@@ -48,6 +48,10 @@ const TILE_EFFECTS = {
     // wild: { id: 'wild', cssClass: 'wild-tile', borderPriority: 5, indicator: { text: '★', position: 'bottom-left' } },
 };
 
+// Rare tiles - letters that only appear once in the bag
+// These get +1 baseline bonus from the "plastic" tile set
+const RARE_TILES = ['J', 'K', 'Q', 'X', 'Z'];
+
 // Get active effects from tile data (works with current data model)
 function getActiveEffects(tileData) {
     if (!tileData || typeof tileData !== 'object') return [];
@@ -339,7 +343,9 @@ function getTileDisplayScore(letter, bonus = 0) {
     const vowelBonus = hasRogue('vowelBonus') && vowels.includes(letter) ? 1 : 0;
     // Add tile set upgrade bonus (applies to all tiles of that letter)
     const tileSetBonus = (runState.tileSetUpgrades && runState.tileSetUpgrades[letter]) || 0;
-    return baseScore + bonus + vowelBonus + tileSetBonus;
+    // Rare tiles (J, K, Q, X, Z) get +1 from "plastic" tile set baseline
+    const rareBonus = RARE_TILES.includes(letter) ? 1 : 0;
+    return baseScore + bonus + vowelBonus + tileSetBonus + rareBonus;
 }
 
 // ============================================================================
@@ -2960,8 +2966,8 @@ function renderExchangeRack() {
 
         const scoreSpan = document.createElement('span');
         scoreSpan.className = 'tile-score';
-        const baseScore = TILE_SCORES[letter] || 0;
-        scoreSpan.textContent = isBlank ? '' : (baseScore + bonus);
+        // Use getTileDisplayScore for consistent display (includes rare bonus, vowel bonus, upgrades)
+        scoreSpan.textContent = isBlank ? '' : getTileDisplayScore(letter, bonus);
 
         tileEl.appendChild(letterSpan);
         tileEl.appendChild(scoreSpan);
@@ -5745,8 +5751,8 @@ function animateTileFromBagToRack(letter, rackIndex, isBlank = false, buffed = f
 
     // Add letter and score
     const displayLetter = (letter === '_' || isBlank) ? '' : letter;
-    const baseScore = (letter === '_' || isBlank) ? 0 : (TILE_SCORES[letter] || 0);
-    const score = (letter === '_' || isBlank) ? '' : (baseScore + bonus);
+    // Use getTileDisplayScore for consistent display (includes rare bonus, vowel bonus, upgrades)
+    const score = (letter === '_' || isBlank) ? '' : getTileDisplayScore(letter, bonus);
     tile.innerHTML = `
         <span class="tile-letter">${displayLetter}</span>
         <span class="tile-score">${score}</span>
@@ -6789,9 +6795,8 @@ async function swapBoardTiles(position1, position2) {
         // Apply tile effects using centralized system
         applyTileEffects(tile, { buffed: isBuffed, bonus, coinTile: isCoinTile });
 
-        // Update score (buffed tiles show boosted score)
-        const baseScore = TILE_SCORES[letter] || 0;
-        tile.querySelector('.tile-value').textContent = isBlank ? '' : (baseScore + bonus);
+        // Update score (includes rare bonus, vowel bonus, upgrades)
+        tile.querySelector('.tile-value').textContent = isBlank ? '' : getTileDisplayScore(letter, bonus);
     }
 
     // Update DOM for tile1 (gets tile2's properties)
@@ -7635,6 +7640,11 @@ function calculateWordScore(positions) {
             letterScore += runState.tileSetUpgrades[letter];
         }
 
+        // Apply rare tile bonus (+1 for J, K, Q, X, Z - "plastic" tile set baseline)
+        if (!isBlank && RARE_TILES.includes(letter)) {
+            letterScore += 1;
+        }
+
         // Apply vowelBonus rogue: +1 to all vowels
         const vowels = ['A', 'E', 'I', 'O', 'U'];
         if (!isBlank && hasRogue('vowelBonus') && vowels.includes(letter)) {
@@ -7837,6 +7847,11 @@ function calculateTurnScoreBreakdown(formedWords) {
 
             if (!isBlank && runState.tileSetUpgrades && runState.tileSetUpgrades[letter]) {
                 baseLetterScore += runState.tileSetUpgrades[letter];
+            }
+
+            // Rare tile bonus (+1 for J, K, Q, X, Z - "plastic" tile set baseline)
+            if (!isBlank && RARE_TILES.includes(letter)) {
+                baseLetterScore += 1;
             }
 
             // Vowel bonus
@@ -8126,6 +8141,11 @@ function calculateWordScoreBreakdown(positions) {
 
         if (!isBlank && runState.tileSetUpgrades && runState.tileSetUpgrades[letter]) {
             baseLetterScore += runState.tileSetUpgrades[letter];
+        }
+
+        // Rare tile bonus (+1 for J, K, Q, X, Z - "plastic" tile set baseline)
+        if (!isBlank && RARE_TILES.includes(letter)) {
+            baseLetterScore += 1;
         }
 
         // Vowel bonus is applied to base score
