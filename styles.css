@@ -3132,35 +3132,6 @@ main {
     box-sizing: border-box;
 }
 
-/* Shop Header: Coins + Bag Icon */
-.shop-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-}
-
-.shop-coins {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--success-color);
-}
-
-.shop-bag-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    transition: color 0.15s, background 0.15s;
-}
-
-.shop-bag-btn:hover {
-    color: var(--text-color);
-    background: rgba(255, 255, 255, 0.1);
-}
-
 /* Tiles Row: 3 items (2 tiles + upgrade) */
 .shop-tiles-row {
     display: flex;

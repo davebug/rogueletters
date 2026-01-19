@@ -1369,8 +1369,8 @@ const runManager = {
         const shopScreen = document.getElementById('shop-screen');
         if (!shopScreen) return;
 
-        // Update coin display
-        document.getElementById('shop-coins').textContent = runState.coins;
+        // Update coin display (header already shows coins, shop-coins removed)
+        this.updateCoinDisplay();
 
         // Update pool count (element may not exist in compact layout)
         const poolCount = 100 + (runState.purchasedTiles?.length || 0);
@@ -1598,8 +1598,7 @@ const runManager = {
         console.log(`[Shop] Tile upgrade: All ${letter}s now +1 (upgrade #${runState.tileSetUpgradeCount}), cost $${price}`);
 
         // Update displays
-        document.getElementById('shop-coins').textContent = runState.coins;
-        this.updateCoinDisplay();  // Update header coin display
+        this.updateCoinDisplay();
         this.renderTileSetUpgrade();
         this.renderCompactShopTiles();  // Update compact shop display
 
@@ -1759,8 +1758,7 @@ const runManager = {
         this.saveRunState();
 
         // Update displays
-        document.getElementById('shop-coins').textContent = runState.coins;
-        this.updateCoinDisplay();  // Update header coin display
+        this.updateCoinDisplay();
         this.renderShopRogueSection();
         this.renderCompactShopRogues();  // Update compact shop display
         this.renderRogueInventory();
@@ -1850,8 +1848,7 @@ const runManager = {
 
         // Hide modal and update displays
         this.hideRogueDiscardModal();
-        document.getElementById('shop-coins').textContent = runState.coins;
-        this.updateCoinDisplay();  // Update header coin display
+        this.updateCoinDisplay();
         this.renderShopRogueSection();
         this.renderCompactShopRogues();  // Update compact shop display
         this.renderRogueInventory();
@@ -1925,12 +1922,6 @@ const runManager = {
             if (item) {
                 item.addEventListener('click', () => this.showRogueBottomSheet(i));
             }
-        }
-
-        // Bag icon in shop
-        const bagBtn = document.getElementById('shop-bag-btn');
-        if (bagBtn) {
-            bagBtn.addEventListener('click', () => showBagViewer());
         }
     },
 
@@ -2589,8 +2580,7 @@ const runManager = {
 
     // Update shop UI after a purchase
     updateShopAfterPurchase(index) {
-        // Update coin displays (shop and header)
-        document.getElementById('shop-coins').textContent = runState.coins;
+        // Update coin display in header
         this.updateCoinDisplay();
 
         // Update pool count (purchased - removed = net change)
