@@ -7018,6 +7018,9 @@ async function handleBoardClick(e) {
         return;
     }
 
+    const row = parseInt(cell.dataset.row);
+    const col = parseInt(cell.dataset.col);
+
     // Check if cell is empty and we have a selected tile
     if (!cell.classList.contains('occupied') && selectedTile) {
         // If the selected tile is from the board, move it
@@ -7027,7 +7030,47 @@ async function handleBoardClick(e) {
             // Selected tile is from rack, place it on board
             await placeTile(cell, selectedTile);
         }
+    } else if (!cell.classList.contains('occupied') && !selectedTile) {
+        // No tile selected, check if tapping a special square
+        const cellType = getCellType(row, col);
+        if (cellType !== 'normal') {
+            showCellExplanation(cellType);
+        }
     }
+}
+
+function showCellExplanation(cellType) {
+    const explanations = {
+        'double-letter': {
+            abbrev: 'DL',
+            title: 'Double Letter',
+            description: 'Doubles the point value of the tile placed on this square.'
+        },
+        'triple-letter': {
+            abbrev: 'TL',
+            title: 'Triple Letter',
+            description: 'Triples the point value of the tile placed on this square.'
+        },
+        'double-word': {
+            abbrev: 'DW',
+            title: 'Double Word',
+            description: 'Doubles the total score of any word that uses this square.'
+        },
+        'triple-word': {
+            abbrev: 'TW',
+            title: 'Triple Word',
+            description: 'Triples the total score of any word that uses this square.'
+        }
+    };
+
+    const info = explanations[cellType];
+    if (!info) return;
+
+    bottomSheet.show({
+        icon: info.abbrev,
+        title: info.title,
+        description: info.description
+    });
 }
 
 async function handleRackBoardClick(e) {
