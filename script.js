@@ -4709,6 +4709,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const copyrightYear = document.getElementById('copyright-year');
     if (copyrightYear) copyrightYear.textContent = new Date().getFullYear();
 
+    // Version tooltip tap handler (for mobile)
+    const versionTooltip = document.getElementById('version-tooltip');
+    if (versionTooltip) {
+        versionTooltip.addEventListener('click', (e) => {
+            e.preventDefault();
+            versionTooltip.classList.toggle('show-tooltip');
+            // Auto-hide after 2 seconds
+            setTimeout(() => versionTooltip.classList.remove('show-tooltip'), 2000);
+        });
+    }
+
     // Proactively wait for LZ-String library to load (needed for share URLs)
     // This ensures it's ready by the time user finishes game and wants to share
     waitForLZString().then(loaded => {

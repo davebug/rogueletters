@@ -212,6 +212,39 @@ footer p {
     margin: 0 0 2px 0; /* Position text 2px above bottom of page */
 }
 
+/* Version tooltip on RogueLetters name */
+.version-tooltip {
+    position: relative;
+    cursor: pointer;
+    border-bottom: 1px dotted var(--text-muted);
+}
+
+.version-tooltip::after {
+    content: attr(data-branch) " v" attr(data-version);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-secondary);
+    color: var(--text-color);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s, visibility 0.15s;
+    border: 1px solid var(--border);
+    z-index: 1001;
+    margin-bottom: 4px;
+}
+
+.version-tooltip:hover::after,
+.version-tooltip.show-tooltip::after {
+    opacity: 1;
+    visibility: visible;
+}
+
 main {
     padding: 60px 5px 5px 5px; /* Adjusted for iOS - prevents board top being cut off */
     display: flex;
