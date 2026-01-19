@@ -3309,9 +3309,11 @@ main {
     text-align: center;
     max-width: 60px;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    line-height: 1.1;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.2;
+    min-height: 2em;
 }
 
 .shop-rogue-price {
