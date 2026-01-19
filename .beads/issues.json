@@ -1114,5 +1114,15 @@
     "description": "Test and fix visibility of all UI elements on mobile, especially the store. Need the most compact layout possible to squeeze everything on screen without scrolling.\n\nKey areas:\n- Store/shop screen layout\n- Game board + rack + controls\n- Earnings screen\n- Settings modal\n- Score displays and animations\n\nGoal: Everything visible and usable on mobile without any scrolling required.",
     "created": "2026-01-18",
     "labels": ["mobile", "ui", "polish"]
+  },
+  {
+    "id": "rl-77",
+    "title": "Hide turn score preview on submit button",
+    "type": "task",
+    "status": "open",
+    "priority": 2,
+    "description": "Don't show the score preview on the submit button (e.g., 'Submit: 24 pts'). Just show 'Submit' so the scoring animation is more exciting - players don't know what they'll get until it totals up. Keep the submit button functional, just hide the score preview.",
+    "created": "2026-01-18",
+    "labels": ["ui", "polish", "scoring-animation"]
   }
 ]
