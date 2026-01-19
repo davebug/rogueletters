@@ -2856,15 +2856,20 @@ function updateBagViewerGrid() {
 
     // Calculate how many buffed/coin tiles of each letter remain in the bag
     // Purchased tiles are either buffed or coin, minus the ones already drawn
+    // Also track the bonus values for buffed tiles
     const buffedRemaining = {};
     const coinRemaining = {};
+    const buffedBonusValues = {}; // Track bonus value per letter (e.g., {E: 1, A: 2})
     for (const tile of (runState.purchasedTiles || [])) {
         const letter = typeof tile === 'object' ? tile.letter : tile;
         const isCoinTile = typeof tile === 'object' && tile.coinTile;
+        const bonus = typeof tile === 'object' ? (tile.bonus || 1) : 1;
         if (isCoinTile) {
             coinRemaining[letter] = (coinRemaining[letter] || 0) + 1;
         } else {
             buffedRemaining[letter] = (buffedRemaining[letter] || 0) + 1;
+            // Track bonus value (use highest if multiple)
+            buffedBonusValues[letter] = Math.max(buffedBonusValues[letter] || 0, bonus);
         }
     }
     // Subtract buffed tiles already drawn
@@ -2928,8 +2933,10 @@ function updateBagViewerGrid() {
 
             const scoreSpan = document.createElement('span');
             scoreSpan.className = 'bag-mini-tile-score';
-            // Show buffed score (+1) for buffed tiles, regular for coin tiles
-            scoreSpan.textContent = isBuffed ? (score + 1) : score;
+            // Use getTileDisplayScore to include tile set upgrades, vowel rogue, etc.
+            // For buffed tiles, pass the actual bonus value
+            const tileBonus = isBuffed ? (buffedBonusValues[letter] || 1) : 0;
+            scoreSpan.textContent = getTileDisplayScore(letter, tileBonus);
 
             tile.appendChild(letterSpan);
             tile.appendChild(scoreSpan);

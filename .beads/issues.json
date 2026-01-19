@@ -1129,10 +1129,12 @@
     "id": "rl-78",
     "title": "Bag viewer: show upgraded tile values",
     "type": "bug",
-    "status": "open",
+    "status": "closed",
     "priority": 1,
     "description": "When viewing the tile bag, upgraded tiles should display their upgraded point value, not just the base letter value. If a tile has +1 or +2 from shop upgrades, show that in the bag viewer so players can see what's coming.",
     "created": "2026-01-18",
+    "closedAt": "2026-01-18",
+    "closedReason": "Fixed - bag viewer now uses getTileDisplayScore() which includes tile set upgrades, buffed tile bonuses, and vowel rogue bonus",
     "labels": ["ui", "bug", "bag-viewer"]
   }
 ]
