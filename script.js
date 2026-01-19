@@ -10246,7 +10246,36 @@ function updateTurnCounter() {
 
 function updateFooterSquares() {
     // Update the footer squares to show turn progress and scores
-    const squares = document.querySelectorAll('.feedback-square');
+    const feedbackRow = document.getElementById('feedbackRow');
+    if (!feedbackRow) return;
+
+    // Ensure correct number of squares for maxTurns
+    let squares = feedbackRow.querySelectorAll('.feedback-square');
+    const targetCount = gameState.maxTurns || 5;
+
+    if (squares.length !== targetCount) {
+        // Find insertion point (after shareIcon, before total-score-display)
+        const shareIcon = feedbackRow.querySelector('#shareIcon');
+        const totalScoreDisplay = feedbackRow.querySelector('.total-score-display');
+
+        // Remove all existing squares
+        squares.forEach(sq => sq.remove());
+
+        // Create new squares
+        for (let i = 1; i <= targetCount; i++) {
+            const square = document.createElement('span');
+            square.className = `feedback-square turn-${i}`;
+            if (totalScoreDisplay) {
+                feedbackRow.insertBefore(square, totalScoreDisplay);
+            } else {
+                feedbackRow.appendChild(square);
+            }
+        }
+
+        // Update squares reference
+        squares = feedbackRow.querySelectorAll('.feedback-square');
+    }
+
     const totalScoreElement = document.querySelector('.total-score-display .score-value');
 
     // Reset all squares
