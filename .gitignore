@@ -68,3 +68,4 @@ data/rate_limits.json
 
 # Git worktrees
 .worktrees/
+daemon.lock
