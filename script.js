@@ -3266,15 +3266,14 @@ function showBagViewerForReplacement() {
 
 function showBagViewerBottomSheet(title) {
     // Build bag viewer HTML for bottom sheet
+    // Only show title in replacement mode, otherwise just show toggle tabs with counts
+    const showTitle = bagReplacementMode;
     const html = `
         <div class="bag-viewer-sheet">
-            <h3 class="bottom-sheet-title">${title}</h3>
-            <div class="bag-summary">
-                <span id="bag-remaining-sheet">0</span> / <span id="bag-total-sheet">100</span> tiles remaining
-            </div>
+            ${showTitle ? `<h3 class="bottom-sheet-title">${title}</h3>` : ''}
             <div class="bag-toggle" style="${bagReplacementMode ? 'display:none' : ''}">
-                <button id="bag-toggle-remaining-sheet" class="bag-toggle-btn ${bagViewMode === 'remaining' ? 'active' : ''}">Remaining</button>
-                <button id="bag-toggle-total-sheet" class="bag-toggle-btn ${bagViewMode === 'total' ? 'active' : ''}">Total</button>
+                <button id="bag-toggle-remaining-sheet" class="bag-toggle-btn ${bagViewMode === 'remaining' ? 'active' : ''}"><span id="bag-remaining-count">0</span> Remaining</button>
+                <button id="bag-toggle-total-sheet" class="bag-toggle-btn ${bagViewMode === 'total' ? 'active' : ''}"><span id="bag-total-count">0</span> Total</button>
             </div>
             <div id="bag-tiles-grid-sheet" class="bag-tiles-grid ${bagReplacementMode ? 'replacement-mode' : ''}"></div>
         </div>
@@ -3312,8 +3311,8 @@ function showBagViewerBottomSheet(title) {
 function updateBagViewerGridSheet() {
     // Get elements from bottom sheet
     const grid = document.getElementById('bag-tiles-grid-sheet');
-    const remainingEl = document.getElementById('bag-remaining-sheet');
-    const totalEl = document.getElementById('bag-total-sheet');
+    const remainingCountEl = document.getElementById('bag-remaining-count');
+    const totalCountEl = document.getElementById('bag-total-count');
     if (!grid) return;
 
     // Calculate views
@@ -3340,9 +3339,9 @@ function updateBagViewerGridSheet() {
         totalRemaining += remaining[letter] || 0;
     }
 
-    // Update summary
-    if (remainingEl) remainingEl.textContent = totalRemaining;
-    if (totalEl) totalEl.textContent = totalBag;
+    // Update counts in toggle buttons
+    if (remainingCountEl) remainingCountEl.textContent = totalRemaining;
+    if (totalCountEl) totalCountEl.textContent = totalBag;
 
     // Choose which counts to display
     const displayCounts = bagViewMode === 'remaining' ? remaining : totalTiles;
