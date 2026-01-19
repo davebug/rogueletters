@@ -9133,7 +9133,8 @@ function updatePotentialWordsSidebar() {
                                 disabledClass = ' disabled';
                                 disabledReason = placementValidation.message;
                                 onclickHandler = 'animateInvalidPlacementTiles()';
-                            } else if (hasInvalidWords) {
+                            } else if (hasInvalidWords && !gameState.debugMode) {
+                                // In debug mode, allow submitting invalid words
                                 disabledClass = ' disabled';
                                 disabledReason = 'Invalid words present';
                                 onclickHandler = '';
