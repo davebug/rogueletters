@@ -8708,6 +8708,20 @@ function submitWord() {
             // Backend already includes +50 bingo bonus if 7 tiles used
             let turnScore = data.score;
 
+            // Calculate score breakdown for animation AND to get rogue multipliers
+            // This must happen before we finalize the score, as turn-level rogues
+            // (like The Closer) multiply the entire turn score
+            const formedWords = findFormedWords();
+            let turnBreakdown = null;
+            if (runState.isRunMode && formedWords.length > 0) {
+                // Calculate breakdown for ALL formed words (for Balatro-style animation)
+                turnBreakdown = calculateTurnScoreBreakdown(formedWords);
+
+                // Use the breakdown total as the actual score - it includes turn-level
+                // multipliers like The Closer that the backend doesn't know about
+                turnScore = turnBreakdown.total;
+            }
+
             // Track word submitted - calculate metrics for analytics
             const wordLength = data.total_word_length || placedWord.length;
             const hasMultiplier = checkIfHasMultiplier(placedWord);
@@ -8728,14 +8742,8 @@ function submitWord() {
             updateTargetProgress();
             runManager.updateRunUI();  // Update "X to go" display
 
-            // Calculate score breakdown for animation (before placedTiles is cleared)
-            const formedWords = findFormedWords();
-            let turnBreakdown = null;
-            if (runState.isRunMode && formedWords.length > 0) {
-                // Calculate breakdown for ALL formed words (for Balatro-style animation)
-                turnBreakdown = calculateTurnScoreBreakdown(formedWords);
-
-                // Track word stats for end-of-run summary (use first word's breakdown for compatibility)
+            // Track word stats for end-of-run summary
+            if (turnBreakdown) {
                 const mainWordBreakdown = turnBreakdown.words.length > 0 ? {
                     baseScore: turnBreakdown.words[0].wordTotal,
                     components: turnBreakdown.words[0].wordComponents,
