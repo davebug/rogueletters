@@ -216,11 +216,13 @@
                     </div>
                 </div>
 
-                <!-- Abandon Run -->
-                <div class="settings-section settings-danger-section">
-                    <label class="settings-label">Danger Zone</label>
-                    <button id="abandon-run-btn" class="btn btn-danger" onclick="confirmAbandonRun()">Abandon Run</button>
-                    <p class="settings-hint">Start over from Set 1, Round 1</p>
+                <!-- Run Actions -->
+                <div class="settings-section">
+                    <label class="settings-label">Run</label>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="resume-run-btn" class="btn btn-secondary" onclick="closeSettingsModal()" style="flex: 1;">Resume Run</button>
+                        <button id="new-run-btn" class="btn btn-danger" onclick="confirmAbandonRun()" style="flex: 1;">New Run</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -339,7 +341,7 @@
 				</div>
 			</div>
 			<p class="fail-message">You needed <span id="fail-amount">0</span> more points to advance.</p>
-			<button id="try-again-btn" class="popup-btn popup-btn-primary">Try Again</button>
+			<button id="try-again-btn" class="popup-btn popup-btn-primary">New Run</button>
 		</div>
 	</div>
 
@@ -560,6 +562,6 @@
     <!-- LZ-String compression library for shareable URLs -->
     <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 
-    <script src="./script.js?v=44.13"></script>
+    <script src="./script.js?v=44.16"></script>
 </body>
 </html>

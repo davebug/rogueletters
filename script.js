@@ -234,9 +234,9 @@ const ROGUES = {
     highValue: {
         id: 'highValue',
         name: 'High Value',
-        description: '+1 per upgraded tile in word',
-        detail: 'Counts buffed tiles (green border) and Tile Set Upgrade tiles.',
-        example: 'Play BEST with 2 buffed tiles → +2 bonus.',
+        description: '+1 per shop-bought tile in word',
+        detail: 'Counts tiles purchased from the shop: +1 tiles (green), ×1.5 tiles (pink), and $1 tiles (yellow).',
+        example: 'Play BEST with 2 shop tiles → +2 bonus.',
         rarity: 'common',
         icon: '💰',
     },
@@ -821,6 +821,7 @@ const runManager = {
         runState.coins = 0;
         runState.lastEarnings = null;
         runState.purchasedTiles = [];  // Reset shop purchases
+        runState.rogues = [];  // Clear rogues for fresh run
         runState.runStartTime = Date.now();
         runState.runSeed = Date.now(); // Use timestamp as run seed
 
@@ -2304,16 +2305,16 @@ const runManager = {
         const vowelsWithY = ['A', 'E', 'I', 'O', 'U', 'Y'];
         const vowelCount = wordLetters.filter(l => vowelsWithY.includes(l)).length;
 
-        // Count buffed tiles
+        // Count shop-bought tiles (green/pink/yellow only, not tile set upgrades)
         let buffedTileCount = 0;
         positions.forEach(({ row, col }) => {
             const placedTile = gameState.placedTiles.find(t => t.row === row && t.col === col);
-            if (placedTile?.bonus > 0) {
+            if (placedTile?.buffed || placedTile?.coinTile || placedTile?.pinkTile) {
                 buffedTileCount++;
             } else {
                 const cell = document.querySelector(`.board-cell[data-row="${row}"][data-col="${col}"]`);
                 const tileEl = cell?.querySelector('.tile');
-                if (tileEl?.dataset.bonus && parseInt(tileEl.dataset.bonus) > 0) {
+                if (tileEl?.dataset.buffed === 'true' || tileEl?.dataset.coinTile === 'true' || tileEl?.dataset.pinkTile === 'true') {
                     buffedTileCount++;
                 }
             }
@@ -2812,6 +2813,7 @@ const runManager = {
             stateToSave.lettersPlayedThisCycle = Array.from(runState.lettersPlayedThisCycle);
         }
         localStorage.setItem('rogueletters_run', JSON.stringify(stateToSave));
+        console.log('[RunState] Saved:', { set: runState.set, round: runState.round, coins: runState.coins, rogues: runState.rogues?.length || 0 });
     },
 
     // Load run state from localStorage
@@ -2819,6 +2821,13 @@ const runManager = {
         const saved = localStorage.getItem('rogueletters_run');
         if (saved) {
             const loaded = JSON.parse(saved);
+            console.log('[RunState] Loading saved state:', {
+                isRunMode: loaded.isRunMode,
+                set: loaded.set,
+                round: loaded.round,
+                coins: loaded.coins,
+                rogues: loaded.rogues,
+            });
             // Convert Array back to Set
             if (Array.isArray(loaded.lettersPlayedThisCycle)) {
                 loaded.lettersPlayedThisCycle = new Set(loaded.lettersPlayedThisCycle);
@@ -2826,6 +2835,8 @@ const runManager = {
             Object.assign(runState, loaded);
             // Recalculate target (in case debug mode changes it)
             runState.targetScore = getTargetScore(runState.set, runState.round);
+        } else {
+            console.log('[RunState] No saved state found');
         }
     },
 
@@ -2842,6 +2853,7 @@ const runManager = {
         runState.lastEarnings = null;
         runState.purchasedTiles = [];
         runState.removedTiles = [];
+        runState.rogues = [];  // Clear owned rogues
         runState.runStartTime = null;
         runState.runSeed = null;
         runState.pendingScreen = null;
@@ -7709,10 +7721,13 @@ function calculateWordScore(positions) {
         // Check placedTiles first (this turn), then DOM element (previous turns)
         let tileBonus = 0;
         let isPinkTile = false;
-        let isBuffedTile = false;
+        let isShopBoughtTile = false;  // Only tiles bought from shop (green/pink/yellow), not tile set upgrades
         if (placedTile?.bonus) {
             tileBonus = placedTile.bonus;
-            isBuffedTile = true;
+        }
+        // Check for shop-bought markers (buffed=green, coinTile=yellow, pinkTile=pink)
+        if (placedTile?.buffed || placedTile?.coinTile || placedTile?.pinkTile) {
+            isShopBoughtTile = true;
         }
         if (placedTile?.pinkTile) {
             isPinkTile = true;
@@ -7724,15 +7739,18 @@ function calculateWordScore(positions) {
             const tileEl = cell?.querySelector('.tile');
             if (tileEl?.dataset.bonus) {
                 tileBonus = parseInt(tileEl.dataset.bonus) || 0;
-                if (tileBonus > 0) isBuffedTile = true;
+            }
+            // Check for shop-bought markers in DOM
+            if (tileEl?.dataset.buffed === 'true' || tileEl?.dataset.coinTile === 'true' || tileEl?.dataset.pinkTile === 'true') {
+                isShopBoughtTile = true;
             }
             if (tileEl?.dataset.pinkTile === 'true') {
                 isPinkTile = true;
             }
         }
 
-        // Track buffed tiles for High Value rogue
-        if (isBuffedTile) {
+        // Track shop-bought tiles for High Value rogue (only green/pink/yellow, not tile set upgrades)
+        if (isShopBoughtTile) {
             buffedTileCount++;
         }
 
@@ -7926,11 +7944,14 @@ function calculateTurnScoreBreakdown(formedWords) {
 
             let tileBonus = 0;
             let isPinkTile = false;
-            let isBuffedTile = false;
+            let isShopBoughtTile = false;  // Only shop-bought tiles (green/pink/yellow)
 
             if (placedTile?.bonus) {
                 tileBonus = placedTile.bonus;
-                isBuffedTile = true;
+            }
+            // Check for shop-bought markers (buffed=green, coinTile=yellow, pinkTile=pink)
+            if (placedTile?.buffed || placedTile?.coinTile || placedTile?.pinkTile) {
+                isShopBoughtTile = true;
             }
             if (placedTile?.pinkTile) {
                 isPinkTile = true;
@@ -7941,14 +7962,17 @@ function calculateTurnScoreBreakdown(formedWords) {
                 const tileEl = cell?.querySelector('.tile');
                 if (tileEl?.dataset.bonus) {
                     tileBonus = parseInt(tileEl.dataset.bonus) || 0;
-                    if (tileBonus > 0) isBuffedTile = true;
+                }
+                // Check for shop-bought markers in DOM
+                if (tileEl?.dataset.buffed === 'true' || tileEl?.dataset.coinTile === 'true' || tileEl?.dataset.pinkTile === 'true') {
+                    isShopBoughtTile = true;
                 }
                 if (tileEl?.dataset.pinkTile === 'true') {
                     isPinkTile = true;
                 }
             }
 
-            if (isBuffedTile) buffedTileCount++;
+            if (isShopBoughtTile) buffedTileCount++;
             if (isPinkTile) pinkMultiplier *= 1.5;
 
             // Calculate base score for this tile
@@ -8221,10 +8245,13 @@ function calculateWordScoreBreakdown(positions) {
 
         let tileBonus = 0;
         let isPinkTile = false;
-        let isBuffedTile = false;
+        let isShopBoughtTile = false;  // Only shop-bought tiles (green/pink/yellow)
         if (placedTile?.bonus) {
             tileBonus = placedTile.bonus;
-            isBuffedTile = true;
+        }
+        // Check for shop-bought markers (buffed=green, coinTile=yellow, pinkTile=pink)
+        if (placedTile?.buffed || placedTile?.coinTile || placedTile?.pinkTile) {
+            isShopBoughtTile = true;
         }
         if (placedTile?.pinkTile) {
             isPinkTile = true;
@@ -8235,14 +8262,17 @@ function calculateWordScoreBreakdown(positions) {
             const tileEl = cell?.querySelector('.tile');
             if (tileEl?.dataset.bonus) {
                 tileBonus = parseInt(tileEl.dataset.bonus) || 0;
-                if (tileBonus > 0) isBuffedTile = true;
+            }
+            // Check for shop-bought markers in DOM
+            if (tileEl?.dataset.buffed === 'true' || tileEl?.dataset.coinTile === 'true' || tileEl?.dataset.pinkTile === 'true') {
+                isShopBoughtTile = true;
             }
             if (tileEl?.dataset.pinkTile === 'true') {
                 isPinkTile = true;
             }
         }
 
-        if (isBuffedTile) buffedTileCount++;
+        if (isShopBoughtTile) buffedTileCount++;
         if (isPinkTile) pinkMultiplier *= 1.5;
 
         // Calculate base score for this tile (before letter multiplier)
@@ -9650,6 +9680,10 @@ function submitWord() {
                     console.log('[All-Round Letter] Cycle complete! Resetting letter tracking.');
                     runState.lettersPlayedThisCycle = new Set();
                 }
+            }
+
+            // Always save run state after turn (coins, letters played, etc.)
+            if (runState.isRunMode) {
                 runManager.saveRunState();
             }
 
