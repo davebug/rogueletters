@@ -5188,23 +5188,51 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 }
 
-                // Submit the word
+                // Submit the word and wait for completion
                 return new Promise((resolve) => {
-                    const originalSubmitting = gameState.isSubmitting;
+                    const originalTurn = gameState.currentTurn;
+                    const originalScoreCount = gameState.turnScores.length;
+                    let submissionStarted = false;
 
-                    // Override submit to capture result
                     const checkSubmit = setInterval(() => {
-                        if (!gameState.isSubmitting && gameState.isSubmitting !== originalSubmitting) {
-                            clearInterval(checkSubmit);
-                            resolve({ success: true, score: gameState.turnScores[gameState.turnScores.length - 1] });
+                        // Track when submission starts
+                        if (gameState.isSubmitting) {
+                            submissionStarted = true;
                         }
-                    }, 100);
 
-                    // Timeout after 5 seconds
+                        // Check for success: turn advanced or new score recorded
+                        if (gameState.currentTurn > originalTurn ||
+                            gameState.turnScores.length > originalScoreCount) {
+                            clearInterval(checkSubmit);
+                            resolve({
+                                success: true,
+                                score: gameState.turnScores[gameState.turnScores.length - 1]
+                            });
+                            return;
+                        }
+
+                        // Check for failure: submission started and finished without turn advance
+                        if (submissionStarted && !gameState.isSubmitting) {
+                            clearInterval(checkSubmit);
+                            resolve({ success: false, error: 'Validation failed' });
+                            return;
+                        }
+                    }, 50);
+
+                    // Timeout after 10 seconds (animations can be slow)
                     setTimeout(() => {
                         clearInterval(checkSubmit);
-                        resolve({ success: false, error: 'Timeout' });
-                    }, 5000);
+                        // Check if it actually succeeded despite timeout
+                        if (gameState.currentTurn > originalTurn ||
+                            gameState.turnScores.length > originalScoreCount) {
+                            resolve({
+                                success: true,
+                                score: gameState.turnScores[gameState.turnScores.length - 1]
+                            });
+                        } else {
+                            resolve({ success: false, error: 'Timeout' });
+                        }
+                    }, 10000);
 
                     submitWord();
                 });
