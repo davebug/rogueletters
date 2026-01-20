@@ -4873,6 +4873,546 @@ document.addEventListener('DOMContentLoaded', async () => {
             runManager.updateRunUI();
             console.log('Debug mode: AUTO-ENABLED (target=1, skip validation)');
         }
+
+        // ============================================================================
+        // TEST API - Programmatic testing interface
+        // ============================================================================
+        // Exposed only when ?debug=1 or ?debug=2 is in URL
+        // Enables automated gameplay testing without browser automation fragility
+
+        // Wordlist for client-side move finding (loaded lazily)
+        let testWordlist = null;
+        let testWordlistLoading = false;
+
+        // Load the test wordlist for move finding
+        async function loadTestWordlist() {
+            if (testWordlist) return testWordlist;
+            if (testWordlistLoading) {
+                // Wait for existing load to complete
+                while (testWordlistLoading) {
+                    await new Promise(r => setTimeout(r, 50));
+                }
+                return testWordlist;
+            }
+
+            testWordlistLoading = true;
+            try {
+                const response = await fetch(`${BASE_PATH}/data/test-wordlist.json`);
+                if (response.ok) {
+                    testWordlist = new Set(await response.json());
+                    console.log(`[TestAPI] Loaded ${testWordlist.size} words for move finding`);
+                } else {
+                    console.warn('[TestAPI] Failed to load test wordlist, move finding disabled');
+                    testWordlist = new Set();
+                }
+            } catch (e) {
+                console.error('[TestAPI] Error loading test wordlist:', e);
+                testWordlist = new Set();
+            }
+            testWordlistLoading = false;
+            return testWordlist;
+        }
+
+        // Helper: Find a rack tile by letter
+        function findRackTileByLetter(letter, usedIndices = new Set()) {
+            const rackCells = document.querySelectorAll('.rack-cell');
+            for (let i = 0; i < rackCells.length; i++) {
+                if (usedIndices.has(i)) continue;
+                const cell = rackCells[i];
+                const tile = cell.querySelector('.tile');
+                if (tile) {
+                    const tileLetter = tile.dataset.letter || tile.querySelector('.tile-letter')?.textContent;
+                    if (tileLetter === letter) {
+                        return { tile, index: i };
+                    }
+                }
+            }
+            return null;
+        }
+
+        // Helper: Get all valid placement cells (empty cells adjacent to existing tiles)
+        function getValidPlacements() {
+            const placements = [];
+            for (let row = 0; row < BOARD_SIZE; row++) {
+                for (let col = 0; col < BOARD_SIZE; col++) {
+                    // Skip occupied cells
+                    if (gameState.board[row][col]) continue;
+
+                    // Check if adjacent to an existing tile
+                    const hasAdjacent =
+                        (row > 0 && gameState.board[row - 1][col]) ||
+                        (row < BOARD_SIZE - 1 && gameState.board[row + 1][col]) ||
+                        (col > 0 && gameState.board[row][col - 1]) ||
+                        (col < BOARD_SIZE - 1 && gameState.board[row][col + 1]);
+
+                    // First turn: only center is valid if board is empty
+                    const boardHasLetters = gameState.board.some(row => row.some(cell => cell));
+                    if (!boardHasLetters) {
+                        if (row === CENTER_POSITION && col === CENTER_POSITION) {
+                            placements.push({ row, col });
+                        }
+                    } else if (hasAdjacent) {
+                        placements.push({ row, col });
+                    }
+                }
+            }
+            return placements;
+        }
+
+        // Helper: Get letters at a position (from board or placed tiles)
+        function getLetterAt(row, col) {
+            // Check board first
+            if (gameState.board[row][col]) {
+                return gameState.board[row][col];
+            }
+            // Check placed tiles
+            const placed = gameState.placedTiles.find(p => p.row === row && p.col === col);
+            return placed ? placed.letter : null;
+        }
+
+        // Helper: Check if a word is in the test wordlist
+        function isValidTestWord(word) {
+            if (!testWordlist) return false;
+            return testWordlist.has(word.toUpperCase());
+        }
+
+        // Find anchor squares (empty cells adjacent to existing tiles)
+        function findAnchorSquares() {
+            const anchors = [];
+            const boardHasLetters = gameState.board.some(row => row.some(cell => cell));
+
+            for (let row = 0; row < BOARD_SIZE; row++) {
+                for (let col = 0; col < BOARD_SIZE; col++) {
+                    if (gameState.board[row][col]) continue; // Skip occupied
+
+                    // First turn: center is the only anchor
+                    if (!boardHasLetters) {
+                        if (row === CENTER_POSITION && col === CENTER_POSITION) {
+                            anchors.push({ row, col });
+                        }
+                        continue;
+                    }
+
+                    // Check adjacency to existing tiles
+                    const hasAdjacent =
+                        (row > 0 && gameState.board[row - 1][col]) ||
+                        (row < BOARD_SIZE - 1 && gameState.board[row + 1][col]) ||
+                        (col > 0 && gameState.board[row][col - 1]) ||
+                        (col < BOARD_SIZE - 1 && gameState.board[row][col + 1]);
+
+                    if (hasAdjacent) {
+                        anchors.push({ row, col });
+                    }
+                }
+            }
+            return anchors;
+        }
+
+        // Calculate score for a word at given positions
+        function calculateMoveScore(placements, word) {
+            // Simple scoring - just letter values for now
+            // Full scoring with multipliers would require more complex logic
+            let score = 0;
+            for (let i = 0; i < word.length; i++) {
+                const letter = word[i];
+                const baseScore = TILE_SCORES[letter] || 0;
+                // Check for multipliers at this position
+                const placement = placements[i];
+                if (placement) {
+                    const cellType = getCellType(placement.row, placement.col);
+                    // Only count multipliers for newly placed tiles
+                    const isNewTile = placement.isNew;
+                    if (isNewTile) {
+                        if (cellType === 'double-letter') score += baseScore * 2;
+                        else if (cellType === 'triple-letter') score += baseScore * 3;
+                        else score += baseScore;
+                    } else {
+                        score += baseScore;
+                    }
+                } else {
+                    score += baseScore;
+                }
+            }
+            return score;
+        }
+
+        // Find words that can be formed starting from an anchor
+        function findWordsFromAnchor(anchor, direction, rackLetters) {
+            const moves = [];
+            const { row, col } = anchor;
+            const isHorizontal = direction === 'horizontal';
+
+            // Get available rack letters as a frequency map
+            const available = {};
+            for (const letter of rackLetters) {
+                available[letter] = (available[letter] || 0) + 1;
+            }
+
+            // Find existing letters in this line
+            const lineStart = isHorizontal ? 0 : 0;
+            const lineEnd = BOARD_SIZE;
+
+            // Look for existing tiles to extend
+            let existingBefore = '';
+            let existingAfter = '';
+
+            // Check for tiles before anchor
+            let pos = isHorizontal ? col - 1 : row - 1;
+            while (pos >= 0) {
+                const letter = isHorizontal
+                    ? gameState.board[row][pos]
+                    : gameState.board[pos][col];
+                if (!letter) break;
+                existingBefore = letter + existingBefore;
+                pos--;
+            }
+
+            // Check for tiles after anchor
+            pos = isHorizontal ? col + 1 : row + 1;
+            while (pos < BOARD_SIZE) {
+                const letter = isHorizontal
+                    ? gameState.board[row][pos]
+                    : gameState.board[pos][col];
+                if (!letter) break;
+                existingAfter += letter;
+                pos++;
+            }
+
+            // Try placing letters at the anchor
+            for (const letter of Object.keys(available)) {
+                if (available[letter] <= 0) continue;
+
+                // Form candidate words
+                const candidateWord = existingBefore + letter + existingAfter;
+
+                if (candidateWord.length >= 2 && isValidTestWord(candidateWord)) {
+                    // Calculate positions
+                    const placements = [];
+                    const startPos = isHorizontal ? col - existingBefore.length : row - existingBefore.length;
+
+                    for (let i = 0; i < candidateWord.length; i++) {
+                        const r = isHorizontal ? row : startPos + i;
+                        const c = isHorizontal ? startPos + i : col;
+                        const existingLetter = gameState.board[r]?.[c];
+
+                        placements.push({
+                            row: r,
+                            col: c,
+                            letter: candidateWord[i],
+                            isNew: !existingLetter
+                        });
+                    }
+
+                    // Only include if we're placing new tiles
+                    const newPlacements = placements.filter(p => p.isNew);
+                    if (newPlacements.length > 0 && newPlacements.length <= Object.values(available).reduce((a, b) => a + b, 0)) {
+                        moves.push({
+                            word: candidateWord,
+                            score: calculateMoveScore(placements, candidateWord),
+                            placements: newPlacements.map(p => ({ row: p.row, col: p.col, letter: p.letter })),
+                            direction
+                        });
+                    }
+                }
+
+                // Try extending with more letters
+                // (Simplified - full implementation would recurse)
+            }
+
+            return moves;
+        }
+
+        // Test API object
+        window.testAPI = {
+            // === State Queries ===
+            getState() {
+                return {
+                    board: gameState.board,
+                    rack: gameState.rackTiles.map(t => typeof t === 'object' ? t.letter : t),
+                    rackFull: gameState.rackTiles,
+                    score: gameState.score,
+                    turn: gameState.currentTurn,
+                    maxTurns: gameState.maxTurns,
+                    set: runState.set,
+                    round: runState.round,
+                    target: runState.targetScore,
+                    coins: runState.coins,
+                    rogues: runState.rogues,
+                    placedTiles: gameState.placedTiles,
+                    isGameOver: gameState.isGameOver,
+                    isRunMode: runState.isRunMode,
+                };
+            },
+
+            getRogues() {
+                return (runState.rogues || []).map(id => ({
+                    id,
+                    ...ROGUES[id]
+                }));
+            },
+
+            getShopOptions() {
+                return {
+                    rogues: runState.shopRogues,
+                    tiles: runManager.shopTiles,
+                    tileTypes: runManager.shopTileTypes,
+                    roguesPurchased: runState.shopRoguesPurchased,
+                    tilesPurchased: runManager.shopPurchased,
+                };
+            },
+
+            getValidPlacements,
+
+            // === Game Actions ===
+            async playWord(placements) {
+                // Clear any existing placements first
+                if (gameState.placedTiles.length > 0) {
+                    await recallTiles();
+                }
+
+                // Track which rack indices we've used
+                const usedIndices = new Set();
+
+                // Place new tiles
+                for (const p of placements) {
+                    const cell = document.querySelector(
+                        `.board-cell[data-row="${p.row}"][data-col="${p.col}"]`
+                    );
+                    const result = findRackTileByLetter(p.letter, usedIndices);
+                    if (cell && result) {
+                        usedIndices.add(result.index);
+                        await placeTile(cell, result.tile);
+                    } else {
+                        console.warn(`[TestAPI] Could not place ${p.letter} at (${p.row}, ${p.col})`);
+                        return { success: false, error: `Missing tile ${p.letter}` };
+                    }
+                }
+
+                // Submit the word
+                return new Promise((resolve) => {
+                    const originalSubmitting = gameState.isSubmitting;
+
+                    // Override submit to capture result
+                    const checkSubmit = setInterval(() => {
+                        if (!gameState.isSubmitting && gameState.isSubmitting !== originalSubmitting) {
+                            clearInterval(checkSubmit);
+                            resolve({ success: true, score: gameState.turnScores[gameState.turnScores.length - 1] });
+                        }
+                    }, 100);
+
+                    // Timeout after 5 seconds
+                    setTimeout(() => {
+                        clearInterval(checkSubmit);
+                        resolve({ success: false, error: 'Timeout' });
+                    }, 5000);
+
+                    submitWord();
+                });
+            },
+
+            async exchange(indices) {
+                // Open exchange modal, select tiles, submit
+                // This is complex due to the modal UI
+                // Simplified: directly modify state
+                console.warn('[TestAPI] exchange() not fully implemented yet');
+                return { success: false, error: 'Not implemented' };
+            },
+
+            pass() {
+                // Submit with no tiles placed
+                if (gameState.placedTiles.length === 0) {
+                    submitWord();
+                    return { success: true };
+                }
+                return { success: false, error: 'Tiles are placed on board' };
+            },
+
+            // === Shop Actions ===
+            buyRogue(index) {
+                if (index < 0 || index > 2) return { success: false, error: 'Invalid index' };
+                const rogueId = runState.shopRogues?.[index];
+                if (!rogueId) return { success: false, error: 'No rogue at index' };
+                const price = getRoguePrice(rogueId);
+                if (runState.coins < price) return { success: false, error: 'Not enough coins' };
+
+                // Simulate the purchase
+                runState.coins -= price;
+                runState.rogues.push(rogueId);
+                runState.shopRogues[index] = null;
+                runState.shopRoguesPurchased[index] = true;
+                runManager.updateCoinDisplay();
+                runManager.saveRunState();
+
+                return { success: true, rogueId };
+            },
+
+            discardRogue(id) {
+                const index = runState.rogues.indexOf(id);
+                if (index === -1) return { success: false, error: 'Rogue not owned' };
+                runState.rogues.splice(index, 1);
+                runManager.saveRunState();
+                return { success: true };
+            },
+
+            buyTile(index, action = 'add') {
+                if (index < 0 || index > 1) return { success: false, error: 'Invalid index' };
+                const letter = runManager.shopTiles?.[index];
+                if (!letter) return { success: false, error: 'No tile at index' };
+
+                const tileType = runManager.shopTileTypes?.[index] || 'buffed';
+                const isPink = tileType === 'pink';
+                const isCoin = tileType === 'coin';
+                const addCost = isPink ? 3 : (isCoin ? 2 : 1);
+                const replaceCost = isPink ? 4 : (isCoin ? 3 : 2);
+                const cost = action === 'add' ? addCost : replaceCost;
+
+                if (runState.coins < cost) return { success: false, error: 'Not enough coins' };
+
+                // Record purchase
+                runState.coins -= cost;
+                runState.purchasedTiles.push({
+                    letter,
+                    buffed: tileType === 'buffed',
+                    bonus: tileType === 'buffed' ? 1 : 0,
+                    coinTile: tileType === 'coin',
+                    pinkTile: tileType === 'pink'
+                });
+                runManager.shopPurchased[index] = true;
+                runManager.updateCoinDisplay();
+                runManager.saveRunState();
+
+                return { success: true, letter, type: tileType };
+            },
+
+            skipShop() {
+                runManager.hideAllRunPopups();
+                runState.pendingScreen = null;
+                runManager.saveRunState();
+                document.getElementById('game-container')?.classList.remove('hidden');
+
+                // Advance to next round if needed
+                if (runState.round <= runState.maxRounds) {
+                    runManager.nextRound();
+                } else {
+                    runManager.nextSet();
+                }
+                return { success: true };
+            },
+
+            // === Debug Helpers ===
+            setRack(letters) {
+                const letterArray = letters.split('');
+                gameState.rackTiles = letterArray.map(letter => ({
+                    letter,
+                    buffed: false,
+                    bonus: 0,
+                    coinTile: false,
+                    pinkTile: false
+                }));
+                gameState.tiles = letterArray;
+                // Re-render rack
+                const rackBoard = document.getElementById('tile-rack-board');
+                if (rackBoard) {
+                    rackBoard.innerHTML = '';
+                    for (let i = 0; i < getRackSize(); i++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'rack-cell';
+                        cell.dataset.index = i;
+                        rackBoard.appendChild(cell);
+
+                        if (i < letterArray.length) {
+                            const tile = createTileElement(letterArray[i], i, false, false, 0, false);
+                            cell.appendChild(tile);
+                        }
+                    }
+                }
+                saveGameState();
+                return { success: true, rack: letterArray };
+            },
+
+            addCoins(n) {
+                runState.coins += n;
+                runManager.updateCoinDisplay();
+                runManager.saveRunState();
+                return { success: true, coins: runState.coins };
+            },
+
+            setScore(n) {
+                gameState.score = n;
+                updateTargetProgress();
+                runManager.updateRunUI();
+                return { success: true, score: n };
+            },
+
+            advanceTo(phase) {
+                if (phase === 'shop') {
+                    runManager.showShopScreen();
+                } else if (phase === 'earnings') {
+                    runManager.showEarningsScreen(gameState.score);
+                } else if (phase === 'nextRound') {
+                    runManager.nextRound();
+                } else if (phase === 'nextSet') {
+                    runManager.nextSet();
+                } else {
+                    return { success: false, error: 'Unknown phase' };
+                }
+                return { success: true, phase };
+            },
+
+            // === Word Finder ===
+            async loadWordlist() {
+                await loadTestWordlist();
+                return { success: true, wordCount: testWordlist?.size || 0 };
+            },
+
+            async findValidMoves() {
+                await loadTestWordlist();
+                if (!testWordlist || testWordlist.size === 0) {
+                    return { moves: [], error: 'Wordlist not loaded' };
+                }
+
+                const rack = gameState.rackTiles.map(t => typeof t === 'object' ? t.letter : t);
+                const anchors = findAnchorSquares();
+                const allMoves = [];
+
+                // For each anchor, find possible words
+                for (const anchor of anchors) {
+                    const hMoves = findWordsFromAnchor(anchor, 'horizontal', rack);
+                    const vMoves = findWordsFromAnchor(anchor, 'vertical', rack);
+                    allMoves.push(...hMoves, ...vMoves);
+                }
+
+                // Deduplicate by word+placements
+                const seen = new Set();
+                const uniqueMoves = allMoves.filter(move => {
+                    const key = `${move.word}-${move.placements.map(p => `${p.row},${p.col}`).join('|')}`;
+                    if (seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                });
+
+                // Sort by score descending
+                uniqueMoves.sort((a, b) => b.score - a.score);
+
+                return { moves: uniqueMoves.slice(0, 50) }; // Return top 50
+            },
+
+            async findBestMove() {
+                const result = await this.findValidMoves();
+                if (result.moves && result.moves.length > 0) {
+                    return { move: result.moves[0] };
+                }
+                return { move: null, error: result.error || 'No valid moves found' };
+            },
+
+            // Helper: Check if a word is valid
+            async isValidWord(word) {
+                await loadTestWordlist();
+                return { valid: isValidTestWord(word) };
+            },
+        };
+
+        console.log('[TestAPI] Test API initialized. Use window.testAPI to access.');
     }
 
     // Check for test_popup parameter to test different scores
