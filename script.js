@@ -4883,8 +4883,300 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Wordlist for client-side move finding (loaded lazily)
         let testWordlist = null;
         let testWordlistLoading = false;
+        let gaddag = null;  // GADDAG data structure for efficient move generation
 
-        // Load the test wordlist for move finding
+        // GADDAG: A specialized trie for Scrabble move generation
+        // Allows finding words that extend in both directions from any position
+        // Reference: Steven A. Gordon, "A Faster Scrabble Move Generation Algorithm"
+
+        class GADDAGNode {
+            constructor() {
+                this.children = {};  // letter -> GADDAGNode
+                this.isTerminal = false;  // true if this completes a valid word
+            }
+        }
+
+        class GADDAG {
+            constructor() {
+                this.root = new GADDAGNode();
+                this.SEPARATOR = '+';  // Marks reversal point (going left -> going right)
+            }
+
+            // Build GADDAG from word list
+            // For word "CARE", we insert:
+            //   C+ARE, AC+RE, RAC+E, ERAC+
+            // This allows finding words that hook at any position
+            build(words) {
+                const startTime = performance.now();
+                let count = 0;
+
+                for (const word of words) {
+                    if (word.length < 2) continue;
+                    this.addWord(word.toUpperCase());
+                    count++;
+                }
+
+                const elapsed = performance.now() - startTime;
+                console.log(`[GADDAG] Built from ${count} words in ${elapsed.toFixed(0)}ms`);
+                return this;
+            }
+
+            addWord(word) {
+                const n = word.length;
+
+                // Insert all forms of the word
+                // Form 1: First letter + separator + rest (hook at first letter)
+                // Form 2..n: Reversed prefix + separator + suffix
+                for (let i = 0; i < n; i++) {
+                    // Build the GADDAG string: reversed prefix + separator + suffix
+                    // For "CARE" at position 1 (hook at A): "CA" reversed = "AC", suffix = "RE"
+                    // So we insert "AC+RE"
+                    let node = this.root;
+
+                    // First, go through the reversed prefix (letters before and including hook)
+                    for (let j = i; j >= 0; j--) {
+                        const letter = word[j];
+                        if (!node.children[letter]) {
+                            node.children[letter] = new GADDAGNode();
+                        }
+                        node = node.children[letter];
+                    }
+
+                    // Add separator
+                    if (!node.children[this.SEPARATOR]) {
+                        node.children[this.SEPARATOR] = new GADDAGNode();
+                    }
+                    node = node.children[this.SEPARATOR];
+
+                    // Then go through the suffix (letters after hook)
+                    for (let j = i + 1; j < n; j++) {
+                        const letter = word[j];
+                        if (!node.children[letter]) {
+                            node.children[letter] = new GADDAGNode();
+                        }
+                        node = node.children[letter];
+                    }
+
+                    // Mark terminal
+                    node.isTerminal = true;
+                }
+            }
+
+            // Check if we can traverse a path in the GADDAG
+            traverse(path) {
+                let node = this.root;
+                for (const char of path) {
+                    if (!node.children[char]) return null;
+                    node = node.children[char];
+                }
+                return node;
+            }
+
+            // Generate all words that can be formed at an anchor
+            // anchor: the position to hook from
+            // direction: 'horizontal' or 'vertical'
+            // board: the current board state
+            // rack: available letters (as frequency map)
+            // Returns array of {word, placements, score}
+            generateMoves(anchor, direction, board, rack, boardSize) {
+                const moves = [];
+                const isHorizontal = direction === 'horizontal';
+                const { row, col } = anchor;
+
+                // Get cross-check sets (which letters can go here based on perpendicular words)
+                const crossChecks = this.computeCrossChecks(board, boardSize);
+
+                // Recursive move generation
+                const generate = (node, pos, tilesPlaced, word, placements, rackLeft, passedSeparator) => {
+                    const r = isHorizontal ? row : pos;
+                    const c = isHorizontal ? pos : col;
+
+                    // Check bounds
+                    if (r < 0 || r >= boardSize || c < 0 || c >= boardSize) return;
+
+                    const existingLetter = board[r]?.[c];
+
+                    if (existingLetter) {
+                        // Cell has a letter - must match
+                        if (node.children[existingLetter]) {
+                            const newWord = passedSeparator
+                                ? word + existingLetter
+                                : existingLetter + word;
+                            generate(
+                                node.children[existingLetter],
+                                passedSeparator ? pos + 1 : pos - 1,
+                                tilesPlaced,
+                                newWord,
+                                placements,
+                                rackLeft,
+                                passedSeparator
+                            );
+                        }
+                    } else {
+                        // Empty cell - try each rack letter that passes cross-check
+                        const crossKey = `${r},${c}`;
+                        const allowed = crossChecks[crossKey] || null;  // null means any letter OK
+
+                        for (const letter of Object.keys(rackLeft)) {
+                            if (rackLeft[letter] <= 0) continue;
+                            if (!node.children[letter]) continue;
+                            if (allowed && !allowed.has(letter)) continue;
+
+                            const newRack = { ...rackLeft };
+                            newRack[letter]--;
+
+                            const newPlacements = [...placements, { row: r, col: c, letter, isNew: true }];
+                            const newWord = passedSeparator
+                                ? word + letter
+                                : letter + word;
+
+                            generate(
+                                node.children[letter],
+                                passedSeparator ? pos + 1 : pos - 1,
+                                tilesPlaced.concat([{ r, c, letter }]),
+                                newWord,
+                                newPlacements,
+                                newRack,
+                                passedSeparator
+                            );
+                        }
+                    }
+
+                    // Try the separator (switch from going left to going right)
+                    if (!passedSeparator && node.children[this.SEPARATOR]) {
+                        generate(
+                            node.children[this.SEPARATOR],
+                            isHorizontal ? col + 1 : row + 1,
+                            tilesPlaced,
+                            word,
+                            placements,
+                            rackLeft,
+                            true
+                        );
+                    }
+
+                    // Check if we've formed a valid word
+                    if (passedSeparator && node.isTerminal && tilesPlaced.length > 0) {
+                        // Verify the word connects to existing tiles or is first move
+                        const connectsToBoard = placements.some(p => {
+                            const pr = p.row, pc = p.col;
+                            return (pr > 0 && board[pr-1]?.[pc]) ||
+                                   (pr < boardSize-1 && board[pr+1]?.[pc]) ||
+                                   (pc > 0 && board[pr]?.[pc-1]) ||
+                                   (pc < boardSize-1 && board[pr]?.[pc+1]);
+                        });
+
+                        const boardEmpty = !board.some(row => row.some(cell => cell));
+                        const touchesCenter = placements.some(p =>
+                            p.row === Math.floor(boardSize/2) && p.col === Math.floor(boardSize/2)
+                        );
+
+                        if (connectsToBoard || (boardEmpty && touchesCenter)) {
+                            moves.push({
+                                word,
+                                placements: placements.filter(p => p.isNew),
+                                direction,
+                                score: 0  // Will be calculated later
+                            });
+                        }
+                    }
+                };
+
+                // Convert rack to frequency map
+                const rackFreq = {};
+                for (const letter of rack) {
+                    const l = letter.toUpperCase();
+                    rackFreq[l] = (rackFreq[l] || 0) + 1;
+                }
+
+                // Start generation from root, going left from anchor
+                const startPos = isHorizontal ? col : row;
+                generate(this.root, startPos, [], '', [], rackFreq, false);
+
+                return moves;
+            }
+
+            // Compute which letters can legally be placed in each cell
+            // based on perpendicular word constraints
+            computeCrossChecks(board, boardSize) {
+                const checks = {};
+
+                for (let r = 0; r < boardSize; r++) {
+                    for (let c = 0; c < boardSize; c++) {
+                        if (board[r][c]) continue;  // Skip occupied
+
+                        // Check vertical cross-word constraint for horizontal plays
+                        const above = this.getWordAbove(board, r, c, boardSize);
+                        const below = this.getWordBelow(board, r, c, boardSize);
+
+                        if (above || below) {
+                            // There's an adjacent letter vertically - compute valid letters
+                            const valid = new Set();
+                            for (let i = 65; i <= 90; i++) {
+                                const letter = String.fromCharCode(i);
+                                const crossWord = above + letter + below;
+                                if (crossWord.length >= 2 && testWordlist?.has(crossWord)) {
+                                    valid.add(letter);
+                                }
+                            }
+                            checks[`${r},${c}`] = valid;
+                        }
+
+                        // Check horizontal cross-word constraint for vertical plays
+                        const left = this.getWordLeft(board, r, c, boardSize);
+                        const right = this.getWordRight(board, r, c, boardSize);
+
+                        if (left || right) {
+                            const valid = checks[`${r},${c}`] || new Set('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''));
+                            const newValid = new Set();
+                            for (const letter of valid) {
+                                const crossWord = left + letter + right;
+                                if (crossWord.length >= 2 && testWordlist?.has(crossWord)) {
+                                    newValid.add(letter);
+                                }
+                            }
+                            checks[`${r},${c}`] = newValid;
+                        }
+                    }
+                }
+
+                return checks;
+            }
+
+            getWordAbove(board, row, col, boardSize) {
+                let word = '';
+                for (let r = row - 1; r >= 0 && board[r][col]; r--) {
+                    word = board[r][col] + word;
+                }
+                return word;
+            }
+
+            getWordBelow(board, row, col, boardSize) {
+                let word = '';
+                for (let r = row + 1; r < boardSize && board[r][col]; r++) {
+                    word += board[r][col];
+                }
+                return word;
+            }
+
+            getWordLeft(board, row, col, boardSize) {
+                let word = '';
+                for (let c = col - 1; c >= 0 && board[row][c]; c--) {
+                    word = board[row][c] + word;
+                }
+                return word;
+            }
+
+            getWordRight(board, row, col, boardSize) {
+                let word = '';
+                for (let c = col + 1; c < boardSize && board[row][c]; c++) {
+                    word += board[row][c];
+                }
+                return word;
+            }
+        }
+
+        // Load the test wordlist and build GADDAG
         async function loadTestWordlist() {
             if (testWordlist) return testWordlist;
             if (testWordlistLoading) {
@@ -4899,8 +5191,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const response = await fetch(`${BASE_PATH}/data/test-wordlist.json`);
                 if (response.ok) {
-                    testWordlist = new Set(await response.json());
+                    const words = await response.json();
+                    testWordlist = new Set(words);
                     console.log(`[TestAPI] Loaded ${testWordlist.size} words for move finding`);
+
+                    // Build GADDAG
+                    gaddag = new GADDAG();
+                    gaddag.build(words);
                 } else {
                     console.warn('[TestAPI] Failed to load test wordlist, move finding disabled');
                     testWordlist = new Set();
@@ -5008,7 +5305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return anchors;
         }
 
-        // Calculate score for a word at given positions
+        // Calculate score for a word at given positions (simple version)
         function calculateMoveScore(placements, word) {
             // Simple scoring - just letter values for now
             // Full scoring with multipliers would require more complex logic
@@ -5034,6 +5331,179 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
             return score;
+        }
+
+        // Calculate full score for a move including all multipliers and cross-words
+        function calculateFullMoveScore(move, board) {
+            const { word, placements, direction } = move;
+            const isHorizontal = direction === 'horizontal';
+            let totalScore = 0;
+
+            // Build complete word positions (including board letters)
+            const wordPositions = [];
+
+            if (placements.length > 0) {
+                // Find the extent of the word
+                const sortedPlacements = [...placements].sort((a, b) =>
+                    isHorizontal ? a.col - b.col : a.row - b.row
+                );
+
+                const first = sortedPlacements[0];
+                const last = sortedPlacements[sortedPlacements.length - 1];
+
+                // Extend backwards to find start of word
+                let startPos = isHorizontal ? first.col : first.row;
+                const fixedPos = isHorizontal ? first.row : first.col;
+                while (startPos > 0) {
+                    const r = isHorizontal ? fixedPos : startPos - 1;
+                    const c = isHorizontal ? startPos - 1 : fixedPos;
+                    if (board[r]?.[c]) {
+                        startPos--;
+                    } else break;
+                }
+
+                // Extend forwards to find end of word
+                let endPos = isHorizontal ? last.col : last.row;
+                while (endPos < BOARD_SIZE - 1) {
+                    const r = isHorizontal ? fixedPos : endPos + 1;
+                    const c = isHorizontal ? endPos + 1 : fixedPos;
+                    if (board[r]?.[c]) {
+                        endPos++;
+                    } else break;
+                }
+
+                // Build word positions
+                for (let pos = startPos; pos <= endPos; pos++) {
+                    const r = isHorizontal ? fixedPos : pos;
+                    const c = isHorizontal ? pos : fixedPos;
+                    const existingLetter = board[r]?.[c];
+                    const placedTile = placements.find(p => p.row === r && p.col === c);
+
+                    wordPositions.push({
+                        row: r,
+                        col: c,
+                        letter: placedTile ? placedTile.letter : existingLetter,
+                        isNew: !!placedTile
+                    });
+                }
+            }
+
+            // Score the main word
+            let mainWordScore = 0;
+            let mainWordMultiplier = 1;
+
+            for (const pos of wordPositions) {
+                const baseScore = TILE_SCORES[pos.letter] || 0;
+                let letterScore = baseScore;
+
+                if (pos.isNew) {
+                    const cellType = getCellType(pos.row, pos.col);
+                    if (cellType === 'double-letter') {
+                        letterScore = baseScore * 2;
+                    } else if (cellType === 'triple-letter') {
+                        letterScore = baseScore * 3;
+                    } else if (cellType === 'double-word') {
+                        mainWordMultiplier *= 2;
+                    } else if (cellType === 'triple-word') {
+                        mainWordMultiplier *= 3;
+                    }
+                }
+
+                mainWordScore += letterScore;
+            }
+
+            totalScore += mainWordScore * mainWordMultiplier;
+
+            // Score cross-words formed by new tiles
+            for (const placement of placements) {
+                const crossWord = getCrossWord(placement.row, placement.col, board, isHorizontal, placement.letter);
+                if (crossWord && crossWord.length >= 2) {
+                    let crossScore = 0;
+                    let crossMultiplier = 1;
+
+                    for (const cPos of crossWord) {
+                        const baseScore = TILE_SCORES[cPos.letter] || 0;
+                        let letterScore = baseScore;
+
+                        if (cPos.isNew) {
+                            const cellType = getCellType(cPos.row, cPos.col);
+                            if (cellType === 'double-letter') {
+                                letterScore = baseScore * 2;
+                            } else if (cellType === 'triple-letter') {
+                                letterScore = baseScore * 3;
+                            } else if (cellType === 'double-word') {
+                                crossMultiplier *= 2;
+                            } else if (cellType === 'triple-word') {
+                                crossMultiplier *= 3;
+                            }
+                        }
+
+                        crossScore += letterScore;
+                    }
+
+                    totalScore += crossScore * crossMultiplier;
+                }
+            }
+
+            // Bingo bonus (all 7 tiles used)
+            if (placements.length >= 7) {
+                totalScore += 50;
+            }
+
+            return totalScore;
+        }
+
+        // Get cross-word at a position
+        function getCrossWord(row, col, board, mainIsHorizontal, placedLetter) {
+            const positions = [];
+
+            if (mainIsHorizontal) {
+                // Check vertical cross-word
+                let startRow = row;
+                while (startRow > 0 && board[startRow - 1]?.[col]) {
+                    startRow--;
+                }
+                let endRow = row;
+                while (endRow < BOARD_SIZE - 1 && board[endRow + 1]?.[col]) {
+                    endRow++;
+                }
+
+                if (startRow === endRow) return null;  // No cross-word
+
+                for (let r = startRow; r <= endRow; r++) {
+                    const letter = r === row ? placedLetter : board[r][col];
+                    positions.push({
+                        row: r,
+                        col: col,
+                        letter: letter,
+                        isNew: r === row
+                    });
+                }
+            } else {
+                // Check horizontal cross-word
+                let startCol = col;
+                while (startCol > 0 && board[row]?.[startCol - 1]) {
+                    startCol--;
+                }
+                let endCol = col;
+                while (endCol < BOARD_SIZE - 1 && board[row]?.[endCol + 1]) {
+                    endCol++;
+                }
+
+                if (startCol === endCol) return null;  // No cross-word
+
+                for (let c = startCol; c <= endCol; c++) {
+                    const letter = c === col ? placedLetter : board[row][c];
+                    positions.push({
+                        row: row,
+                        col: c,
+                        letter: letter,
+                        isNew: c === col
+                    });
+                }
+            }
+
+            return positions;
         }
 
         // Find words that can be formed starting from an anchor
@@ -5398,16 +5868,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!testWordlist || testWordlist.size === 0) {
                     return { moves: [], error: 'Wordlist not loaded' };
                 }
+                if (!gaddag) {
+                    return { moves: [], error: 'GADDAG not built' };
+                }
 
                 const rack = gameState.rackTiles.map(t => typeof t === 'object' ? t.letter : t);
+                const board = gameState.board;
                 const anchors = findAnchorSquares();
                 const allMoves = [];
 
-                // For each anchor, find possible words
+                // Use GADDAG for move generation
                 for (const anchor of anchors) {
-                    const hMoves = findWordsFromAnchor(anchor, 'horizontal', rack);
-                    const vMoves = findWordsFromAnchor(anchor, 'vertical', rack);
+                    const hMoves = gaddag.generateMoves(anchor, 'horizontal', board, rack, BOARD_SIZE);
+                    const vMoves = gaddag.generateMoves(anchor, 'vertical', board, rack, BOARD_SIZE);
                     allMoves.push(...hMoves, ...vMoves);
+                }
+
+                // Calculate scores for all moves
+                for (const move of allMoves) {
+                    move.score = calculateFullMoveScore(move, board);
                 }
 
                 // Deduplicate by word+placements
@@ -5422,7 +5901,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Sort by score descending
                 uniqueMoves.sort((a, b) => b.score - a.score);
 
-                return { moves: uniqueMoves.slice(0, 50) }; // Return top 50
+                return { moves: uniqueMoves.slice(0, 100) }; // Return top 100
             },
 
             async findBestMove() {
