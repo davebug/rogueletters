@@ -2970,6 +2970,187 @@ function updateExchangeButtonVisibility() {
     }
 }
 
+// ============================================================================
+// HINT SYSTEM
+// Pay coins to reveal the best available word
+// ============================================================================
+
+const HINT_COST = 3;  // Fixed cost for hints
+
+/**
+ * Get hint cost (fixed for now, could scale with set later)
+ */
+function getHintCost() {
+    return HINT_COST;
+}
+
+/**
+ * Check if player can afford a hint
+ */
+function canAffordHint() {
+    return runState.coins >= getHintCost();
+}
+
+/**
+ * Update hint button visibility and state
+ */
+function updateHintButtonVisibility() {
+    const hintBtn = document.getElementById('hint-btn');
+    if (!hintBtn) return;
+
+    // Hide if game over, not in run mode, or tiles placed on board
+    if (gameState.isGameOver || !runState.isRunMode || gameState.placedTiles.length > 0) {
+        hintBtn.style.display = 'none';
+        return;
+    }
+
+    // Show hint button
+    hintBtn.style.display = 'flex';
+
+    // Update cost badge
+    const costBadge = hintBtn.querySelector('.hint-cost');
+    if (costBadge) {
+        costBadge.textContent = `$${getHintCost()}`;
+    }
+
+    // Gray out if can't afford
+    if (!canAffordHint()) {
+        hintBtn.classList.add('cannot-afford');
+        hintBtn.disabled = true;
+        hintBtn.title = 'Not enough coins';
+    } else {
+        hintBtn.classList.remove('cannot-afford');
+        hintBtn.disabled = false;
+        hintBtn.title = `Show best word ($${getHintCost()})`;
+    }
+}
+
+/**
+ * Clear any existing hint highlighting
+ */
+function clearHintHighlight() {
+    try {
+        // Remove highlight from cells
+        document.querySelectorAll('.hint-highlight').forEach(el => {
+            el.classList.remove('hint-highlight');
+        });
+        // Remove ghost tiles
+        document.querySelectorAll('.hint-ghost-tile').forEach(el => {
+            el.remove();
+        });
+        // Clear hint status message
+        const statusEl = document.getElementById('status');
+        if (statusEl && statusEl.textContent.startsWith('Hint:')) {
+            statusEl.textContent = '';
+            statusEl.style.color = '';
+        }
+    } catch (err) {
+        console.error('[Hint] clearHintHighlight error:', err);
+    }
+}
+
+/**
+ * Highlight the hint move on the board
+ */
+function highlightHintMove(move) {
+    if (!move || !move.placements) return;
+
+    for (const placement of move.placements) {
+        const cell = document.querySelector(
+            `.board-cell[data-row="${placement.row}"][data-col="${placement.col}"]`
+        );
+        if (cell) {
+            // Add pulsing highlight
+            cell.classList.add('hint-highlight');
+
+            // Add ghost tile showing suggested letter
+            const ghost = document.createElement('div');
+            ghost.className = 'hint-ghost-tile';
+            ghost.textContent = placement.letter;
+            cell.appendChild(ghost);
+        }
+    }
+}
+
+/**
+ * Use hint - find and display best move
+ */
+async function useHint() {
+    if (gameState.isGameOver) return;
+    if (gameState.placedTiles.length > 0) return;
+    if (!canAffordHint()) return;
+
+    console.log('[Hint] Finding best move...');
+
+    // Clear any previous hint
+    clearHintHighlight();
+
+    // Deduct coins
+    runState.coins -= getHintCost();
+    runManager.updateCoinDisplay();
+    runManager.saveRunState();
+
+    // Show loading state on button
+    const hintBtn = document.getElementById('hint-btn');
+    const originalContent = hintBtn.innerHTML;
+    hintBtn.innerHTML = '<span style="font-size: 10px;">...</span>';
+    hintBtn.disabled = true;
+
+    try {
+        // Use the GADDAG-based word finder
+        const result = await (window.testAPI ? testAPI.findBestMove() : findBestMoveInternal());
+
+        if (result && result.move) {
+            console.log(`[Hint] Found: ${result.move.word} for ${result.move.score} pts`);
+            highlightHintMove(result.move);
+
+            // Update status to show the word
+            const statusEl = document.getElementById('status');
+            if (statusEl) {
+                statusEl.textContent = `Hint: ${result.move.word} (${result.move.score} pts)`;
+                statusEl.style.color = 'var(--accent-color)';
+            }
+        } else {
+            console.log('[Hint] No valid moves found');
+            const statusEl = document.getElementById('status');
+            if (statusEl) {
+                statusEl.textContent = 'No valid moves found!';
+                statusEl.style.color = 'var(--danger-color)';
+            }
+        }
+    } catch (err) {
+        console.error('[Hint] Error:', err);
+        const statusEl = document.getElementById('status');
+        if (statusEl) {
+            statusEl.textContent = 'Hint unavailable';
+            statusEl.style.color = 'var(--danger-color)';
+        }
+    }
+
+    // Restore button
+    hintBtn.innerHTML = originalContent;
+    updateHintButtonVisibility();
+}
+
+/**
+ * Internal findBestMove for when testAPI isn't available
+ * Uses the same GADDAG-based approach
+ */
+async function findBestMoveInternal() {
+    // Load wordlist if needed
+    await loadTestWordlist();
+
+    if (!gaddag) {
+        return { move: null, error: 'GADDAG not available' };
+    }
+
+    const result = await testAPI.findValidMoves();
+    if (result.moves && result.moves.length > 0) {
+        return { move: result.moves[0] };  // Already sorted by score
+    }
+    return { move: null };
+}
+
 /**
  * Enter exchange mode - open the modal (or pass turn if No Discard rogue active)
  */
@@ -3134,6 +3315,7 @@ function cancelExchange() {
     document.getElementById('exchange-modal').style.display = 'none';
 
     updateExchangeButtonVisibility();
+    updateHintButtonVisibility();
 }
 
 /**
@@ -3239,8 +3421,12 @@ async function confirmExchange() {
         const keptTileCount = currentRackSize - tilesToExchange.length;
         await displayTilesAnimated(data.tiles, keptTileCount);
 
-        // Update exchange button visibility (may need to hide if can't afford another)
+        // Update exchange/hint button visibility (may need to hide if can't afford another)
         updateExchangeButtonVisibility();
+        updateHintButtonVisibility();
+
+        // Clear any hint highlight since we have new tiles
+        clearHintHighlight();
 
         // Save game state
         saveGameState();
@@ -5832,6 +6018,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 runState.coins += n;
                 runManager.updateCoinDisplay();
                 runManager.saveRunState();
+                updateExchangeButtonVisibility();
+                updateHintButtonVisibility();
                 return { success: true, coins: runState.coins };
             },
 
@@ -7145,6 +7333,9 @@ function setupEventListeners() {
     document.getElementById('exchange-tiles')?.addEventListener('click', enterExchangeMode);
     document.getElementById('cancel-exchange')?.addEventListener('click', cancelExchange);
     document.getElementById('confirm-exchange')?.addEventListener('click', confirmExchange);
+
+    // Hint button
+    document.getElementById('hint-btn')?.addEventListener('click', useHint);
 
     // Popup close handlers
     const popupCloseX = document.getElementById('popup-close-x');
@@ -10407,8 +10598,10 @@ function checkWordValidity() {
     const recallButton = document.getElementById('recall-tiles');
     const exchangeButton = document.getElementById('exchange-tiles');
 
+    const hintButton = document.getElementById('hint-btn');
+
     if (hasTiles) {
-        // Tiles on board - show recall, hide exchange
+        // Tiles on board - show recall, hide exchange and hint
         if (recallButton) {
             recallButton.style.display = 'flex';
             recallButton.style.opacity = '0';
@@ -10417,14 +10610,20 @@ function checkWordValidity() {
         if (exchangeButton) {
             exchangeButton.style.display = 'none';
         }
+        if (hintButton) {
+            hintButton.style.display = 'none';
+        }
+        // Clear hint highlight when tiles are placed
+        clearHintHighlight();
     } else {
-        // No tiles on board - hide recall, maybe show exchange
+        // No tiles on board - hide recall, maybe show exchange and hint
         if (recallButton) {
             recallButton.style.opacity = '0';
             setTimeout(() => { recallButton.style.display = 'none'; }, 300);
         }
-        // Update exchange button visibility (handles coin check)
+        // Update exchange and hint button visibility (handles coin check)
         updateExchangeButtonVisibility();
+        updateHintButtonVisibility();
     }
 
     // Update the potential words sidebar
@@ -10739,6 +10938,9 @@ function submitWord() {
                 cell.classList.remove('placed-this-turn');
             });
             gameState.placedTiles = [];
+
+            // Clear any hint highlight from previous turn
+            clearHintHighlight();
 
             // Clear the potential words display
             updatePotentialWordsSidebar();
