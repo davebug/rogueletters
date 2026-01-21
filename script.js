@@ -5,6 +5,13 @@ const BASE_PATH = window.location.pathname.includes('/letters') ? '/letters' : '
 const API_BASE = `${BASE_PATH}/cgi-bin`;
 
 // ============================================================================
+// WORD FINDER VARIABLES (top-level for hint system access)
+// ============================================================================
+let testWordlist = null;
+let testWordlistLoading = false;
+let gaddag = null;
+
+// ============================================================================
 // TILE EFFECTS SYSTEM
 // ============================================================================
 // Extensible system for tile modifiers (buffed, coin, future types)
@@ -3097,8 +3104,8 @@ async function useHint() {
     hintBtn.disabled = true;
 
     try {
-        // Use the GADDAG-based word finder
-        const result = await (window.testAPI ? testAPI.findBestMove() : findBestMoveInternal());
+        // Use the GADDAG-based word finder (works with or without debug mode)
+        const result = await findBestMoveInternal();
 
         if (result && result.move) {
             console.log(`[Hint] Found: ${result.move.word} for ${result.move.score} pts`);
@@ -3132,24 +3139,10 @@ async function useHint() {
     updateHintButtonVisibility();
 }
 
-/**
- * Internal findBestMove for when testAPI isn't available
- * Uses the same GADDAG-based approach
- */
-async function findBestMoveInternal() {
-    // Load wordlist if needed
-    await loadTestWordlist();
-
-    if (!gaddag) {
-        return { move: null, error: 'GADDAG not available' };
-    }
-
-    const result = await testAPI.findValidMoves();
-    if (result.moves && result.moves.length > 0) {
-        return { move: result.moves[0] };  // Already sorted by score
-    }
-    return { move: null };
-}
+// Placeholder functions - will be assigned inside DOMContentLoaded when GADDAG is available
+// These are called by useHint() and testAPI
+let findValidMovesCore = async () => ({ moves: [], error: 'GADDAG not initialized' });
+let findBestMoveInternal = async () => ({ move: null, error: 'GADDAG not initialized' });
 
 /**
  * Enter exchange mode - open the modal (or pass turn if No Discard rogue active)
@@ -5056,22 +5049,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             gameState.debugMode = true;
             // Set target to 1 for fast testing
             runState.targetScore = 1;
-            runManager.updateRunUI();
+            runManager.updateRunState();
             console.log('Debug mode: AUTO-ENABLED (target=1, skip validation)');
         }
+    }  // End debug mode controls setup
 
-        // ============================================================================
-        // TEST API - Programmatic testing interface
-        // ============================================================================
-        // Exposed only when ?debug=1 or ?debug=2 is in URL
-        // Enables automated gameplay testing without browser automation fragility
-
-        // Wordlist for client-side move finding (loaded lazily)
-        let testWordlist = null;
-        let testWordlistLoading = false;
-        let gaddag = null;  // GADDAG data structure for efficient move generation
-
-        // GADDAG: A specialized trie for Scrabble move generation
+    // ============================================================================
+    // GADDAG - Word finder data structure (always available for hint system)
+    // ============================================================================
+    // GADDAG: A specialized trie for Scrabble move generation
         // Allows finding words that extend in both directions from any position
         // Reference: Steven A. Gordon, "A Faster Scrabble Move Generation Algorithm"
 
@@ -5778,7 +5764,63 @@ document.addEventListener('DOMContentLoaded', async () => {
             return moves;
         }
 
-        // Test API object
+    // ============================================================================
+    // WORD FINDER CORE - Assign real implementations (GADDAG now available)
+    // ============================================================================
+    findValidMovesCore = async function() {
+        await loadTestWordlist();
+
+        if (!testWordlist || testWordlist.size === 0) {
+            return { moves: [], error: 'Wordlist not loaded' };
+        }
+        if (!gaddag) {
+            return { moves: [], error: 'GADDAG not built' };
+        }
+
+        const rack = gameState.rackTiles.map(t => typeof t === 'object' ? t.letter : t);
+        const board = gameState.board;
+        const anchors = findAnchorSquares();
+        const allMoves = [];
+
+        // Use GADDAG for move generation
+        for (const anchor of anchors) {
+            const hMoves = gaddag.generateMoves(anchor, 'horizontal', board, rack, BOARD_SIZE);
+            const vMoves = gaddag.generateMoves(anchor, 'vertical', board, rack, BOARD_SIZE);
+            allMoves.push(...hMoves, ...vMoves);
+        }
+
+        // Calculate scores for all moves
+        for (const move of allMoves) {
+            move.score = calculateFullMoveScore(move, board);
+        }
+
+        // Deduplicate by word+placements
+        const seen = new Set();
+        const uniqueMoves = allMoves.filter(move => {
+            const key = `${move.word}-${move.placements.map(p => `${p.row},${p.col}`).join('|')}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+
+        // Sort by score descending
+        uniqueMoves.sort((a, b) => b.score - a.score);
+
+        return { moves: uniqueMoves.slice(0, 100) }; // Return top 100
+    };
+
+    findBestMoveInternal = async function() {
+        const result = await findValidMovesCore();
+        if (result.moves && result.moves.length > 0) {
+            return { move: result.moves[0] };
+        }
+        return { move: null, error: result.error || 'No valid moves found' };
+    };
+
+    // ============================================================================
+    // TEST API - Debug mode only
+    // ============================================================================
+    if (urlParams.get('debug') === '1' || urlParams.get('debug') === '2') {
         window.testAPI = {
             // === State Queries ===
             getState() {
@@ -6052,52 +6094,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             },
 
             async findValidMoves() {
-                await loadTestWordlist();
-                if (!testWordlist || testWordlist.size === 0) {
-                    return { moves: [], error: 'Wordlist not loaded' };
-                }
-                if (!gaddag) {
-                    return { moves: [], error: 'GADDAG not built' };
-                }
-
-                const rack = gameState.rackTiles.map(t => typeof t === 'object' ? t.letter : t);
-                const board = gameState.board;
-                const anchors = findAnchorSquares();
-                const allMoves = [];
-
-                // Use GADDAG for move generation
-                for (const anchor of anchors) {
-                    const hMoves = gaddag.generateMoves(anchor, 'horizontal', board, rack, BOARD_SIZE);
-                    const vMoves = gaddag.generateMoves(anchor, 'vertical', board, rack, BOARD_SIZE);
-                    allMoves.push(...hMoves, ...vMoves);
-                }
-
-                // Calculate scores for all moves
-                for (const move of allMoves) {
-                    move.score = calculateFullMoveScore(move, board);
-                }
-
-                // Deduplicate by word+placements
-                const seen = new Set();
-                const uniqueMoves = allMoves.filter(move => {
-                    const key = `${move.word}-${move.placements.map(p => `${p.row},${p.col}`).join('|')}`;
-                    if (seen.has(key)) return false;
-                    seen.add(key);
-                    return true;
-                });
-
-                // Sort by score descending
-                uniqueMoves.sort((a, b) => b.score - a.score);
-
-                return { moves: uniqueMoves.slice(0, 100) }; // Return top 100
+                return await findValidMovesCore();
             },
 
             async findBestMove() {
-                const result = await this.findValidMoves();
-                if (result.moves && result.moves.length > 0) {
-                    return { move: result.moves[0] };
-                }
-                return { move: null, error: result.error || 'No valid moves found' };
+                return await findBestMoveInternal();
             },
 
             // Helper: Check if a word is valid
