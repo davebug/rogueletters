@@ -29,8 +29,9 @@ RUN for file in /usr/local/apache2/cgi-bin/*.py; do \
         sed -i '1s|^.*$|#!/usr/bin/python3|' "$file"; \
     done
 
-# Copy data files
+# Copy data files (txt and json)
 COPY data/*.txt /usr/local/apache2/data/
+COPY data/*.json /usr/local/apache2/data/
 
 # Enable CGI execution in Apache
 COPY httpd.conf /usr/local/apache2/conf/httpd.conf

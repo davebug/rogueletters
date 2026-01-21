@@ -3092,16 +3092,13 @@ async function useHint() {
     // Clear any previous hint
     clearHintHighlight();
 
-    // Deduct coins
-    runState.coins -= getHintCost();
-    runManager.updateCoinDisplay();
-    runManager.saveRunState();
-
     // Show loading state on button
     const hintBtn = document.getElementById('hint-btn');
     const originalContent = hintBtn.innerHTML;
     hintBtn.innerHTML = '<span style="font-size: 10px;">...</span>';
     hintBtn.disabled = true;
+
+    let hintSucceeded = false;
 
     try {
         // Use the GADDAG-based word finder (works with or without debug mode)
@@ -3117,6 +3114,7 @@ async function useHint() {
                 statusEl.textContent = `Hint: ${result.move.word} (${result.move.score} pts)`;
                 statusEl.style.color = 'var(--accent-color)';
             }
+            hintSucceeded = true;
         } else {
             console.log('[Hint] No valid moves found');
             const statusEl = document.getElementById('status');
@@ -3132,6 +3130,13 @@ async function useHint() {
             statusEl.textContent = 'Hint unavailable';
             statusEl.style.color = 'var(--danger-color)';
         }
+    }
+
+    // Only deduct coins if hint succeeded
+    if (hintSucceeded) {
+        runState.coins -= getHintCost();
+        runManager.updateCoinDisplay();
+        runManager.saveRunState();
     }
 
     // Restore button
