@@ -5168,8 +5168,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const r = isHorizontal ? row : pos;
                     const c = isHorizontal ? pos : col;
 
-                    // Check bounds
-                    if (r < 0 || r >= boardSize || c < 0 || c >= boardSize) return;
+                    // Check bounds - but still check for completed words at board edge
+                    if (r < 0 || r >= boardSize || c < 0 || c >= boardSize) {
+                        if (passedSeparator && node.isTerminal && tilesPlaced.length > 0) {
+                            const connectsToBoard = placements.some(p => {
+                                const pr = p.row, pc = p.col;
+                                return (pr > 0 && board[pr-1]?.[pc]) ||
+                                       (pr < boardSize-1 && board[pr+1]?.[pc]) ||
+                                       (pc > 0 && board[pr]?.[pc-1]) ||
+                                       (pc < boardSize-1 && board[pr]?.[pc+1]);
+                            });
+                            if (connectsToBoard) {
+                                moves.push({
+                                    word,
+                                    placements: placements.filter(p => p.isNew),
+                                    direction,
+                                    score: 0
+                                });
+                            }
+                        }
+                        return;
+                    }
 
                     const existingLetter = board[r]?.[c];
 
@@ -5510,6 +5529,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             return score;
         }
 
+        // Get effective tile score including rare bonus, upgrades, and rogue effects
+        function getEffectiveTileScore(letter) {
+            let score = TILE_SCORES[letter] || 0;
+            if (RARE_TILES.includes(letter)) score += 2;
+            if (runState.tileSetUpgrades && runState.tileSetUpgrades[letter]) {
+                score += runState.tileSetUpgrades[letter];
+            }
+            if (hasRogue('vowelBonus') && 'AEIOU'.includes(letter)) score += 1;
+            return score;
+        }
+
         // Calculate full score for a move including all multipliers and cross-words
         function calculateFullMoveScore(move, board) {
             const { word, placements, direction } = move;
@@ -5570,7 +5600,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             let mainWordMultiplier = 1;
 
             for (const pos of wordPositions) {
-                const baseScore = TILE_SCORES[pos.letter] || 0;
+                const baseScore = getEffectiveTileScore(pos.letter);
                 let letterScore = baseScore;
 
                 if (pos.isNew) {
@@ -5599,7 +5629,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     let crossMultiplier = 1;
 
                     for (const cPos of crossWord) {
-                        const baseScore = TILE_SCORES[cPos.letter] || 0;
+                        const baseScore = getEffectiveTileScore(cPos.letter);
                         let letterScore = baseScore;
 
                         if (cPos.isNew) {
@@ -6182,10 +6212,21 @@ async function initializeGame() {
         runManager.updateRunUI();
     }
 
-    // In debug mode, give $100 coins for easy testing (unless explicitly set via URL)
-    if (gameState.debugMode && !urlParams.has('coins')) {
-        runState.coins = 100;
-        console.log('[Debug] Debug mode coins set to $100');
+    // In debug mode (?debug=1 or ?debug=2), enter run mode with $100 coins for easy testing
+    const isDebugUrl = urlParams.get('debug') === '1' || urlParams.get('debug') === '2';
+    if (isDebugUrl) {
+        if (!runState.isRunMode) {
+            runState.isRunMode = true;
+            runState.runSeed = Date.now();
+            runState.set = runState.set || 1;
+            runState.round = runState.round || 1;
+            runState.targetScore = getTargetScore(runState.set, runState.round);
+            console.log('[Debug] Debug mode: auto-entering run mode');
+        }
+        if (!urlParams.has('coins')) {
+            runState.coins = 100;
+            console.log('[Debug] Debug mode coins set to $100');
+        }
         runManager.saveRunState();
         runManager.updateRunUI();
     }
@@ -6266,9 +6307,9 @@ async function initializeGame() {
 
     let seed = urlParams.get('seed');
 
-    // In run mode, ALWAYS use the calculated seed from runSeed + round
-    // This ensures refreshing the page uses the correct round's seed
-    if (runState.isRunMode) {
+    // In run mode, use the calculated seed from runSeed + round
+    // UNLESS an explicit ?seed= param was provided (for testing)
+    if (runState.isRunMode && !urlParams.has('seed')) {
         seed = gameState.seed;  // Already calculated as String(runSeed + round)
     } else if (!seed) {
         // Use today's date in YYYYMMDD format
