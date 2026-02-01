@@ -402,7 +402,7 @@ function getTileDisplayScore(letter, bonus = 0) {
 // Animation speed setting: '0.5x', '1x', '5x', '20x', 'skip'
 // Persisted in localStorage
 // Base speed (1x) is tuned for readability; multiplier applied to durations
-let animationSpeed = localStorage.getItem('animationSpeed') || '1x';
+let animationSpeed = localStorage.getItem('animationSpeed') || '5x';
 
 function setAnimationSpeed(speed) {
     animationSpeed = speed;
@@ -2405,7 +2405,7 @@ const runManager = {
         }
 
         // Get remaining tiles in bag
-        const remaining = getRemainingTiles();
+        const remaining = calculateRemainingTiles();
 
         // Build array of [letter, count] and sort by count (most common first)
         const tileEntries = Object.entries(remaining)
@@ -7277,6 +7277,11 @@ async function displayTilesAnimated(tiles, existingTileCount = 0) {
     await Promise.all(animations);
 
     checkWordValidity();
+
+    // Update Top Deck display if that rogue is active
+    if (typeof runManager !== 'undefined' && runManager.renderTopDeck) {
+        runManager.renderTopDeck();
+    }
 }
 
 // ============================================================================

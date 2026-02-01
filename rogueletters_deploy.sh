@@ -142,6 +142,10 @@ else
   echo "  Warning: WikiLetters data not found, using bundled wordlists"
 fi
 
+# Copy test-wordlist.json from container image to volume (needed for hint system)
+echo "Ensuring test-wordlist.json is available..."
+docker run --rm ${IMAGE_NAME}:latest cat /usr/local/apache2/data/test-wordlist.json > /mnt/user/appdata/rogueletters/data/test-wordlist.json 2>/dev/null && echo "  Copied test-wordlist.json"
+
 # Start new container with restart policy and persistent data
 echo "Starting new ${CONTAINER_NAME} container..."
 docker run -d --name ${CONTAINER_NAME} \\

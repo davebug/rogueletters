@@ -33,6 +33,7 @@
     --text-color: #e8e8e8;        /* Light text */
     --text-muted: #9ca3af;        /* Muted text */
     --text-accent: #dc2626;       /* Red accent text */
+    --accent-color: #f59e0b;      /* Warm amber for hint/highlights */
 
     /* Cell sizing - shared by board and rack */
     --cell-size: calc((100vw - 10px) / 9);
@@ -69,37 +70,59 @@ header {
     left: 0;
     width: 100%;
     z-index: 1000;
-    padding: 4px 10px 2px 10px; /* Header ends 2px below subtitle text */
+    padding: 4px 10px 2px 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
 }
 
-/* Start Over button in header */
-.header-icon-btn {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 22px;  /* Match height of W in WikiLetters */
-    height: 22px;  /* Match height of W in WikiLetters */
-    border-radius: 50%;
-    background: transparent;
-    border: 2px solid var(--primary-color);
-    color: var(--primary-color);
-    cursor: pointer;
+/* Header toolbar: hint + coins/bag + gear in one row */
+#header-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+/* Shared toolbar button style — pill shape, same border/bg */
+#header-toolbar > button {
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 12px;
+    background: var(--board-square);
+    border: 1px solid var(--board-border);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s ease, opacity 0.3s ease;
-    padding: 0;
+    gap: 4px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
 }
 
-.header-icon-btn:hover {
-    background: var(--primary-color);
-    color: white;
-    transform: rotate(360deg);
+/* Coins display — plain text, not a button */
+.toolbar-coins {
+    color: var(--text-color);
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+/* Settings gear button in header */
+.header-icon-btn {
+    color: var(--text-muted);
+    padding: 0 6px;
+}
+
+@media (hover: hover) {
+    .header-icon-btn:hover {
+        background: var(--board-border);
+        color: var(--text-color);
+    }
 }
 
 .header-icon-btn svg {
-    width: 12px;  /* Proportionally smaller */
-    height: 12px;  /* Proportionally smaller */
+    width: 14px;
+    height: 14px;
 }
 
 h1 {
@@ -113,21 +136,7 @@ a, .accent {
     text-decoration: none;
 }
 
-/* Game Progress Display */
-#game-progress {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    margin-top: -22px;
-    color: var(--text-color);
-    font-size: 18px;
-    font-weight: bold;
-    letter-spacing: 0.5px;
-    line-height: 1;
-    height: 22px;  /* Fixed height to match dateDisplay in WikiLetters */
-}
-
+/* Game Progress (legacy selectors for JS compat) */
 #game-progress .progress-sep {
     color: var(--text-muted);
     font-weight: normal;
@@ -163,10 +172,11 @@ a, .accent {
 }
 
 #subtitle {
+    width: 100%;
     text-align: center;
     color: var(--text-muted);
     font-size: 13px;
-    margin-top: 4px;
+    margin-top: 2px;
     padding: 0 10px;
 }
 
@@ -183,11 +193,12 @@ a, .accent {
 }
 
 #status {
+    width: 100%;
     font-size: 13px;
     text-align: center;
     margin-top: 1px;
     margin-bottom: 1px;
-    min-height: 0; /* Reduced from 20px to eliminate extra space when empty */
+    min-height: 0;
     color: var(--text-muted);
 }
 
@@ -937,29 +948,19 @@ main {
     color: var(--danger-color);
 }
 
-/* Hint Button - positioned further left, shows best move */
+/* Hint Button - in header toolbar */
 .hint-btn {
-    position: absolute;
-    width: 36px;
-    height: 36px;
-    left: -80px;  /* Further left than exchange button */
-    border-radius: 4px;
-    background: var(--board-square);
-    border: 1px solid var(--tile-border);
-    color: var(--accent-color);  /* Gold/yellow for lightbulb */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background 0.3s ease, transform 0.3s ease;
-    z-index: 10;
+    color: var(--accent-color);
+    border-color: var(--accent-color);
 }
 
 @media (hover: hover) {
     .hint-btn:hover {
         background: var(--accent-color);
-        color: var(--bg-primary);
-        transform: scale(1.1);
+        color: var(--bg-color);
+    }
+    .hint-btn:hover .hint-cost {
+        color: var(--bg-color);
     }
 }
 
@@ -968,25 +969,23 @@ main {
 }
 
 .hint-btn svg {
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
 }
 
 /* Cost badge on hint button */
 .hint-cost {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 700;
-    color: var(--success-color);
-    text-shadow: 0 0 2px rgba(0,0,0,0.5);
+    color: var(--accent-color);
+    line-height: 1;
 }
 
 /* Hint button grayed out when can't afford */
 .hint-btn.cannot-afford {
     opacity: 0.4;
     cursor: not-allowed;
+    border-color: var(--board-border);
 }
 
 .hint-btn.cannot-afford:hover {
@@ -2740,22 +2739,20 @@ main {
    ============================================ */
 
 .bag-icon-btn {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    margin-left: 4px;
-    color: var(--tile-bg);
-    transition: color 0.2s, transform 0.2s;
-    vertical-align: middle;
-    display: flex;
-    align-items: center;
-    height: 18px;
+    color: var(--text-muted);
+    padding: 0 6px;
 }
 
-.bag-icon-btn:hover {
-    color: var(--tile-bg-selected);
-    transform: scale(1.1);
+.bag-icon-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+@media (hover: hover) {
+    .bag-icon-btn:hover {
+        background: var(--board-border);
+        color: var(--text-color);
+    }
 }
 
 /* Bag Viewer Modal */
